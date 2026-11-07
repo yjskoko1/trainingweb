@@ -72,6 +72,10 @@ main{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
 .srow.done .no{color:var(--green)}
 .srow.next{outline:2px solid var(--blue);outline-offset:-2px}
 .srow.next .no{color:var(--blue)}
+.repchips{display:flex;gap:6px;padding:6px 2px 10px 44px;align-items:center}
+.repchips button{flex:1;min-width:0;height:44px;border-radius:10px;border:1px solid #C9D6F5;background:#fff;font-size:16px;font-weight:700;color:var(--ink)}
+.repchips button.plan{background:var(--blue);border-color:var(--blue);color:#fff}
+.repchips .hint{font-size:11px;color:var(--sub);padding:0 6px 0 44px;margin-top:-4px}
 .tick{width:48px;height:48px;border-radius:12px;border:2px solid #C4C8CE;background:#fff;display:flex;align-items:center;justify-content:center}
 .srow.done .tick{background:var(--green);border-color:var(--green)}
 .tabs3{background:var(--chip);border-radius:14px;padding:4px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
@@ -404,11 +408,12 @@ function vSets(e,k,order,pos){
   '<div class="why">'+(r.custom?'오늘 무게를 직접 '+fmt(r.W)+'kg으로 바꿨어요. (추천 '+fmt(st.t)+'kg)':esc(st.why))+'</div>'+
   '<div style="display:flex;gap:8px;padding-top:4px;flex-wrap:wrap"><a class="ghost" href="#guide" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85;display:inline-flex;align-items:center;text-decoration:none">규칙 보기</a><button class="ghost" data-a="w-change" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85">오늘 무게 바꾸기</button>'+(r.custom?'<button class="ghost" data-a="w-reset" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85">추천대로</button>':'')+'</div></div>';
  var rm=oneRM(e.id);
- if(rm)h+='<div class="card" style="flex-direction:row;justify-content:space-around;text-align:center;gap:6px;padding:12px 8px">'+
-  '<div><div class="meta">추정 1RM</div><div style="font-size:22px;font-weight:900">'+rmTxt(rm.best.v)+'<small class="meta"> kg</small></div><div class="meta" style="font-size:11px">'+fmt(rm.best.s.w)+'×'+rm.best.s.r+' · '+short(rm.best.k)+'</div></div>'+
-  '<div><div class="meta">최근 1RM</div><div style="font-size:22px;font-weight:900">'+rmTxt(rm.recent.v)+'<small class="meta"> kg</small></div><div class="meta" style="font-size:11px">'+fmt(rm.recent.s.w)+'×'+rm.recent.s.r+' · '+short(rm.recent.k)+'</div></div>'+
-  '<div><div class="meta">최고 무게</div><div style="font-size:22px;font-weight:900">'+fmt(rm.top.s.w)+'<small class="meta"> kg</small></div><div class="meta" style="font-size:11px">'+rm.top.s.r+'회 · '+short(rm.top.k)+'</div></div></div>';
- else if(r.W>0)h+='<div class="note">본세트 기록이 쌓이면 이 종목의 추정 1RM(한 번에 들 수 있는 최대 무게)이 여기 표시돼요.</div>';
+ if(r.W>0||e.startWeight>0){
+  var cell=function(lbl,val,sub){return '<div style="flex:1;min-width:0"><div class="meta">'+lbl+'</div><div style="font-size:22px;font-weight:900;line-height:1.3">'+val+'</div><div class="meta" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sub+'</div></div>'};
+  h+='<div class="card" style="flex-direction:row;justify-content:space-around;text-align:center;gap:6px;padding:12px 8px">'+
+   (rm?cell('추정 1RM',rmTxt(rm.best.v)+'<small class="meta"> kg</small>',fmt(rm.best.s.w)+'×'+rm.best.s.r+' · '+short(rm.best.k))+cell('최근 1RM',rmTxt(rm.recent.v)+'<small class="meta"> kg</small>',fmt(rm.recent.s.w)+'×'+rm.recent.s.r+' · '+short(rm.recent.k))+cell('최고 무게',fmt(rm.top.s.w)+'<small class="meta"> kg</small>',rm.top.s.r+'회 · '+short(rm.top.k))
+     :cell('추정 1RM','–','본세트 기록 후')+cell('최근 1RM','–','본세트 기록 후')+cell('최고 무게','–','본세트 기록 후'))+'</div>';
+ }
  /* warmups */
  var nextKey=null;
  var rows=[];
@@ -422,7 +427,13 @@ function vSets(e,k,order,pos){
   var pct=rw.type==='warm'&&r.W>0&&!rw.done?Math.round(rw.plan.w/r.W*100):null;
   return '<div class="srow'+(rw.done?' done':'')+(isNext?' next':'')+'"><span class="no">'+rw.label+'</span>'+
    '<button class="val" data-a="row-edit" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-label="'+rw.label+' 세트 무게·횟수 고치기"><b>'+fmt(v.w)+'</b>kg × <b>'+v.r+'</b>회'+(pct!=null?'<small>'+(rw.plan.w===db.settings.bar&&rw.i===0?'빈 봉':pct+'%')+'</small>':'')+(rw.done&&pr[rw.done.id]?I.trophy:'')+'</button>'+
-   '<button class="tick" data-a="row-tick" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-pressed="'+!!rw.done+'" aria-label="'+rw.label+' 세트 '+(rw.done?'완료 취소':'완료')+'">'+(rw.done?I.check:'')+'</button></div>';
+   '<button class="tick" data-a="row-tick" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-pressed="'+!!rw.done+'" aria-label="'+rw.label+' 세트 '+(rw.done?'완료 취소':'완료')+'">'+(rw.done?I.check:'')+'</button></div>'+
+   (isNext&&rw.type==='work'?repChips(rw):'');
+ }
+ function repChips(rw){
+  var pr=rw.plan.r,lo=Math.max(1,pr-4),hi=lo+6,b='';
+  for(var n=lo;n<=hi;n++)b+='<button data-a="row-reps" data-t="'+rw.type+'" data-i="'+rw.i+'" data-r="'+n+'" class="'+(n===pr?'plan':'')+'" aria-label="'+rw.label+'세트 '+n+'회로 기록">'+n+'</button>';
+  return '<div class="repchips" role="group" aria-label="한 횟수 바로 기록">'+b+'</div><div class="repchips hint" style="display:block;padding-top:0">실제로 한 횟수를 누르면 바로 기록돼요</div>';
  }
  var warmRows=rows.filter(function(x){return x.type==='warm'}),workRows=rows.filter(function(x){return x.type==='work'});
  if(warmRows.length)h+='<div class="card" style="gap:4px;padding:12px"><div class="row" style="padding:0 6px 6px"><span class="name" style="font-size:15px">웜업</span><span class="meta">본세트 무게 기준 자동 계산</span></div>'+warmRows.map(rowHtml).join('')+'</div>';
@@ -651,11 +662,11 @@ function rowData(e,k,type,i){
  var o=ovr[okey(e.id,type,i)];if(o&&!done)planned={w:o.w,r:o.r};
  return{r:r,done:done,planned:planned,list:list};
 }
-function tickRow(e,type,i){
+function tickRow(e,type,i,reps){
  var k=curDate,rd=rowData(e,k,type,i);
  if(rd.done){var d=day(k);d.sets=d.sets.filter(function(s){return s.id!==rd.done.id});cleanDay(k);save();render();return}
  /* 앞 세트를 건너뛰고 체크해도 순서대로 기록 */
- var p=rd.planned||{w:rd.r.W,r:rd.r.p.max};
+ var p=rd.planned||{w:rd.r.W,r:rd.r.p.max};if(reps!=null)p={w:p.w,r:reps};
  var d2=day(k,true);if(d2.plan.indexOf(e.id)<0&&!dayOrder(k).length)d2.plan.push(e.id);
  d2.sets.push({id:rid(),exId:e.id,w:fix(p.w),r:p.r,warm:type==='warm',ts:Date.now()});
  save();
@@ -808,6 +819,7 @@ document.addEventListener('click',function(ev){
   case 'bm':bodyMetric=t.getAttribute('data-v');render();break;
   case 'ptab':planTab=t.getAttribute('data-v');catQuery='';render();break;
   case 'row-tick':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
+  case 'row-reps':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'),+t.getAttribute('data-r'));break;
   case 'row-edit':if(e)editSheet(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
   case 'es':var inp=document.getElementById(t.getAttribute('data-f')==='w'?'ew':'er'),ex2=exById(rowCtx&&rowCtx.exId);if(inp&&ex2){var n=+t.getAttribute('data-n');inp.value=t.getAttribute('data-f')==='w'?fmt(Math.max(0,(parseFloat(inp.value)||0)+n*ex2.increment)):Math.max(0,(parseInt(inp.value,10)||0)+n)}break;
   case 'es-save':saveEditSheet();break;
