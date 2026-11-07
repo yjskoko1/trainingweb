@@ -151,6 +151,11 @@ nav.tabs a.on{color:var(--ink);font-weight:700}
 .swatches button{width:38px;height:38px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px #DADDE2}
 .swatches button.on{box-shadow:0 0 0 3px var(--ink)}
 .sr{position:absolute;left:-9999px}
+.swipewrap{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.swipewrap:last-child{border-bottom:none}
+.swipebg{position:absolute;inset:0;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:flex-end;padding-right:18px;font-weight:700;font-size:14px}
+.swipe{position:relative;background:#fff;padding:12px 4px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.swipe.anim{transition:transform .2s}
 textarea{width:100%;min-height:120px;border:1px solid #DADDE2;border-radius:12px;padding:10px;font-size:12px;font-family:ui-monospace,monospace}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #7FA3F5;outline-offset:2px}
 </style>
@@ -587,7 +592,7 @@ function vCal(){
  g+='</div><div class="legend">'+db.cats.map(function(c){return '<span><i class="dot" style="background:'+c.color+'"></i>'+esc(c.name)+'</span>'}).join('')+'</div></div>';
  h+='<div class="meta" style="padding:0 4px">이번 달 <b style="color:var(--ink)">'+cnt+'일</b> 운동했어요. 날짜를 누르면 그날 기록을 보고 고칠 수 있어요.</div>'+g;
  var recent=sortedDates().filter(function(k){return db.days[k].sets.length}).reverse().slice(0,10);
- if(recent.length)h+='<div class="sectitle">최근 운동</div><div class="list">'+recent.map(function(k){var d=db.days[k],w=d.workout?wkById(d.workout):null,ex=dayOrder(k).map(exById).filter(Boolean);return '<button class="li" data-a="goto" data-k="'+k+'"><div style="min-width:0"><div class="t">'+esc(pretty(k))+(w?' · '+esc(w.name):'')+'</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(ex.map(function(e){return e.name}).join(', '))+'</div></div>'+I.chev+'</button>'}).join('')+'</div>';
+ if(recent.length)h+='<div class="sectitle">최근 운동</div><div class="list">'+recent.map(function(k){var d=db.days[k],w=d.workout?wkById(d.workout):null,ex=dayOrder(k).map(exById).filter(Boolean);return '<button class="li" data-a="day-pop" data-k="'+k+'"><div style="min-width:0"><div class="t">'+esc(pretty(k))+(w?' · '+esc(w.name):'')+'</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(ex.map(function(e){return e.name}).join(', '))+'</div></div>'+I.chev+'</button>'}).join('')+'</div>';
  return h+'</main>';
 }
 
@@ -718,6 +723,25 @@ function saveEditSheet(){
  rowCtx=null;modal('');render();
 }
 function finishDay(){var d=db.days[curDate];if(!d)return;d.done=true;save();window.scrollTo(0,0);var w=d.workout?wkById(d.workout):null,nx=nextWk(addDays(curDate,1));toast((w?w.name+' ':'')+'운동을 완료했어요.'+(nx?' 다음 차례는 '+nx.name+'예요.':''))}
+var popDay=null,pendingDel=null;
+function daySheet(k){
+ popDay=k;var d=db.days[k];
+ if(!d||!d.sets.length){modal('');popDay=null;render();return}
+ var w=d.workout?wkById(d.workout):null,order=dayOrder(k).filter(function(id){return setsOn(k,id).length});
+ var rows=order.map(function(id){var e=exById(id),c=e?catById(e.cat):catById(''),ws=setsOn(k,id,true),ss=setsOn(k,id,false);
+  return '<div class="swipewrap"><div class="swipebg" aria-hidden="true">삭제</div><div class="swipe" data-swipe="'+esc(id)+'"><div class="row"><div style="min-width:0"><div class="name" style="font-size:15px"><span class="dot" style="background:'+c.color+'"></span>'+esc(e?e.name:'삭제된 종목')+'</div><div class="meta" style="margin-top:2px">'+(ss.length?ss.map(function(s){return fmt(s.w)+'×'+s.r}).join(', '):'본세트 없음')+(ws.length?' · 웜업 '+ws.length+'세트':'')+'</div></div><button class="ghost" data-a="daydel" data-id="'+esc(id)+'" aria-label="'+esc(e?e.name:'종목')+' 기록 삭제" style="flex-shrink:0;color:var(--red);border-color:#F0C9B8">삭제</button></div></div></div>'}).join('');
+ modal('<h2>'+esc(pretty(k,{month:'long',day:'numeric',weekday:'long'}))+'</h2><div class="meta">'+(w?esc(w.name)+' · ':'')+order.length+'개 종목'+(d.done?' · 완료':'')+' · 왼쪽으로 밀면 지울 수 있어요</div><div style="max-height:56vh;overflow-y:auto;border-top:1px solid var(--line)">'+rows+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">닫기</button><button class="primary" data-a="goto" data-k="'+k+'">이날 기록 열기</button></div>');
+}
+function askDayDel(exId){
+ var k=popDay,e=exById(exId);if(!k)return;pendingDel={k:k,id:exId};
+ modal('<h2>기록을 지울까요?</h2><div class="meta" style="line-height:1.6">'+esc(pretty(k))+' <b>'+esc(e?e.name:'종목')+'</b> 기록 '+setsOn(k,exId).length+'세트(웜업 포함)를 지워요. 지운 기록은 되돌릴 수 없고, 다음 무게 처방도 남은 기록으로 다시 계산돼요.</div><div class="btnrow"><button class="secondary" data-a="daydel-cancel">취소</button><button class="danger" data-a="daydel-ok">확인</button></div>');
+}
+/* 옆으로 밀어서 삭제 */
+var sw=null;
+document.addEventListener('pointerdown',function(ev){var el=ev.target.closest&&ev.target.closest('.swipe');if(!el||ev.target.closest('button'))return;sw={el:el,x0:ev.clientX,y0:ev.clientY,dx:0,on:false};el.classList.remove('anim')});
+document.addEventListener('pointermove',function(ev){if(!sw)return;var dx=ev.clientX-sw.x0,dy=ev.clientY-sw.y0;if(!sw.on){if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy))sw.on=true;else if(Math.abs(dy)>10){sw=null;return}else return}sw.dx=Math.min(0,dx);sw.el.style.transform='translateX('+sw.dx+'px)'});
+function swEnd(){if(!sw)return;var s=sw;sw=null;s.el.classList.add('anim');var w=s.el.offsetWidth||300;if(s.on&&s.dx<-Math.min(110,w*0.3)){s.el.style.transform='translateX(-'+w+'px)';var id=s.el.getAttribute('data-swipe');setTimeout(function(){askDayDel(id)},180)}else s.el.style.transform=''}
+document.addEventListener('pointerup',swEnd);document.addEventListener('pointercancel',swEnd);
 function startWk(id){
  var w=wkById(id);if(!w)return;var k=curDate,d=day(k,true);
  wkEx(w).forEach(function(e){if(d.plan.indexOf(e.id)<0)d.plan.push(e.id)});
@@ -840,6 +864,10 @@ document.addEventListener('click',function(ev){
   case 'row-tick':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
   case 'hist-del':if(e){var hk=t.getAttribute('data-k');confirmSheet(esc(pretty(hk))+' 기록 삭제',esc(e.name)+'의 이날 기록(웜업 포함 '+setsOn(hk,e.id).length+'세트)을 지울까요? 지운 기록은 되돌릴 수 없고, 다음 무게 처방도 남은 기록으로 다시 계산돼요.','삭제','hist-del-ok',hk)}break;
   case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
+  case 'day-pop':daySheet(t.getAttribute('data-k'));break;
+  case 'daydel':askDayDel(id);break;
+  case 'daydel-cancel':var pk=pendingDel&&pendingDel.k;pendingDel=null;if(pk)daySheet(pk);else modal('');break;
+  case 'daydel-ok':if(pendingDel){var dk=pendingDel.k,dd2=db.days[dk];if(dd2){dd2.sets=dd2.sets.filter(function(x){return x.exId!==pendingDel.id});dd2.plan=dd2.plan.filter(function(x){return x!==pendingDel.id});cleanDay(dk);save()}pendingDel=null;render();if(db.days[dk]&&db.days[dk].sets.length)daySheet(dk);else{modal('');toast(pretty(dk)+' 기록을 모두 지웠어요.')}}break;
   case 'row-reps':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'),+t.getAttribute('data-r'));break;
   case 'row-edit':if(e)editSheet(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
   case 'es':var inp=document.getElementById(t.getAttribute('data-f')==='w'?'ew':'er'),ex2=exById(rowCtx&&rowCtx.exId);if(inp&&ex2){var n=+t.getAttribute('data-n');inp.value=t.getAttribute('data-f')==='w'?fmt(Math.max(0,(parseFloat(inp.value)||0)+n*ex2.increment)):Math.max(0,(parseInt(inp.value,10)||0)+n)}break;
@@ -893,7 +921,7 @@ document.addEventListener('click',function(ev){
   case 'notif':try{if('Notification' in window)Notification.requestPermission().then(function(){render()})}catch(err){}break;
   case 'nx-type':readNewEx();newEx.type=t.getAttribute('data-v');var tt=NTYPES.filter(function(x){return x[0]===newEx.type})[0];if(tt)newEx.inc=tt[3];renderNewEx();break;
   case 'new-ex':var ctx=t.getAttribute('data-ctx')||'',cid=t.getAttribute('data-c')||(view==='cat'?param:'');picker=null;openNewEx(ctx,cid,'');break;
-  case 'modal-close':case 'modal-bg':picker=null;rowCtx=null;newEx=null;modal('');break;
+  case 'modal-close':case 'modal-bg':picker=null;rowCtx=null;newEx=null;popDay=null;pendingDel=null;modal('');break;
  }
 });
 document.addEventListener('pointerover',function(ev){var gi=ev.target.getAttribute&&ev.target.getAttribute('data-gi');if(gi!=null)showPoint(+gi)});
