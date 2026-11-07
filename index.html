@@ -841,7 +841,7 @@ var newEx=null;
 var NTYPES=[['L','바벨 운동','5×5 · 웜업 4세트',2.5],['D','덤벨·머신','3×8~12 · 웜업 1세트',2],['B','맨몸 운동','3×8~12 · 웜업 없음',2.5],['C','카디오','시간 · 거리 기록',0]];
 function openNewEx(ctx,catId,name){
  if(!db.cats.length){toast('먼저 부위를 하나 만들어 주세요.','err');return}
- newEx={ctx:ctx,cat:catId||db.cats[0].id,name:name||'',type:'D',w:'',inc:2};
+ newEx={ctx:ctx,cat:catId||db.cats[0].id,name:name||'',type:'D',w:'',inc:2,dbf:null};
  renderNewEx();
 }
 function renderNewEx(){
@@ -852,7 +852,8 @@ function renderNewEx(){
   '<div class="lbl">종류 · 세트 방식과 웜업이 정해져요</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+NTYPES.map(function(t){var on=n.type===t[0];return '<button type="button" data-a="nx-type" data-v="'+t[0]+'" aria-pressed="'+on+'" style="min-height:72px;border-radius:14px;border:'+(on?'2px solid var(--ink)':'1px solid #DADDE2')+';background:'+(on?'#F4F5F2':'#fff')+';text-align:left;padding:8px 10px"><div style="font-size:15px;font-weight:700">'+t[1]+'</div><div class="meta" style="font-size:12px">'+t[2]+'</div></button>'}).join('')+'</div>'+
   (n.type==='C'?'':'<div class="btnrow"><div style="display:flex;flex-direction:column;gap:6px"><label for="nx-w" class="lbl">시작 무게 (kg)</label><input id="nx-w" type="number" inputmode="decimal" step="any" min="0" value="'+esc(n.w)+'" placeholder="'+(n.type==='B'?'0 = 맨몸':'예: 20')+'" style="height:52px;width:100%;min-width:0;box-sizing:border-box;border:1px solid #DADDE2;border-radius:12px;text-align:center;font-size:20px;font-weight:700"></div>'+
   '<div style="display:flex;flex-direction:column;gap:6px"><label for="nx-inc" class="lbl">한번에 올릴 무게</label><select id="nx-inc" style="height:52px;width:100%;min-width:0;border:1px solid #DADDE2;border-radius:12px;padding:0 10px;font-size:18px;font-weight:700;background:#fff;text-align:center">'+[1,1.25,2,2.5,5,10].map(function(v){return '<option value="'+v+'"'+(+n.inc===v?' selected':'')+'>'+v+' kg</option>'}).join('')+'</select></div></div>')+
-  '<div class="note">세트 수·횟수·웜업은 만든 뒤 종목 설정에서 언제든 바꿀 수 있어요.</div>'+
+  (n.type==='D'?(function(){var on=n.dbf!=null?n.dbf:/덤벨/.test(n.name||'');return '<div class="lbl">덤벨 종목</div><div class="seg two">'+[['1','예 · 있는 덤벨로 맞춤'],['0','아니요 (머신 등)']].map(function(m){var o=(m[0]==='1')===on;return '<button type="button" data-a="nx-db" data-v="'+m[0]+'" class="'+(o?'on':'')+'" aria-pressed="'+o+'">'+m[1]+'</button>'}).join('')+'</div>'})():'')+
+  '<div class="note">세트 수·횟수·웜업은 만든 뒤 종목 설정에서 언제든 바꿀 수 있어요.'+(n.type==='D'?' 덤벨 종목은 무게를 올릴 때 설정의 "헬스장에 있는 덤벨" 무게로 맞춰요.':'')+'</div>'+
   '<div class="btnrow"><button type="button" class="secondary" data-a="modal-close">취소</button><button type="submit" class="primary">만들기</button></div></form>');
  var ni=document.getElementById('nx-name');if(ni&&!n.name)ni.focus();
 }
@@ -862,7 +863,7 @@ function saveNewEx(){
  if(!name){var ni=document.getElementById('nx-name');if(ni){ni.focus();ni.setAttribute('aria-invalid','true');ni.placeholder='종목 이름을 입력해 주세요'}return}
  var dup=liveEx().filter(function(x){return x.cat===n.cat&&x.name===name})[0];
  var e=dup;
- if(!e){if(n.type==='C'){e=mkCardio(name,n.cat)}else{var w=Math.max(0,parseFloat(n.w)||0),t=n.type==='B'?'D':n.type;e=mkEx(name,n.cat,t,+n.inc||2.5,w);if(n.type==='B'||w<=0)e.warm='none'}db.exercises.push(e)}
+ if(!e){if(n.type==='C'){e=mkCardio(name,n.cat)}else{var w=Math.max(0,parseFloat(n.w)||0),t=n.type==='B'?'D':n.type;e=mkEx(name,n.cat,t,+n.inc||2.5,w);if(n.type==='B'||w<=0)e.warm='none';if(n.type==='D')e.dumbbell=n.dbf!=null?n.dbf:/덤벨/.test(name)}db.exercises.push(e)}
  var where='';
  if(n.ctx==='day'){var d=day(curDate,true);if(d.plan.indexOf(e.id)<0)d.plan.push(e.id);where=(curDate===todayKey()?'오늘':'이날')+' 운동에'}
  else if(n.ctx==='wk'){var wk=wkById(param);if(wk&&wk.exIds.indexOf(e.id)<0)wk.exIds.push(e.id);where='워크아웃에'}
@@ -1007,6 +1008,7 @@ document.addEventListener('click',function(ev){
   case 'plates-save':db.settings.plates=ALLPLATES.filter(function(p){return plateSel[p]});save();modal('');render();break;
   case 'rest-toggle':db.settings.restOn=!db.settings.restOn;if(!db.settings.restOn)stopRest();save();render();break;
   case 'notif':try{if('Notification' in window)Notification.requestPermission().then(function(){render()})}catch(err){}break;
+  case 'nx-db':readNewEx();newEx.dbf=t.getAttribute('data-v')==='1';renderNewEx();break;
   case 'nx-type':readNewEx();newEx.type=t.getAttribute('data-v');var tt=NTYPES.filter(function(x){return x[0]===newEx.type})[0];if(tt)newEx.inc=tt[3];renderNewEx();break;
   case 'new-ex':var ctx=t.getAttribute('data-ctx')||'',cid=t.getAttribute('data-c')||(view==='cat'?param:'');picker=null;openNewEx(ctx,cid,'');break;
   case 'modal-close':case 'modal-bg':picker=null;rowCtx=null;newEx=null;popDay=null;pendingDel=null;modal('');break;
