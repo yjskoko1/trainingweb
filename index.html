@@ -225,14 +225,19 @@ function defaults(){
  var picks={'가슴':['벤치프레스','인클라인 덤벨 프레스','케이블 플라이'],'등':['데드리프트','랫풀다운','시티드 케이블 로우'],'어깨':['오버헤드 프레스','사이드 레터럴 레이즈'],'하체':['스쿼트','레그 프레스','레그 컬'],'이두':['바벨 컬','해머 컬'],'삼두':['트라이셉 푸시다운','오버헤드 트라이셉 익스텐션'],'복근':['행잉 레그 레이즈','케이블 크런치']};
  var ex=[];cats.forEach(function(c){(CATALOG[c.name]||[]).forEach(function(it){if(picks[c.name].indexOf(it[0])>=0)ex.push(mkEx(it[0],c.id,it[1],it[2],it[3]))})});
  var d={v:3,cats:cats,exercises:ex,workouts:[],days:{},body:[],settings:{bar:20,rest:90,restWarm:60,restOn:false},lastBackup:''};
- d.workouts=[mkWk(d,'A · 가슴 등 삼두',['가슴','등','삼두']),mkWk(d,'B · 하체 어깨 이두',['하체','어깨','이두'])];
+ var p={id:'p'+rid(),name:'2분할'};d.programs=[p];d.activeProg=p.id;
+ d.workouts=[mkWk(d,'A · 가슴 등 삼두',['가슴','등','삼두'],p.id),mkWk(d,'B · 하체 어깨 이두',['하체','어깨','이두'],p.id)];
  return d;
 }
-function mkWk(d,name,catNames){var ids=[];catNames.forEach(function(n){d.cats.forEach(function(c){if(c.name===n)d.exercises.forEach(function(e){if(e.cat===c.id&&!e.deleted)ids.push(e.id)})})});return{id:'w'+rid(),name:name,exIds:ids}}
+function mkWk(d,name,catNames,prog){var ids=[];catNames.forEach(function(n){d.cats.forEach(function(c){if(c.name===n)d.exercises.forEach(function(e){if(e.cat===c.id&&!e.deleted)ids.push(e.id)})})});return{id:'w'+rid(),name:name,exIds:ids,prog:prog||''}}
 function catById(id){for(var i=0;i<db.cats.length;i++)if(db.cats[i].id===id)return db.cats[i];return{id:'',name:'기타',color:'#9AA0A8'}}
 function exById(id){for(var i=0;i<db.exercises.length;i++)if(db.exercises[i].id===id)return db.exercises[i];return null}
 function liveEx(){return db.exercises.filter(function(e){return !e.deleted})}
 function wkById(id){for(var i=0;i<db.workouts.length;i++)if(db.workouts[i].id===id)return db.workouts[i];return null}
+function progById(id){for(var i=0;i<db.programs.length;i++)if(db.programs[i].id===id)return db.programs[i];return null}
+function progWks(pid){return db.workouts.filter(function(w){return w.prog===pid})}
+function activeProg(){return progById(db.activeProg)||db.programs[0]||null}
+function activeWks(){var p=activeProg();return p?progWks(p.id):[]}
 function wkEx(w){return w.exIds.map(exById).filter(function(e){return e&&!e.deleted})}
 function day(k,create){if(!db.days[k]&&create)db.days[k]={date:k,workout:'',plan:[],sets:[],wo:{}};var d=db.days[k];if(d){d.plan=d.plan||[];d.sets=d.sets||[];d.wo=d.wo||{}}return d}
 function cleanDay(k){var d=db.days[k];if(d&&!d.sets.length&&!d.plan.length)delete db.days[k]}
@@ -298,7 +303,7 @@ function oneRM(exId){
 }
 function rmTxt(v){return String(Math.round(v*2)/2)}
 function prIds(exId){var best=0,ids={},all=[];sortedDates().forEach(function(k){setsOn(k,exId,false).forEach(function(s){all.push(s)})});all.sort(byTs);all.forEach(function(s){var v=e1rm(s.w,s.r);if(s.w>0&&v>best+1e-9){best=v;ids[s.id]=1}});return ids}
-function nextWk(before){var l=db.workouts;if(!l.length)return null;var last=null;sortedDates().forEach(function(k){var d=db.days[k];if(k<before&&d.workout&&d.done&&wkById(d.workout))last=d.workout});if(!last)return l[0];return l[(l.indexOf(wkById(last))+1)%l.length]}
+function nextWk(before,pid){var l=pid?progWks(pid):activeWks();if(!l.length)return null;var last=null;sortedDates().forEach(function(k){var d=db.days[k];if(k<before&&d.workout&&d.done&&wkById(d.workout))last=d.workout});if(!last)return l[0];return l[(l.indexOf(wkById(last))+1)%l.length]}
 function dayOrder(k){
  var d=db.days[k],order=[];if(!d)return order;
  d.plan.forEach(function(id){var x=exById(id);if(x&&!x.deleted&&order.indexOf(id)<0)order.push(id)});
@@ -351,10 +356,11 @@ function vToday(){
  if(!isToday)h+='<div class="banner"><span>'+esc(pretty(k))+' 기록을 보고 있어요.</span><button class="ghost" data-a="to-today">오늘로</button></div>';
  if(!order.length){
   var nx=nextWk(k);
-  if(db.workouts.length){
-   h+='<div class="sectitle">오늘 할 워크아웃</div>'+db.workouts.map(function(w){return wkBtn(w,nx)}).join('');
+  var ap=activeProg(),aw=activeWks();
+  if(aw.length){
+   h+='<div class="sectitle" style="justify-content:space-between"><span>오늘 할 워크아웃 · '+esc(ap.name)+'</span><a href="#plan" class="meta" style="font-weight:500">루틴 바꾸기</a></div>'+aw.map(function(w){return wkBtn(w,nx)}).join('');
    h+='<div class="note">누르면 워크아웃 종목이 한 번에 들어가요. 운동을 마치고 <b>운동 완료</b>를 누르면 다음 차례로 넘어가요.</div>';
-  }else h+='<div class="card"><div class="empty" style="padding:12px">워크아웃이 없어요.<br>운동 관리 탭에서 워크아웃을 만들어 두면 한 번에 불러올 수 있어요.</div></div>';
+  }else h+='<div class="card"><div class="empty" style="padding:12px">사용 중인 루틴에 워크아웃이 없어요.<br>운동 관리 → 루틴에서 만들어 두면 한 번에 불러올 수 있어요.</div></div>';
   h+='<button class="secondary" data-a="add-ex">종목 직접 고르기</button></main>';
   return h;
  }
@@ -483,12 +489,16 @@ function vExEdit(){
 
 /* =============== view: plan (workouts + exercises) =============== */
 function vPlan(){
- var h=hdr('운동 관리',planTab==='wk'?'워크아웃: 종목 묶음':'종목: 부위별 목록',null,'<button class="icon" data-a="'+(planTab==='wk'?'wk-new':'cat-new')+'" aria-label="'+(planTab==='wk'?'워크아웃 추가':'부위 추가')+'">'+I.plus+'</button>')+'<main>';
- h+='<div class="tabs3 two" role="tablist">'+[['wk','워크아웃'],['ex','종목']].map(function(t){return '<button role="tab" aria-selected="'+(planTab===t[0])+'" class="'+(planTab===t[0]?'on':'')+'" data-a="ptab" data-v="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div>';
+ var h=hdr('운동 관리',planTab==='wk'?'루틴: 분할 방식과 워크아웃':'종목: 부위별 목록',null,'<button class="icon" data-a="'+(planTab==='wk'?'prog-new':'cat-new')+'" aria-label="'+(planTab==='wk'?'루틴 추가':'부위 추가')+'">'+I.plus+'</button>')+'<main>';
+ h+='<div class="tabs3 two" role="tablist">'+[['wk','루틴'],['ex','종목']].map(function(t){return '<button role="tab" aria-selected="'+(planTab===t[0])+'" class="'+(planTab===t[0]?'on':'')+'" data-a="ptab" data-v="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div>';
  if(planTab==='wk'){
-  if(!db.workouts.length)h+='<div class="card"><div class="empty">워크아웃이 없어요. 오른쪽 위 + 로 만들어 보세요.</div></div>';
-  else{var nx=nextWk(addDays(todayKey(),1)),L=db.workouts.length;h+='<div class="list" data-sortable="wkl">'+db.workouts.map(function(w,i){var ex=wkEx(w),cs=[];ex.forEach(function(e){var c=catById(e.cat);if(cs.indexOf(c)<0)cs.push(c)});return '<div class="li" data-i="'+i+'"><button class="drag" aria-label="'+esc(w.name)+' 순서 옮기기 (끌거나 위아래 화살표 키)">'+I.grip+'</button><a href="#wk-'+esc(w.id)+'" style="flex:1;min-width:0;text-decoration:none;color:inherit;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px"><div style="min-width:0"><div class="t">'+(i+1)+'. '+esc(w.name)+(nx===w?' <span class="tag">다음 차례</span>':'')+'</div><div class="meta">'+ex.length+'개 종목 · '+cs.map(function(c){return '<span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)}).join(' ')+'</div></div>'+I.chev+'</a></div>'}).join('')+'</div>'}
-  h+='<div class="note">워크아웃은 목록 순서대로 돌아가며 "다음 차례"가 돼요. 왼쪽 점 6개를 잡고 끌면 순서를 바꿀 수 있어요. 오늘 탭에서 운동을 마치고 <b>운동 완료</b>를 누르면 다음 차례로 넘어가요.</div>';
+  if(!db.programs.length)h+='<div class="card"><div class="empty">루틴이 없어요. 오른쪽 위 + 로 만들어 보세요.</div></div>';
+  db.programs.forEach(function(p){
+   var l=progWks(p.id),on=p.id===db.activeProg,nx=on?nextWk(addDays(todayKey(),1),p.id):null;
+   h+='<a class="card" href="#prog-'+esc(p.id)+'" style="text-decoration:none;color:inherit;gap:8px;border:2px solid '+(on?'var(--ink)':'transparent')+'"><div class="row"><div class="name">'+esc(p.name)+'</div>'+(on?'<span class="tag">사용 중</span>':I.chev)+'</div>'+
+    (l.length?l.map(function(w){var cs=[];wkEx(w).forEach(function(e){var c=catById(e.cat);if(cs.indexOf(c)<0)cs.push(c)});return '<div class="row" style="justify-content:flex-start;gap:8px;font-size:14px"><b style="min-width:0">'+esc(w.name)+'</b><span class="meta">'+wkEx(w).length+'개</span>'+(nx===w?'<span class="badge b-new" style="padding:2px 8px">다음 차례</span>':'')+'</div>'}).join(''):'<div class="meta">워크아웃 없음</div>')+'</a>';
+  });
+  h+='<div class="note"><b>루틴</b>은 2분할·3분할 같은 운동 방식이고, 그 안의 <b>워크아웃</b>(A, B, C…)을 순서대로 돌아가며 해요. 사용 중인 루틴 하나만 오늘 탭에 나와요. 루틴을 바꿔도 다른 루틴과 기록은 그대로 남아요.</div>';
   return h+'</main>';
  }
  h+='<button class="primary" data-a="new-ex">+ 새 종목 직접 만들기</button>';
@@ -498,6 +508,20 @@ function vPlan(){
  return h+'<div class="note">부위를 누르면 종목을 추가하거나 지울 수 있어요. 오른쪽 위 + 로 부위도 추가할 수 있어요.</div></main>';
 }
 function exRow(e){var st=progress(e,addDays(todayKey(),1)),c=catById(e.cat),rm=oneRM(e.id);return '<a class="li" href="#ex-'+esc(e.id)+'"><div style="min-width:0"><div class="t">'+esc(e.name)+'</div><div class="meta"><span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)+' · '+planText(plan(e))+(rm?' · 1RM '+rmTxt(rm.best.v)+'kg':'')+'</div></div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:900;white-space:nowrap">'+(st.t>0?fmt(st.t)+'<small class="meta"> kg</small>':'맨몸')+'</span>'+I.chev+'</div></a>'}
+function vProg(){
+ var p=progById(param);if(!p)return vPlan();
+ var l=progWks(p.id),on=p.id===db.activeProg,nx=nextWk(addDays(todayKey(),1),p.id);
+ var h=hdr(esc(p.name),on?'사용 중인 루틴':'루틴',backBtn('#plan'))+'<main>';
+ h+='<div class="list"><div class="field"><label for="pn">루틴 이름</label><input id="pn" type="text" maxlength="20" value="'+esc(p.name)+'" data-prog="name"></div></div>';
+ if(!on)h+='<button class="primary" data-a="prog-use" data-id="'+esc(p.id)+'">이 루틴 사용하기</button>';
+ h+='<div class="sectitle">워크아웃 '+l.length+'개 · 이 순서대로 돌아가요 · 점 6개를 끌어 순서 변경</div>';
+ h+=l.length?'<div class="list" data-sortable="wkl">'+l.map(function(w,i){var ex=wkEx(w),cs=[];ex.forEach(function(e){var c=catById(e.cat);if(cs.indexOf(c)<0)cs.push(c)});return '<div class="li" data-i="'+i+'"><button class="drag" aria-label="'+esc(w.name)+' 순서 옮기기 (끌거나 위아래 화살표 키)">'+I.grip+'</button><a href="#wk-'+esc(w.id)+'" style="flex:1;min-width:0;text-decoration:none;color:inherit;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px"><div style="min-width:0"><div class="t">'+esc(w.name)+(on&&nx===w?' <span class="tag">다음 차례</span>':'')+'</div><div class="meta">'+ex.length+'개 종목 · '+cs.map(function(c){return '<span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)}).join(' ')+'</div></div>'+I.chev+'</a></div>'}).join('')+'</div>':'<div class="card"><div class="empty">워크아웃을 추가해 주세요.</div></div>';
+ h+='<button class="secondary" data-a="wk-new">+ 워크아웃 추가</button>';
+ h+='<button class="danger" data-a="prog-del">이 루틴 삭제</button></main>';
+ return h;
+}
+var PTEMPL=[['empty','빈 루틴','워크아웃을 직접 만들어요',[]],['2','2분할','A 가슴·등·삼두 / B 하체·어깨·이두',[['A · 가슴 등 삼두',['가슴','등','삼두']],['B · 하체 어깨 이두',['하체','어깨','이두']]]],['3','3분할','A 가슴·삼두 / B 등·이두 / C 하체·어깨',[['A · 가슴 삼두',['가슴','삼두']],['B · 등 이두',['등','이두']],['C · 하체 어깨',['하체','어깨']]]],['4','4분할','A 가슴 / B 등 / C 하체 / D 어깨·팔',[['A · 가슴',['가슴']],['B · 등',['등']],['C · 하체',['하체']],['D · 어깨 팔',['어깨','이두','삼두']]]]];
+function progSheet(){modal('<h2>새 루틴</h2><div class="meta">틀을 고르면 워크아웃이 미리 채워져요. 만든 뒤에 이름과 종목을 바꿀 수 있어요.</div>'+PTEMPL.map(function(t){return '<button class="wkbtn" data-a="prog-make" data-v="'+t[0]+'"><div><div class="t">'+t[1]+'</div><div class="meta">'+t[2]+'</div></div>'+I.chev+'</button>'}).join('')+'<button class="secondary" data-a="modal-close">취소</button>')}
 function vCat(){
  var c=catById(param);if(!c.id)return vPlan();
  var list=liveEx().filter(function(e){return e.cat===c.id});
@@ -511,7 +535,7 @@ function vCat(){
 function vWk(){
  var w=wkById(param);if(!w)return vPlan();
  var ex=wkEx(w);
- var h=hdr(esc(w.name),'워크아웃 편집',backBtn('#plan'))+'<main>';
+ var pw=progById(w.prog);var h=hdr(esc(w.name),'워크아웃 편집'+(pw?' · '+esc(pw.name):''),backBtn(pw?'#prog-'+esc(pw.id):'#plan'))+'<main>';
  h+='<div class="list"><div class="field"><label for="wn">이름</label><input id="wn" type="text" maxlength="30" value="'+esc(w.name)+'" data-wk="name"></div></div>';
  h+='<div class="sectitle">종목 '+ex.length+'개 · 이 순서대로 나와요 · 점 6개를 잡고 끌어서 순서 변경</div>';
  h+=ex.length?'<div class="list" data-sortable="wke">'+ex.map(function(e,i){var c=catById(e.cat);return '<div class="li" data-i="'+i+'"><button class="drag" aria-label="'+esc(e.name)+' 순서 옮기기 (끌거나 위아래 화살표 키)">'+I.grip+'</button><div style="min-width:0;flex:1"><div class="t">'+esc(e.name)+'</div><div class="meta"><span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)+'</div></div><div style="display:flex;gap:6px"><button class="mini" data-a="wk-rm" data-n="'+i+'" aria-label="'+esc(e.name)+' 빼기" style="background:var(--redBg);color:var(--red)">✕</button></div></div>'}).join('')+'</div>':'<div class="card"><div class="empty">종목을 추가해 주세요.</div></div>';
@@ -561,6 +585,7 @@ function vGuide(){
   ['','최근 1RM','가장 최근 운동한 날 기준 값이에요. 추정 1RM보다 많이 낮으면 컨디션이나 회복을 점검해 보세요.'],
   ['','참고','15회가 넘는 세트는 정확도가 떨어져서 계산에서 빼요. 실제로 1RM을 시도할 때는 보조자와 함께 하세요.']
  ]);
+ h+=sec('루틴과 워크아웃',[['','루틴','2분할·3분할 같은 운동 방식이에요. 여러 개 만들어 두고 하나를 골라 사용해요.'],['','워크아웃','루틴 안의 하루치 운동(A, B, C…)이에요. 순서대로 돌아가며 "다음 차례"가 되고, 오늘 탭에서 <b>운동 완료</b>를 눌러야 다음 차례로 넘어가요.']]);
  h+=sec('휴식',[['','휴식 타이머','내 정보 → 설정에서 켜고 끌 수 있어요(처음엔 꺼져 있어요). 켜면 세트를 체크할 때 자동으로 시작하고, 시간은 설정과 종목 설정에서 바꿀 수 있어요.']]);
  return h+'</main>';
 }
@@ -604,12 +629,12 @@ function render(){
  if(!db)return;
  graphData=null;
  var h;
- switch(view){case 'ex':h=vEx();break;case 'exedit':h=vExEdit();break;case 'cal':h=vCal();break;case 'plan':h=vPlan();break;case 'cat':h=vCat();break;case 'wk':h=vWk();break;case 'me':h=vMe();break;case 'guide':h=vGuide();break;default:h=vToday()}
+ switch(view){case 'ex':h=vEx();break;case 'exedit':h=vExEdit();break;case 'cal':h=vCal();break;case 'plan':h=vPlan();break;case 'cat':h=vCat();break;case 'wk':h=vWk();break;case 'prog':h=vProg();break;case 'me':h=vMe();break;case 'guide':h=vGuide();break;default:h=vToday()}
  if(toasts.length){var tt=toasts.map(function(t){return '<div class="toast '+t.k+'" role="'+(t.k==='err'?'alert':'status')+'">'+esc(t.m)+'</div>'}).join('');h=h.replace('<main>','<main>'+tt);toasts=[]}
  var app=document.getElementById('app'),act=document.activeElement,aid=act&&act.id;
  app.innerHTML=h;
  if(aid==='sq'){var s=document.getElementById('sq');if(s){s.focus();var L=s.value.length;try{s.setSelectionRange(L,L)}catch(e){}}}
- var tab={today:'today',ex:'today',exedit:'today',cal:'cal',plan:'plan',cat:'plan',wk:'plan',me:'me',guide:'me'}[view]||'today';
+ var tab={today:'today',ex:'today',exedit:'today',cal:'cal',plan:'plan',cat:'plan',wk:'plan',prog:'plan',me:'me',guide:'me'}[view]||'today';
  Array.prototype.forEach.call(document.querySelectorAll('nav.tabs a'),function(a){var on=a.getAttribute('data-tab')===tab;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
  syncWake();
 }
@@ -747,15 +772,22 @@ function restoreFrom(text){
  var n=normalize(o);if(!n){toast('이 앱의 백업이 아니에요.','err');return}
  db=n;save();modal('');toast('복원했어요.');go('#today');
 }
+/* 루틴이 없던 예전 데이터: 워크아웃들을 하나의 루틴으로 묶어요 */
+function ensureProgs(o){
+ o.programs=o.programs||[];
+ var orphan=o.workouts.filter(function(w){return !w.prog||!o.programs.some(function(p){return p.id===w.prog})});
+ if(orphan.length){var p={id:'p'+rid(),name:orphan.length===2?'2분할':orphan.length===3?'3분할':'내 루틴'};o.programs.push(p);orphan.forEach(function(w){w.prog=p.id})}
+ if(!o.activeProg||!o.programs.some(function(p){return p.id===o.activeProg}))o.activeProg=o.programs[0]?o.programs[0].id:'';
+}
 /* v3 백업 또는 이전 아티팩트 버전(v2) 백업을 받아들임 */
 function normalize(o){
- if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.settings=Object.assign({bar:20,rest:90,restWarm:60,restOn:false},o.settings||{});return o}
+ if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.settings=Object.assign({bar:20,rest:90,restWarm:60,restOn:false},o.settings||{});ensureProgs(o);return o}
  if(o&&o.app==='hc'&&o.cfg&&Array.isArray(o.cfg.exercises)){
   var c=o.cfg,d={v:3,cats:(c.categories||[]).map(function(x){return{id:x.id,name:x.name,color:x.color}}),exercises:[],workouts:(c.routines||[]).map(function(r){return{id:r.id,name:r.name,exIds:r.exIds||[]}}),days:{},body:(o.body&&o.body.entries)||[],settings:{bar:20,rest:(c.settings&&c.settings.rest)||90,restWarm:60,restOn:false},lastBackup:''};
   c.exercises.forEach(function(e){var lin=e.method!=='double';d.exercises.push({id:e.id,name:e.name,cat:e.cat,method:lin?'linear':'double',sets:e.method==='gzclp'?5:(e.sets||3),repsMin:e.method==='gzclp'?3:(e.repsMin||8),repsMax:e.method==='gzclp'?3:(e.repsMax||12),increment:e.increment||2.5,startWeight:+e.startWeight||0,anchor:e.anchor||'',warm:(+e.startWeight||0)>0?(lin?'full':'light'):'none',failLimit:e.failLimit||3,deloadPct:e.deloadPct==null?10:e.deloadPct,rest:e.rest||0,deleted:!!e.deleted})});
   Object.keys(o.days||{}).forEach(function(k){var x=o.days[k];if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!x)return;d.days[k]={date:k,workout:x.workout||'',plan:x.plan||[],sets:(x.sets||[]).map(function(s){return{id:s.id||rid(),exId:s.exId,w:+s.w||0,r:+s.r||0,warm:false,ts:s.ts||0}}),wo:{}}});
   if(!d.cats.length)return null;
-  return d;
+  ensureProgs(d);return d;
  }
  return null;
 }
@@ -790,16 +822,21 @@ document.addEventListener('click',function(ev){
   case 'day-done-ok':modal('');finishDay();break;
   case 'day-undone':var du=db.days[curDate];if(du){delete du.done;save();render()}break;
   case 'wkl-up':case 'wkl-down':var wi=+t.getAttribute('data-n'),wj=a==='wkl-up'?wi-1:wi+1;if(wj>=0&&wj<db.workouts.length){var wt=db.workouts[wi];db.workouts[wi]=db.workouts[wj];db.workouts[wj]=wt;save();render()}break;
-  case 'wk-sheet':var nx=nextWk(curDate);modal('<h2>워크아웃 불러오기</h2><div class="meta">이미 들어간 종목은 그대로 두고 없는 종목만 더해요.</div>'+db.workouts.map(function(w){return wkBtn(w,nx)}).join('')+(db.workouts.length?'':'<div class="empty">워크아웃이 없어요.</div>')+'<button class="secondary" data-a="modal-close">닫기</button>');break;
+  case 'wk-sheet':var nx=nextWk(curDate);modal('<h2>워크아웃 불러오기</h2><div class="meta">이미 들어간 종목은 그대로 두고 없는 종목만 더해요.</div>'+db.programs.map(function(p){var l=progWks(p.id);if(!l.length)return '';var nxp=nextWk(curDate,p.id);return '<div class="sectitle">'+esc(p.name)+(p.id===db.activeProg?' <span class="tag" style="margin-left:6px">사용 중</span>':'')+'</div>'+l.map(function(w){return wkBtn(w,nxp)}).join('')}).join('')+(db.workouts.length?'':'<div class="empty">워크아웃이 없어요.</div>')+'<button class="secondary" data-a="modal-close">닫기</button>');break;
   case 'add-ex':openPicker('day');break;
   case 'wk-pick':openPicker('wk');break;
   case 'pick-t':if(picker)setPick(t,!picker.sel[id]);break;
   case 'pick-all':if(picker){var cc=t.getAttribute('data-c'),btns=document.querySelectorAll('.pick[data-c="'+cc+'"]'),allOn=Array.prototype.every.call(btns,function(b){return picker.sel[b.getAttribute('data-id')]});Array.prototype.forEach.call(btns,function(b){setPick(b,!allOn)})}break;
   case 'pick-save':if(picker)savePicker();break;
-  case 'wk-new':var nw={id:'w'+rid(),name:'워크아웃 '+String.fromCharCode(65+db.workouts.length%26),exIds:[]};db.workouts.push(nw);save();go('#wk-'+nw.id);break;
+  case 'wk-new':if(view!=='prog')break;var nw={id:'w'+rid(),name:String.fromCharCode(65+progWks(param).length%26)+' · 새 워크아웃',exIds:[],prog:param};db.workouts.push(nw);save();go('#wk-'+nw.id);break;
+  case 'prog-new':progSheet();break;
+  case 'prog-make':var tp=PTEMPL.filter(function(x){return x[0]===t.getAttribute('data-v')})[0];if(tp){var np={id:'p'+rid(),name:tp[0]==='empty'?'새 루틴':tp[1]};db.programs.push(np);tp[3].forEach(function(x){db.workouts.push(mkWk(db,x[0],x[1],np.id))});if(!db.activeProg)db.activeProg=np.id;save();modal('');go('#prog-'+np.id)}break;
+  case 'prog-use':db.activeProg=id;save();var pu=progById(id);toast((pu?pu.name:'루틴')+'을(를) 사용해요. 오늘 탭에 이 루틴의 워크아웃이 나와요.');break;
+  case 'prog-del':var pd=progById(param);if(pd)confirmSheet(esc(pd.name)+' 삭제','이 루틴과 안의 워크아웃 '+progWks(pd.id).length+'개가 지워져요. 종목과 운동 기록은 그대로 남아요.','삭제','prog-del-ok',pd.id);break;
+  case 'prog-del-ok':db.workouts=db.workouts.filter(function(x){return x.prog!==id});db.programs=db.programs.filter(function(x){return x.id!==id});if(db.activeProg===id)db.activeProg=db.programs[0]?db.programs[0].id:'';save();modal('');go('#plan');break;
   case 'wk-up':case 'wk-down':case 'wk-rm':var ww=wkById(param);if(ww){var live=wkEx(ww).map(function(x){return x.id}),ni=+t.getAttribute('data-n');if(a==='wk-rm')live.splice(ni,1);else{var j=a==='wk-up'?ni-1:ni+1;if(j>=0&&j<live.length){var tmp=live[ni];live[ni]=live[j];live[j]=tmp}}ww.exIds=live;save();render()}break;
   case 'wk-del':var wd=wkById(param);if(wd)confirmSheet(esc(wd.name)+' 삭제','워크아웃만 지워지고 종목과 기록은 그대로예요.','삭제','wk-del-ok',wd.id);break;
-  case 'wk-del-ok':db.workouts=db.workouts.filter(function(x){return x.id!==id});save();modal('');go('#plan');break;
+  case 'wk-del-ok':var wdo=wkById(id),wpr=wdo?wdo.prog:'';db.workouts=db.workouts.filter(function(x){return x.id!==id});save();modal('');go(wpr?'#prog-'+wpr:'#plan');break;
   case 'rec-add':var c1=catById(param),it=(CATALOG[c1.name]||[]).filter(function(x){return x[0]===t.getAttribute('data-n')})[0];if(it){db.exercises.push(mkEx(it[0],c1.id,it[1],it[2],it[3]));save();toast(it[0]+' 추가했어요.')}break;
   case 'cat-new':catEdit={id:null,name:'',color:COLORS[db.cats.length%COLORS.length]};catSheet();break;
   case 'cat-edit':var ce=catById(id);catEdit={id:ce.id,name:ce.name,color:ce.color};catSheet();break;
@@ -826,6 +863,7 @@ document.addEventListener('pointerover',function(ev){var gi=ev.target.getAttribu
 document.addEventListener('input',function(ev){
  var el=ev.target;
  if(el.id==='sq'){catQuery=el.value.trim();render();return}
+ if(el.getAttribute('data-prog')==='name'){var pn=progById(param);if(pn){pn.name=el.value.trim().slice(0,20)||'루틴';save()}return}
  if(el.getAttribute('data-wk')==='name'){var wn=wkById(param);if(wn){wn.name=el.value.trim().slice(0,30)||'워크아웃';save()}return}
  if(el.getAttribute('data-s')==='bar'){var v=parseFloat(el.value);if(v>=0){db.settings.bar=v;save()}return}
  if(el.getAttribute('data-s')==='rest'||el.getAttribute('data-s')==='restWarm'){var v2=Math.round(parseFloat(el.value));if(v2>=0){db.settings[el.getAttribute('data-s')]=v2;save()}return}
@@ -860,7 +898,7 @@ document.addEventListener('submit',function(ev){
 /* =============== drag to reorder =============== */
 function moveItem(kind,from,to){
  if(from===to)return;
- if(kind==='wkl'){var a=db.workouts.splice(from,1)[0];db.workouts.splice(to,0,a)}
+ if(kind==='wkl'){var pl=progWks(param),a=pl.splice(from,1)[0];pl.splice(to,0,a);db.workouts=db.workouts.filter(function(x){return x.prog!==param}).concat(pl)}
  else if(kind==='wke'){var w=wkById(param);if(!w)return;var live=wkEx(w).map(function(x){return x.id});var b=live.splice(from,1)[0];live.splice(to,0,b);w.exIds=live}
  save();render();
 }
@@ -907,6 +945,7 @@ function route(hash){
  if(!(view==='exedit'&&h.indexOf('exedit-')===0))editBuf=null;
  if(h==='plan'){view='plan'}
  else if((m=h.match(/^wk-(.+)$/))){view='wk';param=m[1]}
+ else if((m=h.match(/^prog-(.+)$/))){view='prog';param=m[1]}
  else if((m=h.match(/^cat-(.+)$/))){view='cat';param=m[1]}
  else if((m=h.match(/^exedit-(.+)$/))){view='exedit';param=m[1]}
  else if((m=h.match(/^ex-(.+)$/))){if(view!=='ex'||param!==m[1])exTab='today';view='ex';param=m[1]}
