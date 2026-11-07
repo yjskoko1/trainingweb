@@ -3,7 +3,7 @@
   "short_name": "트레이닝웹",
   "description": "웜업과 본세트를 자동으로 정해 주는 헬스 기록",
   "lang": "ko",
-  "start_url": "./#today",
+  "start_url": "./#home",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
