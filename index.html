@@ -293,10 +293,10 @@ function plateTxt(w){
  var bar=db.settings.bar||20,pl=(db.settings.plates||[]).slice().sort(function(a,b){return b-a});
  if(w<bar)return 'EACH SIDE – (빈 봉 '+fmt(bar)+'kg보다 가벼움)';
  var per=fix((w-bar)/2),left=per,parts=[];
- pl.forEach(function(p){var n=Math.floor((left+1e-9)/p);if(n>0){parts.push(n>1?fmt(p)+'×'+n:fmt(p));left=fix(left-n*p)}});
- var t='EACH SIDE '+fmt(per)+'kg';
- if(per>0&&parts.length&&!(parts.length===1&&parts[0]===fmt(per)))t+=' · '+parts.join(' + ');
- if(left>0.001)t+=' ('+fmt(left)+'kg 원판 없음)';
+ if(per<=0)return 'EACH SIDE 0kg';
+ pl.forEach(function(p){var n=Math.floor((left+1e-9)/p);for(var i=0;i<n;i++)parts.push(fmt(p)+'kg');left=fix(left-n*p)});
+ var t='EACH SIDE '+parts.join(' + ');
+ if(left>0.001)t+=(parts.length?' ':'')+'('+fmt(left)+'kg 원판 없음)';
  return t;
 }
 function warmups(e,W){
