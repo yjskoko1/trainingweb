@@ -781,10 +781,17 @@ document.addEventListener('pointerdown',function(ev){var el=ev.target.closest&&e
 document.addEventListener('pointermove',function(ev){if(!sw)return;var dx=ev.clientX-sw.x0,dy=ev.clientY-sw.y0;if(!sw.on){if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy))sw.on=true;else if(Math.abs(dy)>10){sw=null;return}else return}sw.dx=Math.min(0,dx);sw.el.style.transform='translateX('+sw.dx+'px)'});
 function swEnd(){if(!sw)return;var s=sw;sw=null;s.el.classList.add('anim');var w=s.el.offsetWidth||300;if(s.on&&s.dx<-Math.min(110,w*0.3)){s.el.style.transform='translateX(-'+w+'px)';var id=s.el.getAttribute('data-swipe');setTimeout(function(){askDayDel(id)},180)}else s.el.style.transform=''}
 document.addEventListener('pointerup',swEnd);document.addEventListener('pointercancel',swEnd);
-function startWk(id){
- var w=wkById(id);if(!w)return;var k=curDate,d=day(k,true);
- wkEx(w).forEach(function(e){if(d.plan.indexOf(e.id)<0)d.plan.push(e.id)});
- d.workout=w.id;save();modal('');toasts.push({m:w.name+' · '+wkEx(w).length+'개 종목을 불러왔어요.',k:'ok'});go('#today');
+function startWk(id,force){
+ var w=wkById(id);if(!w)return;var k=curDate,cur=dayOrder(k);
+ var all=wkEx(w),dup=all.filter(function(e){return cur.indexOf(e.id)>=0}),add=all.filter(function(e){return cur.indexOf(e.id)<0});
+ if(dup.length&&!force){
+  var names='<div style="background:#F4F5F2;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.7">'+dup.map(function(e){return esc(e.name)}).join('<br>')+'</div>';
+  if(!add.length)modal('<h2>이미 모두 들어 있어요</h2><div class="meta" style="line-height:1.6">'+esc(w.name)+'의 종목 '+all.length+'개가 모두 오늘 목록에 있어요.</div>'+names+'<button class="primary" data-a="modal-close">확인</button>');
+  else modal('<h2>중복 종목이 '+dup.length+'개 있어요</h2><div class="meta" style="line-height:1.6">아래 종목은 이미 오늘 목록에 있어서 한 번만 들어가요. 나머지 <b>'+add.length+'개</b>를 추가할까요?</div>'+names+'<div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="wk-start-force" data-id="'+esc(w.id)+'">추가하기</button></div>');
+  return;
+ }
+ var d=day(k,true);add.forEach(function(e){d.plan.push(e.id)});
+ d.workout=w.id;save();modal('');toasts.push({m:w.name+' · '+add.length+'개 종목을 불러왔어요.'+(dup.length?' (중복 '+dup.length+'개 제외)':''),k:'ok'});go('#today');
 }
 function openPicker(mode){
  picker={mode:mode,sel:{}};
@@ -928,6 +935,7 @@ document.addEventListener('click',function(ev){
   case 'rest-add':rest.end+=30000;tickRest();break;
   case 'rest-stop':stopRest();break;
   case 'wk-start':startWk(id);break;
+  case 'wk-start-force':startWk(id,true);break;
   case 'day-done':var dd0=db.days[curDate];if(dd0){var left=dayOrder(curDate).map(exById).filter(function(x){return x&&!x.deleted&&!exStatus(x,curDate).done}).length;if(left){confirmSheet('아직 안 끝난 종목이 '+left+'개 있어요','그래도 오늘 운동을 완료할까요? 남은 종목은 기록된 만큼만 저장돼요.','완료하기','day-done-ok','')}else finishDay()}break;
   case 'day-done-ok':modal('');finishDay();break;
   case 'day-undone':var du=db.days[curDate];if(du){delete du.done;save();render()}break;
