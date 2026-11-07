@@ -276,15 +276,16 @@ function progress(e,before){
  return st;
 }
 function isBarbell(e){return e.barbell!=null?!!e.barbell:e.warm==='full'}
-var ALLPLATES=[25,20,15,10,5,2.5,2,1.25,1,0.5];
+var ALLPLATES=[50,25,20,15,10,5,2.5,2,1.25,1,0.5,0.25];
 function plateTxt(w){
  var bar=db.settings.bar||20,pl=(db.settings.plates||[]).slice().sort(function(a,b){return b-a});
- if(w<=bar)return w<bar?'빈 봉('+fmt(bar)+'kg)보다 가벼워요':'빈 봉';
+ if(w<bar)return 'EACH SIDE – (빈 봉 '+fmt(bar)+'kg보다 가벼움)';
  var per=fix((w-bar)/2),left=per,parts=[];
  pl.forEach(function(p){var n=Math.floor((left+1e-9)/p);if(n>0){parts.push(n>1?fmt(p)+'×'+n:fmt(p));left=fix(left-n*p)}});
- var t=parts.length?'한쪽 '+parts.join(' + '):'';
- if(left>0.001)t+=(t?' ':'')+'(한쪽 '+fmt(left)+'kg 모자람)';
- return t||'한쪽 '+fmt(per)+'kg';
+ var t='EACH SIDE '+fmt(per)+'kg';
+ if(per>0&&parts.length&&!(parts.length===1&&parts[0]===fmt(per)))t+=' · '+parts.join(' + ');
+ if(left>0.001)t+=' ('+fmt(left)+'kg 원판 없음)';
+ return t;
 }
 function warmups(e,W){
  if(e.warm==='none'||W<=0)return[];
@@ -419,7 +420,7 @@ function vSets(e,k,order,pos){
  var badge=r.custom?'<span class="badge b-keep">직접 바꿈</span>':st.res==='up'?'<span class="badge b-up">▲ '+fmt(e.increment)+'kg 증량</span>':st.res==='down'?'<span class="badge b-down">▼ 무게 내림</span>':st.res==='new'?'<span class="badge b-new">첫 기록</span>':'<span class="badge b-keep">유지</span>';
  var h='<div class="rx'+cls+'"><div class="row"><span style="font-size:13px;opacity:.85">'+(k===todayKey()?'오늘':esc(short(k)))+' 본세트</span>'+badge+'</div>'+
   '<div class="big">'+(r.W>0?fmt(r.W)+'kg':'맨몸')+' <small>× '+(r.p.min===r.p.max?r.p.max:r.work.map(function(w){return w.r}).join('/'))+'회 × '+r.p.sets+'세트</small></div>'+
-  (isBarbell(e)&&r.W>0?'<div class="why" style="font-weight:700;opacity:1">'+plateTxt(r.W)+' (빈 봉 '+fmt(db.settings.bar)+'kg)</div>':'')+
+  (isBarbell(e)&&r.W>0?'<div class="why" style="font-weight:700;opacity:1">'+plateTxt(r.W)+'</div>':'')+
   '<div class="why">'+(r.custom?'오늘 무게를 직접 '+fmt(r.W)+'kg으로 바꿨어요. (추천 '+fmt(st.t)+'kg)':esc(st.why))+'</div>'+
   '<div style="display:flex;gap:8px;padding-top:4px;flex-wrap:wrap"><a class="ghost" href="#guide" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85;display:inline-flex;align-items:center;text-decoration:none">규칙 보기</a><button class="ghost" data-a="w-change" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85">오늘 무게 바꾸기</button>'+(r.custom?'<button class="ghost" data-a="w-reset" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85">추천대로</button>':'')+'</div></div>';
  var rm=oneRM(e.id);
@@ -441,7 +442,7 @@ function vSets(e,k,order,pos){
   var v=rw.done||rw.plan,isNext=nextKey===rw.type+rw.i;
   var pct=rw.type==='warm'&&r.W>0&&!rw.done?Math.round(rw.plan.w/r.W*100):null;
   return '<div class="srow'+(rw.done?' done':'')+(isNext?' next':'')+'"><span class="no">'+rw.label+'</span>'+
-   '<button class="val" data-a="row-edit" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-label="'+rw.label+' 세트 무게·횟수 고치기"><b>'+fmt(v.w)+'</b>kg × <b>'+v.r+'</b>회'+(pct!=null?'<small>'+(rw.plan.w===db.settings.bar&&rw.i===0?'빈 봉':pct+'%')+'</small>':'')+(rw.done&&pr[rw.done.id]?I.trophy:'')+(isBarbell(e)&&v.w>(db.settings.bar||20)?'<span class="plates">'+plateTxt(v.w)+'</span>':'')+'</button>'+
+   '<button class="val" data-a="row-edit" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-label="'+rw.label+' 세트 무게·횟수 고치기"><b>'+fmt(v.w)+'</b>kg × <b>'+v.r+'</b>회'+(pct!=null?'<small>'+(rw.plan.w===db.settings.bar&&rw.i===0?'빈 봉':pct+'%')+'</small>':'')+(rw.done&&pr[rw.done.id]?I.trophy:'')+(isBarbell(e)&&v.w>0?'<span class="plates">'+plateTxt(v.w)+'</span>':'')+'</button>'+
    '<button class="tick" data-a="row-tick" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-pressed="'+!!rw.done+'" aria-label="'+rw.label+' 세트 '+(rw.done?'완료 취소':'완료')+'">'+(rw.done?I.check:'')+'</button></div>'+
    (isNext&&rw.type==='work'?repChips(rw):'');
  }
@@ -641,7 +642,7 @@ function vMe(){
  var since=db.lastBackup?daysBetween(db.lastBackup.slice(0,10),todayKey()):null;
  h+='<div class="sectitle" style="padding-top:12px">백업</div><div class="card"><div class="meta" style="line-height:1.6">기록은 이 휴대폰에만 저장돼요. 폰을 바꾸거나 브라우저 데이터를 지우면 사라지니, 가끔 백업 파일을 저장해 두세요.<br><b style="color:var(--ink)">마지막 백업: '+(db.lastBackup?(since===0?'오늘':since+'일 전'):'없음')+'</b></div><button class="primary" data-a="backup">백업 파일 저장</button><button class="secondary" data-a="import">백업 파일에서 복원</button><button class="secondary" data-a="paste">글자로 붙여넣어 복원</button></div>';
  h+='<div class="sectitle" style="padding-top:12px">바벨 · 원판</div><div class="list"><div class="field"><label for="s-bar">빈 봉 무게</label><div style="display:flex;align-items:center;gap:6px"><input id="s-bar" type="number" min="0" step="0.5" value="'+db.settings.bar+'" data-s="bar"><span class="meta">kg</span></div></div></div>'+
-  '<div class="card" style="gap:8px"><div class="lbl">헬스장에 있는 원판</div><div style="display:flex;flex-wrap:wrap;gap:8px">'+ALLPLATES.map(function(p){var on=(db.settings.plates||[]).indexOf(p)>=0;return '<button class="chip'+(on?' on':'')+'" data-a="plate-t" data-v="'+p+'" aria-pressed="'+on+'" style="min-width:56px;height:44px">'+fmt(p)+'</button>'}).join('')+'</div><div class="note" style="padding:0">바벨 종목을 할 때 한쪽에 끼울 원판이 무게 아래에 표시돼요. 예: 70kg → 한쪽 25</div></div>';
+  '<div class="list" style="margin-top:8px"><button class="li" data-a="plates-open"><div><div class="t" style="font-weight:500">헬스장에 있는 원판</div><div class="meta">'+((db.settings.plates||[]).slice().sort(function(a,b){return b-a}).map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note">바벨 종목을 할 때 무게 아래에 "EACH SIDE 25kg"처럼 한쪽 무게와 끼울 원판이 표시돼요.</div>';
  var ro=!!db.settings.restOn;
  h+='<div class="list"><div class="field"><label for="s-rest-on">휴식 타이머</label><button id="s-rest-on" role="switch" aria-checked="'+ro+'" data-a="rest-toggle" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(ro?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(ro?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff;transition:left .15s"></span><span class="sr">'+(ro?'켜짐':'꺼짐')+'</span></button></div>'+
   (ro?'<div class="field"><label for="s-rest">본세트 휴식</label><div style="display:flex;align-items:center;gap:6px"><input id="s-rest" type="number" min="10" step="5" value="'+db.settings.rest+'" data-s="rest"><span class="meta">초</span></div></div><div class="field"><label for="s-restw">웜업 휴식</label><div style="display:flex;align-items:center;gap:6px"><input id="s-restw" type="number" min="0" step="5" value="'+db.settings.restWarm+'" data-s="restWarm"><span class="meta">초</span></div></div>':'')+'</div>';
@@ -671,7 +672,7 @@ function modal(html){document.getElementById('modal').innerHTML=html?'<div class
 function confirmSheet(title,body,okLabel,act,id){modal('<h2>'+title+'</h2><div class="meta" style="line-height:1.6">'+body+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="danger" data-a="'+act+'" data-id="'+esc(id||'')+'">'+okLabel+'</button></div>')}
 
 /* =============== actions =============== */
-var rowCtx=null,ovr={};
+var rowCtx=null,ovr={},plateSel={};
 function okey(exId,type,i){return curDate+'|'+exId+'|'+type+'|'+i}
 function rowData(e,k,type,i){
  var r=rx(e,k),list=setsOn(k,e.id,type==='warm'),done=list[i]||null,planned;
@@ -885,7 +886,9 @@ document.addEventListener('click',function(ev){
   case 'import':document.getElementById('importFile').click();break;
   case 'paste':modal('<h2>글자로 복원</h2><div class="meta" style="line-height:1.6">백업 글자를 붙여넣으세요. 예전 아티팩트 버전에서 "백업 복사하기"로 복사한 글자도 돼요. <b>지금 기록은 백업 내용으로 바뀌어요.</b></div><label for="rs" class="sr">백업 내용</label><textarea id="rs"></textarea><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="danger" data-a="paste-ok">복원</button></div>');break;
   case 'paste-ok':restoreFrom(document.getElementById('rs').value);break;
-  case 'plate-t':var pv=+t.getAttribute('data-v'),pls=db.settings.plates||[];if(pls.indexOf(pv)>=0)pls=pls.filter(function(x){return x!==pv});else pls.push(pv);db.settings.plates=pls;save();render();break;
+  case 'plates-open':plateSel={};(db.settings.plates||[]).forEach(function(p){plateSel[p]=true});modal('<h2>헬스장에 있는 원판</h2><div class="meta">있는 원판을 체크하세요. 한쪽에 끼울 원판을 계산할 때 써요.</div><div style="max-height:52vh;overflow-y:auto;border-top:1px solid var(--line)">'+ALLPLATES.map(function(p){var on=!!plateSel[p];return '<button class="pick'+(on?' on':'')+'" data-a="plate-t" data-v="'+p+'" aria-pressed="'+on+'"><span style="font-size:16px;font-weight:700">'+fmt(p)+' kg</span><span class="box" aria-hidden="true">'+(on?I.checkS:'')+'</span></button>'}).join('')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="plates-save">완료</button></div>');break;
+  case 'plate-t':var pv=t.getAttribute('data-v'),pon=!plateSel[pv];plateSel[pv]=pon;t.classList.toggle('on',pon);t.setAttribute('aria-pressed',String(pon));t.querySelector('.box').innerHTML=pon?I.checkS:'';break;
+  case 'plates-save':db.settings.plates=ALLPLATES.filter(function(p){return plateSel[p]});save();modal('');render();break;
   case 'rest-toggle':db.settings.restOn=!db.settings.restOn;if(!db.settings.restOn)stopRest();save();render();break;
   case 'notif':try{if('Notification' in window)Notification.requestPermission().then(function(){render()})}catch(err){}break;
   case 'nx-type':readNewEx();newEx.type=t.getAttribute('data-v');var tt=NTYPES.filter(function(x){return x[0]===newEx.type})[0];if(tt)newEx.inc=tt[3];renderNewEx();break;
