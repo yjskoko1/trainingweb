@@ -1621,12 +1621,26 @@ function startWk(id,force){
  d.workout=w.id;save();modal('');toasts.push({m:w.name+' · '+add.length+'개 종목을 불러왔어요.'+(dup.length?' (중복 '+dup.length+'개 제외)':''),k:'ok'});go('#today');
 }
 function openPicker(mode){
- picker={mode:mode,sel:{}};
+ picker={mode:mode,sel:{},cat:null};
  var pre=[];if(mode==='wk'){var w=wkById(param);pre=w?w.exIds:[]}else{var d=db.days[curDate];pre=d?d.plan:[]}
  pre.forEach(function(id){picker.sel[id]=true});
- var h='<h2>'+(mode==='wk'?'워크아웃 종목 고르기':'종목 고르기')+'</h2><div class="meta" style="line-height:1.5">부위 옆 <b>전체</b>를 누르면 그 부위 종목이 한 번에 선택돼요.</div><button class="secondary" data-a="new-ex" data-ctx="'+(mode==='wk'?'wk':'day')+'">+ 목록에 없는 종목 직접 만들기</button>';
- db.cats.forEach(function(c){var l=liveEx().filter(function(e){return e.cat===c.id});if(!l.length)return;h+='<div class="row" style="padding-top:8px"><div class="name" style="font-size:15px"><span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)+'</div><button class="ghost" data-a="pick-all" data-c="'+esc(c.id)+'">전체</button></div>'+l.map(function(e){var on=!!picker.sel[e.id];return '<button class="pick'+(on?' on':'')+'" data-a="pick-t" data-id="'+esc(e.id)+'" data-c="'+esc(e.cat)+'" aria-pressed="'+on+'"><span style="font-size:15px">'+esc(e.name)+'</span><span class="box" aria-hidden="true">'+(on?I.checkS:'')+'</span></button>'}).join('')});
- h+='<div class="btnrow" style="position:sticky;bottom:calc(-22px - env(safe-area-inset-bottom));background:#fff;padding:12px 0 calc(8px + env(safe-area-inset-bottom))"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="pick-save">완료</button></div>';
+ renderPicker();
+}
+function renderPicker(){
+ var mode=picker.mode,h;
+ if(!picker.cat){
+  var tot=Object.keys(picker.sel).filter(function(k){return picker.sel[k]&&exById(k)&&!exById(k).deleted}).length;
+  h='<h2>'+(mode==='wk'?'워크아웃 종목 고르기':'종목 고르기')+'</h2><div class="meta">부위를 누르면 종목을 고를 수 있어요 · 지금 <b>'+tot+'개</b> 선택</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+db.cats.map(function(c){var l=liveEx().filter(function(e){return e.cat===c.id});if(!l.length)return '';var n=l.filter(function(e){return picker.sel[e.id]}).length;
+   return '<button data-a="pick-cat" data-c="'+esc(c.id)+'" style="min-height:72px;border-radius:16px;border:'+(n?'2px solid '+c.color:'1px solid #DADDE2')+';background:#fff;text-align:left;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px"><span style="font-size:17px;font-weight:800"><span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)+'</span><span class="meta" style="font-size:12px">'+l.length+'개 종목'+(n?' · <b style="color:var(--ink)">'+n+'개 선택</b>':'')+'</span></button>'}).join('')+'</div>';
+  h+='<button class="secondary" data-a="new-ex" data-ctx="'+(mode==='wk'?'wk':'day')+'">목록에 없는 종목 직접 만들기</button>';
+  h+='<div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="pick-save">완료</button></div>';
+ }else{
+  var c=catById(picker.cat),l=liveEx().filter(function(e){return e.cat===c.id});
+  h='<div class="row"><button class="icon" data-a="pick-back" aria-label="부위 목록으로">'+I.back+'</button><h2 style="margin:0;flex:1;padding-left:6px"><span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)+'</h2><button class="ghost" data-a="pick-all" data-c="'+esc(c.id)+'">전체</button></div>';
+  h+=l.map(function(e){var on=!!picker.sel[e.id];return '<button class="pick'+(on?' on':'')+'" data-a="pick-t" data-id="'+esc(e.id)+'" data-c="'+esc(e.cat)+'" aria-pressed="'+on+'"><span style="font-size:15px">'+esc(e.name)+'</span><span class="box" aria-hidden="true">'+(on?I.checkS:'')+'</span></button>'}).join('');
+  h+='<button class="primary" data-a="pick-back">선택 완료</button>';
+ }
  modal(h);
 }
 function setPick(btn,on){picker.sel[btn.getAttribute('data-id')]=on;btn.classList.toggle('on',on);btn.setAttribute('aria-pressed',String(on));btn.querySelector('.box').innerHTML=on?I.checkS:''}
@@ -1815,6 +1829,8 @@ document.addEventListener('click',function(ev){
   case 'pick-t':if(picker)setPick(t,!picker.sel[id]);break;
   case 'pick-all':if(picker){var cc=t.getAttribute('data-c'),btns=document.querySelectorAll('.pick[data-c="'+cc+'"]'),allOn=Array.prototype.every.call(btns,function(b){return picker.sel[b.getAttribute('data-id')]});Array.prototype.forEach.call(btns,function(b){setPick(b,!allOn)})}break;
   case 'pick-save':if(picker)savePicker();break;
+  case 'pick-cat':if(picker){picker.cat=t.getAttribute('data-c');renderPicker()}break;
+  case 'pick-back':if(picker){picker.cat=null;renderPicker()}break;
   case 'wk-new':if(view!=='prog')break;var nw={id:'w'+rid(),name:String.fromCharCode(65+progWks(param).length%26)+' · 새 워크아웃',exIds:[],prog:param,mode:'h'};db.workouts.push(nw);save();go('#wk-'+nw.id);break;
   case 'prog-new':progSheet();break;
   case 'prog-make':var tp=PTEMPL.filter(function(x){return x[0]===t.getAttribute('data-v')})[0];if(tp){var np={id:'p'+rid(),name:tp[0]==='empty'?'새 루틴':tp[1]};db.programs.push(np);tp[3].forEach(function(x){db.workouts.push(mkWk(db,x[0],x[1],np.id))});if(!db.activeProg)db.activeProg=np.id;save();modal('');go('#prog-'+np.id)}break;
