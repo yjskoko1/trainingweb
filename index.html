@@ -393,7 +393,7 @@ function syncWake(){
 document.addEventListener('visibilitychange',syncWake);
 
 /* =============== state =============== */
-var view='today',param=null,curDate=todayKey(),calMonth=todayKey().slice(0,7);
+var meTab='common';var view='today',param=null,curDate=todayKey(),calMonth=todayKey().slice(0,7);
 var exTab='today',graphMetric='e1rm',planTab='wk',bodyMetric='w',catQuery='',editBuf=null,catEdit=null,picker=null,extra={},graphData=null,toasts=[];
 function toast(m,k){toasts.push({m:m,k:k||'ok'});render()}
 
@@ -722,11 +722,13 @@ function vMe(){
  var es=db.body.slice().sort(function(a,b){return a.date<b.date?-1:1}),last=es[es.length-1],prev=es.filter(function(x){return x.w}).slice(-2)[0];
  var lastH=null;for(var i=es.length-1;i>=0;i--)if(es[i].h){lastH=es[i].h;break}
  var lastW=null;for(var j=es.length-1;j>=0;j--)if(es[j].w){lastW=es[j];break}
- var h=hdr('설정','근무 패턴 · 몸 기록 · 원판 · 백업')+'<main>';
+ var h=hdr('설정',meTab==='gym'?'헬스 설정':meTab==='run'?'러닝 설정':'공통 설정')+'<main>';
+ h+='<div class="tabs3" role="tablist">'+[['common','공통'],['gym','헬스'],['run','러닝']].map(function(t){return '<button role="tab" aria-selected="'+(meTab===t[0])+'" class="'+(meTab===t[0]?'on':'')+'" data-a="metab" data-v="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div>';
+
+ if(meTab==='common'){
  var so=!db.settings.shiftOff;
- h+='<div class="sectitle">근무 패턴</div><div class="list"><div class="field"><label for="s-shift">당번 → 비번 → 휴무 사용</label><button id="s-shift" role="switch" aria-checked="'+so+'" data-a="shift-toggle" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(so?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(so?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff"></span></button></div>'+(so?'<div class="field"><label for="s-anchor">당번이었던 날짜</label><input id="s-anchor" type="date" value="'+esc(db.settings.shiftAnchor||'')+'" data-s="shiftAnchor" style="height:42px;border:1px solid #DADDE2;border-radius:10px;padding:0 8px;font-size:15px;background:#fff"></div>':'')+'</div>'+(so&&db.settings.shiftAnchor?'<div class="note">오늘은 <b>'+shiftOf(todayKey())+'</b>이에요. 러닝 처방과 홈 화면에 써요.</div>':'');
- h+='<div class="list" style="margin-top:8px"><a class="li" href="#runset"><div><div class="t">러닝 목표 · 신발</div><div class="meta">'+(rset().goal?esc(RGOAL[rset().goal].name):'아직 설정 안 함')+'</div></div>'+I.chev+'</a></div>';
- h+='<div class="list"><a class="li" href="#guide"><div><div class="t">무게가 바뀌는 규칙 안내</div><div class="meta">올림·유지·내림, 웜업, 1RM 계산 방법</div></div>'+I.chev+'</a></div>';
+ h+='<div class="sectitle">근무 패턴</div><div class="list"><div class="field"><label for="s-shift">당번 → 비번 → 휴무 사용</label><button id="s-shift" role="switch" aria-checked="'+so+'" data-a="shift-toggle" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(so?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(so?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff"></span></button></div>'+(so?'<div class="field"><label for="s-anchor">당번일</label><input id="s-anchor" type="date" value="'+esc(db.settings.shiftAnchor||'')+'" data-s="shiftAnchor" style="height:42px;border:1px solid #DADDE2;border-radius:10px;padding:0 8px;font-size:15px;background:#fff"></div>':'')+'</div>'+(so&&db.settings.shiftAnchor?'<div class="note">오늘은 <b>'+shiftOf(todayKey())+'</b>이에요. 러닝 처방과 홈 화면에 써요.</div>':'');
+ h+='<div class="sectitle" style="padding-top:12px">몸 기록</div>';
  if(memOnly)h+='<div class="toast err">이 브라우저에서는 저장이 되지 않아요. 기록이 사라질 수 있어요.</div>';
  if(lastW||lastH){var diff=lastW&&prev&&prev!==lastW?fix(lastW.w-prev.w):null,b=bmi(lastH,lastW&&lastW.w);
   h+='<div class="card" style="flex-direction:row;justify-content:space-around;text-align:center;gap:8px"><div><div class="meta">몸무게</div><div style="font-size:24px;font-weight:900">'+(lastW?fmt(lastW.w):'–')+'<small class="meta"> kg</small></div>'+(diff!=null&&diff!==0?'<div class="delta '+(diff>0?'d-down':'d-up')+'">'+(diff>0?'▲ ':'▼ ')+fmt(Math.abs(diff))+'kg</div>':'')+'</div><div><div class="meta">키</div><div style="font-size:24px;font-weight:900">'+(lastH?fmt(lastH):'–')+'<small class="meta"> cm</small></div></div><div><div class="meta">BMI</div><div style="font-size:24px;font-weight:900">'+(b!=null?b:'–')+'</div></div></div>'}
@@ -741,6 +743,9 @@ function vMe(){
  if(es.length)h+='<div class="list">'+es.slice().reverse().slice(0,20).map(function(e){return '<div class="li"><div><div class="t" style="font-weight:500">'+esc(pretty(e.date,{year:'numeric',month:'long',day:'numeric'}))+'</div><div class="meta">'+[e.w?fmt(e.w)+'kg':'',e.h?fmt(e.h)+'cm':''].filter(Boolean).join(' · ')+'</div></div><button class="ghost" data-a="body-del" data-k="'+e.date+'" aria-label="'+esc(e.date)+' 몸 기록 삭제">삭제</button></div>'}).join('')+'</div>';
  var since=db.lastBackup?daysBetween(db.lastBackup.slice(0,10),todayKey()):null;
  h+='<div class="sectitle" style="padding-top:12px">백업</div><div class="card"><div class="meta" style="line-height:1.6">기록은 이 휴대폰에만 저장돼요. 폰을 바꾸거나 브라우저 데이터를 지우면 사라지니, 가끔 백업 파일을 저장해 두세요.<br><b style="color:var(--ink)">마지막 백업: '+(db.lastBackup?(since===0?'오늘':since+'일 전'):'없음')+'</b></div><button class="primary" data-a="backup">백업 파일 저장</button><button class="secondary" data-a="import">백업 파일에서 복원</button><button class="secondary" data-a="paste">글자로 붙여넣어 복원</button></div>';
+ }
+ if(meTab==='gym'){
+ h+='<div class="list"><a class="li" href="#guide"><div><div class="t">헬스 규칙 안내</div><div class="meta">올림·유지·내림, 웜업, 1RM 계산 방법</div></div>'+I.chev+'</a></div>';
  h+='<div class="sectitle" style="padding-top:12px">바벨 · 원판</div><div class="list"><div class="field"><label for="s-bar">빈 봉 무게</label><div style="display:flex;align-items:center;gap:6px"><input id="s-bar" type="number" min="0" step="0.5" value="'+db.settings.bar+'" data-s="bar"><span class="meta">kg</span></div></div></div>'+
   '<div class="list" style="margin-top:8px"><button class="li" data-a="plates-open"><div><div class="t" style="font-weight:500">헬스장에 있는 원판</div><div class="meta">'+((db.settings.plates||[]).slice().sort(function(a,b){return b-a}).map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note" style="margin-bottom:6px">바벨 종목을 할 때 무게 아래에 "EACH SIDE 25kg"처럼 한쪽 무게와 끼울 원판이 표시돼요.</div>';
  h+='<div class="sectitle" style="padding-top:12px">덤벨</div><div class="list"><button class="li" data-a="dbs-open"><div style="min-width:0"><div class="t" style="font-weight:500">헬스장에 있는 덤벨</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(dbList().map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note">덤벨 종목은 무게를 올리거나 내릴 때 여기 있는 덤벨 무게로 맞춰요. 예: 14kg 다음은 16kg</div>';
@@ -750,7 +755,16 @@ function vMe(){
  h+='<div class="note">'+(ro?'세트를 체크하면 휴식 시간이 자동으로 나와요. 웜업 휴식을 0으로 두면 웜업 뒤에는 안 나와요.':'꺼 두면 운동 중에 휴식 시간이 나오지 않아요.')+'</div>';
  if(ro)h+='<button class="secondary" data-a="notif">'+('Notification' in window&&Notification.permission==='granted'?'휴식 끝 알림 켜짐':'휴식 끝 알림 허용하기')+'</button><div class="note">화면이 꺼져 있을 때도 휴식이 끝나면 알림으로 알려줘요.</div>';
  var nd=Object.keys(db.days).filter(function(k){return db.days[k].sets.length}).length,ns=0;Object.keys(db.days).forEach(function(k){ns+=db.days[k].sets.length});
- h+='<div class="note">운동한 날 '+nd+'일 · 기록한 세트 '+ns+'개</div></main>';
+ h+='<div class="note">헬스 운동한 날 '+nd+'일 · 기록한 세트 '+ns+'개</div>';
+ }
+ if(meTab==='run'){
+ var rs0=rset(),act=db.run.shoes.filter(function(x){return !x.retired});
+ h+='<div class="sectitle">러닝 목표</div><div class="list"><a class="li" href="#runset"><div style="min-width:0"><div class="t">'+(rs0.goal?esc(RGOAL[rs0.goal].name)+(rs0.raceDate?' · '+esc(pretty(rs0.raceDate,{year:'numeric',month:'long',day:'numeric'})):''):'목표 설정하기')+'</div><div class="meta">'+(rs0.goal?[rs0.age?'나이 '+rs0.age:'',hrMax()?'최대 심박 '+hrMax()+(rs0.hrMax?'':'(추정)'):'',rs0.recKm&&rs0.recSec?'최근 기록 '+r1(rs0.recKm)+'km '+fmtDur(rs0.recSec):''].filter(Boolean).join(' · '):'나이·최대 심박·최근 기록·목표를 넣으면 처방해 드려요')+'</div></div>'+I.chev+'</a></div>';
+ h+='<div class="sectitle">신발</div><div class="list"><a class="li" href="#runset"><div style="min-width:0"><div class="t">신발 '+act.length+'켤레</div><div class="meta">'+(act.length?esc(act.map(function(x){return x.name+' '+shoeKm(x)+'km'}).join(', ')):'등록한 신발이 없어요')+'</div></div>'+I.chev+'</a></div>';
+ h+='<div class="list" style="margin-top:8px"><a class="li" href="#guide"><div><div class="t">러닝 처방 근거 안내</div><div class="meta">10% 규칙, 80% 쉬운 강도, 예상 기록, 테이퍼</div></div>'+I.chev+'</a></div>';
+ h+='<div class="note">러닝 '+db.run.runs.length+'회 · 총 '+r1(db.run.runs.reduce(function(x,r){return x+(+r.km||0)},0))+'km 기록</div>';
+ }
+ h+='</main>';
  return h;
 }
 
@@ -1309,6 +1323,7 @@ document.addEventListener('click',function(ev){
   case 'dbs-open':plateSel={};dbList().forEach(function(p){plateSel[p]=true});modal('<h2>헬스장에 있는 덤벨</h2><div class="meta">있는 덤벨 무게(한 개 기준)를 체크하세요.</div><div style="max-height:52vh;overflow-y:auto;border-top:1px solid var(--line)">'+ALLDBS.map(function(p){var on=!!plateSel[p];return '<button class="pick'+(on?' on':'')+'" data-a="plate-t" data-v="'+p+'" aria-pressed="'+on+'"><span style="font-size:16px;font-weight:700">'+fmt(p)+' kg</span><span class="box" aria-hidden="true">'+(on?I.checkS:'')+'</span></button>'}).join('')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="dbs-save">완료</button></div>');break;
   case 'dbs-save':db.settings.dbs=ALLDBS.filter(function(p){return plateSel[p]});save();modal('');render();break;
   case 'plates-save':db.settings.plates=ALLPLATES.filter(function(p){return plateSel[p]});save();modal('');render();break;
+  case 'metab':meTab=t.getAttribute('data-v');render();break;
   case 'shift-toggle':db.settings.shiftOff=!db.settings.shiftOff;save();render();break;
   case 'rest-toggle':db.settings.restOn=!db.settings.restOn;if(!db.settings.restOn)stopRest();save();render();break;
   case 'notif':try{if('Notification' in window)Notification.requestPermission().then(function(){render()})}catch(err){}break;
