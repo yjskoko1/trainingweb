@@ -717,7 +717,7 @@ function vGuide(){
 function vRunGuide(){
  var h=hdr('러닝 처방 근거','러닝 처방은 이렇게 정해져요',backBtn('#me'))+'<main>';
  function sec(title,items){return '<div class="sectitle">'+title+'</div><div class="list">'+items.map(function(it){return '<div class="li" style="align-items:flex-start;flex-direction:column;gap:4px"><div class="row" style="justify-content:flex-start;gap:8px">'+(it[0]?'<span class="badge '+it[0]+'">'+it[1]+'</span>':'<span class="t">'+it[1]+'</span>')+'</div><div style="font-size:14px;line-height:1.6;color:#33373C">'+it[2]+'</div></div>'}).join('')+'</div>'}
- h+=sec('러닝',[['','근무 패턴','당번은 쉬고, 비번은 리커버리, 휴무는 목표별 순서(풀코스: 롱런 → 템포런 → 롱런 → 인터벌)로 강도 있게 뛰어요.'],['','10% 규칙','한 번 뛰는 거리는 최근 30일 최장 거리의 10%를 넘지 않게 처방해요. 이보다 길게 뛰면 과사용 부상 위험이 높아졌다는 연구(Frandsen 외, 2025)를 따랐어요.'],['','80% 쉬운 강도','기량 좋은 지구력 선수들처럼 전체 거리의 약 80%를 쉬운 강도로 채워요(Seiler 2010). 최근 4주 쉬운 강도 비율을 러닝 화면에 보여줘요.'],['','예상 기록','최근 기록으로 5km~풀코스 기록을 예측하고(Riegel 공식), 기록이 쌓이면 최근 8주 주당 거리와 평균 페이스로 풀코스 기록을 예측해요(Tanda 2011).'],['','테이퍼','대회 2주 전부터 거리를 30~50% 줄이고 강도는 유지해요(Bosquet 2007 메타분석).'],['','심박','최대 심박수를 모르면 208 − 0.7 × 나이로 추정해요(Tanaka 공식). 가민에 나오는 값이 더 정확해요.']]);
+ h+=sec('러닝',[['','근무 패턴','당번은 쉬고, 비번은 리커버리, 휴무는 목표별 순서(풀코스: 롱런 → 템포런 → 롱런 → 인터벌)로 강도 있게 뛰어요.'],['','10% 규칙','한 번 뛰는 거리는 최근 30일 최장 거리의 10%를 넘지 않게 처방해요. 이보다 길게 뛰면 과사용 부상 위험이 높아졌다는 연구(Frandsen 외, 2025)를 따랐어요.'],['','80% 쉬운 강도','전체 거리의 약 80%를 쉬운 강도로 채워요. 마라톤 러너 15만여 명을 분석한 연구에서 가장 빠른 그룹의 80% 이상이 이런 배분을 썼고(Muniz-Pumares 외, 2025), 세계적인 장거리 선수들도 80% 이상을 낮은 강도로 뛰어요(Haugen 외, 2022). 최근 4주 쉬운 강도 비율을 러닝 화면에 보여줘요.'],['','예상 기록·페이스','5km~하프 기록은 최근 기록으로 예측해요(Riegel 공식). 이 공식은 아마추어 러너의 풀코스를 10분 이상 빠르게 예측하는 경우가 많아서(Vickers & Vertosick 2016), 훈련 페이스는 하프 예측 페이스를 기준으로 정해요. 풀코스는 기록이 쌓이면 최근 8주 주당 거리와 평균 페이스로 예측해요(Tanda 2011).'],['','테이퍼','대회 2주 전부터 거리를 30~50% 줄이고, 강도와 뛰는 날 수는 유지해요. 21일 이내로 훈련량을 41~60% 줄이고 강도·빈도를 유지하는 방식이 효과적이었다는 메타분석을 따랐어요(Wang 외, 2023; Bosquet 외, 2007).'],['','심박','최대 심박수를 모르면 208 − 0.7 × 나이로 추정해요(Tanaka 공식, 2001). 추정값은 사람마다 오차가 커서, 가민에 나오는 값이나 실제로 잰 값이 더 정확해요.']]);
  h+='<div class="note">처방은 일반적인 연구 결과를 바탕으로 해요. 통증이 있거나 몸이 안 좋은 날은 처방보다 몸 상태를 먼저 따라 주세요.</div>';
  return h+'</main>';
 }
@@ -810,27 +810,30 @@ function tandaPred(k){
  var km=rs.reduce(function(a,r){return a+(+r.km)},0),sec=rs.reduce(function(a,r){return a+(+r.sec)},0),K=km/8,P=sec/km;
  return{sec:(17.1+140*Math.exp(-0.0053*K)+0.55*P)*42.195,K:r1(K),P:P};
 }
+/* Riegel 공식은 하프까지만 잘 맞고 풀코스는 너무 빠르게 예측해요(Vickers & Vertosick 2016).
+   그래서 페이스 기준은 하프 예측(ph)으로 잡고, 풀코스 예측은 기록이 쌓이면 Tanda 공식을 써요. */
 function predictions(k){
  var rr=recRec(),t=tandaPred(k),o={};
- if(rr){o.k5=riegel(rr.km,rr.sec,5);o.k10=riegel(rr.km,rr.sec,10);o.half=riegel(rr.km,rr.sec,21.0975);o.full=riegel(rr.km,rr.sec,42.195)}
+ if(rr){o.k5=riegel(rr.km,rr.sec,5);o.k10=riegel(rr.km,rr.sec,10);o.half=riegel(rr.km,rr.sec,21.0975);o.fullRiegel=riegel(rr.km,rr.sec,42.195)}
  if(t)o.tanda=t;
- var mp=null;if(o.full&&t)mp=(o.full+t.sec)/2/42.195;else if(o.full)mp=o.full/42.195;else if(t)mp=t.sec/42.195;
- o.mp=mp;o.p5=o.k5?o.k5/5:(mp?mp-40:null);o.ph=o.half?o.half/21.0975:(mp?mp-12:null);
+ o.ph=o.half?o.half/21.0975:(t?t.sec/42.195-15:null);
+ o.p5=o.k5?o.k5/5:(o.ph?o.ph-25:null);
+ o.mp=t?t.sec/42.195:null;
  return o;
 }
 function countTypes(k,types){var s=rset().since||'';return runsBefore(k).filter(function(r){return r.date>=s&&types.indexOf(r.type)>=0}).length}
 function runRx(k){
  var s=rset(),sh=shiftOf(k);
  if(!s.goal)return{setup:false,shift:sh};
- var g=RGOAL[s.goal]||RGOAL.full,pr=predictions(k),mp=pr.mp,hm=hrMax(),L30=longest30(k),cap=L30?r1(L30*1.1):null;
+ var g=RGOAL[s.goal]||RGOAL.full,pr=predictions(k),ph=pr.ph,hm=hrMax(),L30=longest30(k),cap=L30?r1(L30*1.1):null;
  var o={setup:true,shift:sh,goal:g,cap:cap,L30:L30,pred:pr,notes:[]};
  var race=s.raceDate,dR=race?daysBetween(k,race):null;o.dRace=dR;
- if(race&&dR===0){o.type='race';o.km=g.km||null;o.why='대회 날이에요. 처음 5km는 계획보다 살짝 느리게 시작하세요.';if(mp)o.pace=[mp-3,mp+3];return o}
+ if(race&&dR===0){o.type='race';o.km=g.km||null;o.why='대회 날이에요. 처음 5km는 계획보다 살짝 느리게 시작하세요.';if(s.goal==='half'&&ph)o.pace=[ph-3,ph+3];else if(s.goal==='ten'&&pr.k10)o.pace=[pr.k10/10-3,pr.k10/10+3];else if(pr.mp)o.pace=[pr.mp-3,pr.mp+3];return o}
  if(sh==='당번'){o.type='rest';o.why='당번이라 쉬는 날이에요. 회복도 훈련이에요.';return o}
  var taper=race&&dR>0&&dR<=14?(dR<=7?0.5:0.7):1;
  var hr=function(a,b){return hm?[Math.round(hm*a),Math.round(hm*b)]:null};
  if(sh==='비번'){
-  o.type='recovery';o.km=(g.rec[0]+g.rec[1])/2;o.pace=mp?[mp+75,mp+105]:null;o.hr=hr(0.6,0.7);
+  o.type='recovery';o.km=(g.rec[0]+g.rec[1])/2;o.pace=ph?[ph+90,ph+120]:null;o.hr=hr(0.6,0.7);
   o.detail='대화가 편한 속도로 천천히. 다리를 푸는 날이에요.';o.why='비번 날은 가볍게 회복해요. 전체 거리의 80% 이상을 쉬운 강도로 채우는 게 기본이에요.';
  }else{
   var qs=g.seq,n=countTypes(k,['long','tempo','interval','fartlek']);o.type=qs[n%qs.length];
@@ -840,7 +843,7 @@ function runRx(k){
    if(taper<1){km=base;why='대회 전 테이퍼 기간이라 롱런을 줄여요.'}
    else if(nl>0&&nl%4===3){km=base*0.75;why='롱런 4번째마다 한 번은 25% 줄여서 회복해요.'}
    km=Math.min(km,g.longMax);if(cap&&km>cap+0.05){km=cap;why+=' 최근 30일 최장 '+r1(L30)+'km의 10% 이내로 맞췄어요.'}
-   o.km=Math.max(g.rec[1],rHalf(km));o.pace=mp?[mp+45,mp+75]:null;o.hr=hr(0.65,0.78);o.why=why;o.detail='처음부터 끝까지 대화할 수 있는 속도로 일정하게.';
+   o.km=Math.max(g.rec[1],rHalf(km));o.pace=ph?[ph+60,ph+90]:null;o.hr=hr(0.65,0.78);o.why=why;o.detail='처음부터 끝까지 대화할 수 있는 속도로 일정하게.';
   }else if(o.type==='tempo'){
    var nt=countTypes(k,['tempo']),tmin=Math.min(40,20+5*nt),tk=pr.ph?r1(tmin*60/pr.ph):r1(tmin/5.5);
    o.km=r1(4+tk);o.pace=pr.ph?[pr.ph-5,pr.ph+5]:null;o.hr=hr(0.85,0.9);o.detail='워밍업 2km → 템포 '+tmin+'분 → 쿨다운 2km';o.why='하프마라톤 페이스 근처에서 버티는 힘을 길러요. 템포 시간을 5분씩 늘려 최대 40분까지 가요.';
@@ -848,11 +851,11 @@ function runRx(k){
    var ni=countTypes(k,['interval']),reps=Math.min(6,4+Math.floor(ni/2));if(taper<1)reps=Math.max(3,Math.round(reps*taper));
    o.km=r1(4+reps+0.4*(reps-1));o.pace=pr.p5?[pr.p5-5,pr.p5+5]:null;o.hr=hr(0.9,0.95);o.detail='워밍업 2km → 1km × '+reps+'회 (사이 2~3분 조깅) → 쿨다운 2km';o.why='5km 경기 페이스로 심폐 능력을 끌어올려요. 전체 훈련의 20% 이하로만 해요.';
   }else{
-   o.km=g.rec[1];o.pace=mp?[mp+60,mp+90]:null;o.hr=hr(0.65,0.78);o.detail='편하게 뛰다가 1분씩 빠르게 × 6~8회';o.why='체력 유지 단계에서는 즐겁게, 가끔 속도를 섞어요.';
+   o.km=g.rec[1];o.pace=ph?[ph+75,ph+105]:null;o.hr=hr(0.65,0.78);o.detail='편하게 뛰다가 1분씩 빠르게 × 6~8회';o.why='체력 유지 단계에서는 즐겁게, 가끔 속도를 섞어요.';
   }
  }
- if(taper<1&&o.type!=='interval'){o.km=r1(o.km*taper);o.notes.push('대회 D-'+dR+': 테이퍼 기간이라 거리를 '+Math.round((1-taper)*100)+'% 줄였어요. 강도는 유지해요.')}
- else if(taper<1)o.notes.push('대회 D-'+dR+': 테이퍼 기간이라 반복 횟수를 줄였어요. 강도는 유지해요.');
+ if(taper<1&&o.type!=='interval'){o.km=r1(o.km*taper);o.notes.push('대회 D-'+dR+': 테이퍼 기간이라 거리를 '+Math.round((1-taper)*100)+'% 줄였어요. 강도와 뛰는 날 수는 그대로 유지해요.')}
+ else if(taper<1)o.notes.push('대회 D-'+dR+': 테이퍼 기간이라 반복 횟수를 줄였어요. 강도와 뛰는 날 수는 그대로 유지해요.');
  if(cap&&o.km>cap+0.05){o.km=cap;o.notes.push('최근 30일 최장 거리('+r1(L30)+'km)의 10%를 넘지 않게 줄였어요.')}
  return o;
 }
@@ -878,16 +881,18 @@ function vRun(){
    '<div class="big">'+(x.km?r1(x.km)+'km':RTYPE[x.type])+'</div>'+
    '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px">'+(x.pace?'<div><span style="opacity:.75">페이스</span> <b>'+paceTxt(x.pace)+'</b></div>':'')+(x.hr?'<div><span style="opacity:.75">심박</span> <b>'+x.hr[0]+'~'+x.hr[1]+'</b></div>':'')+'</div>'+
    (x.detail?'<div class="why" style="opacity:1">'+esc(x.detail)+'</div>':'')+'<div class="why">'+esc(x.why||'')+'</div>'+x.notes.map(function(n){return '<div class="why">· '+esc(n)+'</div>'}).join('')+
-   (!x.pace?'<div class="why">· 설정에 최근 기록을 넣으면 페이스도 알려드려요.</div>':'')+(!x.hr?'<div class="why">· 설정에 나이나 최대 심박수를 넣으면 심박 구간도 알려드려요.</div>':'')+'</div>';
+   (!x.pace?'<div class="why">· 러닝 설정에 최근 기록을 넣으면 페이스도 알려드려요.</div>':'')+(!x.hr?'<div class="why">· 설정에 나이나 최대 심박수를 넣으면 심박 구간도 알려드려요.</div>':'')+'</div>';
  }
  if(today.length)h+='<div class="toast ok">오늘 '+today.map(function(r){return RTYPE[r.type]+' '+r1(r.km)+'km'}).join(', ')+' 기록했어요.</div>';
  if(sh==='휴무'||sh==='비번'||!sh){var g=x.goal;if(sh==='휴무'){var n=countTypes(addDays(k,1),['long','tempo','interval','fartlek']);}h+='<div class="card" style="gap:8px"><div class="name" style="font-size:14px">근무별 계획</div><div class="meta" style="line-height:1.7">당번: 쉬기 · 비번: 리커버리 '+g.rec[0]+'~'+g.rec[1]+'km<br>휴무: '+g.seq.map(function(t){return RTYPE[t]}).join(' → ')+' 순서로 반복</div></div>'}
  h+='<div class="btnrow"><button class="primary" data-a="run-log" data-v="out">야외 기록하기</button><button class="secondary" data-a="run-log" data-v="tm">트레드밀 기록하기</button></div>';
  var p=x.pred;
- if(p.full||p.tanda){
+ if(p.half||p.tanda){
   h+='<div class="card" style="gap:6px"><div class="name" style="font-size:14px">지금 예상 기록</div>'+
-   (p.full?'<div class="row" style="justify-content:space-around;text-align:center"><div><div class="meta">5km</div><b>'+fmtDur(p.k5)+'</b></div><div><div class="meta">10km</div><b>'+fmtDur(p.k10)+'</b></div><div><div class="meta">하프</div><b>'+fmtDur(p.half)+'</b></div><div><div class="meta">풀</div><b>'+fmtDur(p.full)+'</b></div></div><div class="meta" style="font-size:11px">최근 기록 기준(Riegel 공식)</div>':'')+
-   (p.tanda?'<div class="meta">훈련 기록 기준 풀코스 예상 <b style="color:var(--ink)">'+fmtDur(p.tanda.sec)+'</b> (최근 8주 주당 '+p.tanda.K+'km, Tanda 공식)</div>':'')+'</div>';
+   (p.half?'<div class="row" style="justify-content:space-around;text-align:center"><div><div class="meta">5km</div><b>'+fmtDur(p.k5)+'</b></div><div><div class="meta">10km</div><b>'+fmtDur(p.k10)+'</b></div><div><div class="meta">하프</div><b>'+fmtDur(p.half)+'</b></div><div><div class="meta">풀코스</div><b>'+(p.tanda?fmtDur(p.tanda.sec):fmtDur(p.fullRiegel)+'*')+'</b></div></div>':'')+
+   (p.half?'<div class="meta" style="font-size:11px;line-height:1.5">5km~하프: 최근 기록 기준(Riegel 공식). '+(p.tanda?'풀코스: 최근 8주 훈련 기록 기준(Tanda 공식).':'* 풀코스: 이 공식은 아마추어 러너의 풀코스를 10분 이상 빠르게 예측하는 경우가 많아요. 훈련 기록이 쌓이면 더 정확한 공식으로 바꿔서 보여드려요.')+'</div>':'')+
+   (!p.half&&p.tanda?'<div class="meta">훈련 기록 기준 풀코스 예상 <b style="color:var(--ink)">'+fmtDur(p.tanda.sec)+'</b> (최근 8주 주당 '+p.tanda.K+'km, Tanda 공식)</div>':'')+
+   '<div class="meta" style="font-size:11px">훈련 페이스는 하프 예측 페이스('+fmtPace(p.ph)+'/km)를 기준으로 정해요.</div></div>';
  }
  h+=runRecent();
  h+='<a class="secondary" href="#runhist">전체 기록 · 그래프</a>';
