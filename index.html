@@ -241,7 +241,7 @@ function defaults(){
  var cats=DEFAULT_CATS.map(function(n,i){return{id:'c'+i+rid(),name:n,color:COLORS[i]}});
  var picks={'카디오':['실내 사이클','로잉머신','러닝머신'],'가슴':['벤치프레스','인클라인 덤벨 프레스','케이블 플라이'],'등':['데드리프트','랫풀다운','시티드 케이블 로우'],'어깨':['오버헤드 프레스','사이드 레터럴 레이즈'],'하체':['스쿼트','레그 프레스','레그 컬'],'이두':['바벨 컬','해머 컬'],'삼두':['트라이셉 푸시다운','오버헤드 트라이셉 익스텐션'],'복근':['행잉 레그 레이즈','케이블 크런치']};
  var ex=[];cats.forEach(function(c){(CATALOG[c.name]||[]).forEach(function(it){if(picks[c.name].indexOf(it[0])>=0)ex.push(mkAny(it,c.id))})});
- var d={v:3,cardioAdded:true,run:{setup:null,runs:[],shoes:[]},cats:cats,exercises:ex,workouts:[],days:{},body:[],settings:{shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},lastBackup:''};
+ var d={v:3,cardioAdded:true,run:{setup:null,runs:[],shoes:[]},swim:{setup:null,swims:[],cssHist:[]},cats:cats,exercises:ex,workouts:[],days:{},body:[],settings:{shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},lastBackup:''};
  var p={id:'p'+rid(),name:'2분할'};d.programs=[p];d.activeProg=p.id;
  d.workouts=[mkWk(d,'A · 가슴 등 삼두',['가슴','등','삼두'],p.id),mkWk(d,'B · 하체 어깨 이두',['하체','어깨','이두'],p.id)];
  return d;
@@ -666,37 +666,40 @@ function vWk(){
 
 /* =============== view: calendar =============== */
 var calKind='all';
-var SPORTS=[{id:'gym',name:'헬스',color:'#1F55D6'},{id:'run',name:'러닝',color:'#B4441C'},{id:'swim',name:'수영',color:'#1F7A44',soon:true},{id:'bike',name:'자전거',color:'#6250D6',soon:true}];
+var SPORTS=[{id:'gym',name:'헬스',color:'#1F55D6'},{id:'run',name:'러닝',color:'#B4441C'},{id:'swim',name:'수영',color:'#1F7A44'},{id:'bike',name:'자전거',color:'#6250D6',soon:true}];
 var RTCOLOR={recovery:'#7FB3A0',easy:'#3E9A6E',long:'#1F55D6',tempo:'#E08A1E',interval:'#D23F31',fartlek:'#8E5BD6',race:'#16181A',free:'#9AA0A8'};
 function calMarks(k){
  var ds=db.days[k],rr=db.run.runs.filter(function(r){return r.date===k}),cs=[];
  if(calKind==='gym'){if(ds)ds.sets.forEach(function(s){var e=exById(s.exId),c=e?catById(e.cat):catById('');if(cs.indexOf(c)<0)cs.push(c)})}
  else if(calKind==='run'){rr.forEach(function(r){if(!cs.some(function(c){return c.t===r.type}))cs.push({t:r.type,name:RTYPE[r.type],color:RTCOLOR[r.type]||'#9AA0A8'})})}
- else{if(ds&&ds.sets.length)cs.push(SPORTS[0]);if(rr.length)cs.push(SPORTS[1])}
+ else if(calKind==='swim'){db.swim.swims.forEach(function(w){if(w.date===k&&!cs.some(function(c){return c.t===w.kind}))cs.push({t:w.kind,name:SKIND[w.kind],color:SCOLOR[w.kind]})})}
+ else{if(ds&&ds.sets.length)cs.push(SPORTS[0]);if(rr.length)cs.push(SPORTS[1]);if(db.swim.swims.some(function(w){return w.date===k}))cs.push(SPORTS[2])}
  return cs;
 }
 function vCal(){
  var y=+calMonth.slice(0,4),m=+calMonth.slice(5,7)-1,first=new Date(y,m,1),n=new Date(y,m+1,0).getDate(),tk=todayKey(),cnt=0;
- var sub={all:'전체 운동 기록',gym:'헬스 기록',run:'러닝 기록'}[calKind];
- var left=calKind==='gym'?backBtn('#today','오늘 헬스로'):calKind==='run'?backBtn('#run','오늘의 러닝으로'):null;
+ var sub={all:'전체 운동 기록',gym:'헬스 기록',run:'러닝 기록',swim:'수영 기록'}[calKind];
+ var left=calKind==='gym'?backBtn('#today','오늘 헬스로'):calKind==='run'?backBtn('#run','오늘의 러닝으로'):calKind==='swim'?backBtn('#swim','오늘의 수영으로'):null;
  var h=hdr(y+'년 '+(m+1)+'월',sub,left,'<div style="display:flex;gap:6px"><button class="icon" data-a="mon" data-n="-1" aria-label="이전 달">'+I.back+'</button><button class="icon" data-a="mon" data-n="1" aria-label="다음 달">'+I.fwd+'</button></div>')+'<main>';
  var g='<div class="card"><div class="cal">'+['일','월','화','수','목','금','토'].map(function(w){return '<div class="wd">'+w+'</div>'}).join('');
  for(var i=0;i<first.getDay();i++)g+='<button class="blank" tabindex="-1" aria-hidden="true"></button>';
- var act=calKind==='gym'?'goto':calKind==='run'?'run-day':'day-pop';
+ var act=calKind==='gym'?'goto':calKind==='run'?'run-day':calKind==='swim'?'sw-day':'day-pop';
  for(var dd=1;dd<=n;dd++){
   var k=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0'),cs=calMarks(k);
   if(cs.length)cnt++;
   g+='<button data-a="'+act+'" data-k="'+k+'" class="'+(cs.length?'has':'')+(k===tk?' today':'')+'" aria-label="'+(m+1)+'월 '+dd+'일'+(cs.length?', '+cs.map(function(c){return c.name}).join(', '):'')+'">'+dd+'<span class="dots">'+cs.slice(0,6).map(function(c){return '<i style="background:'+c.color+'"></i>'}).join('')+'</span></button>';
  }
  var leg=calKind==='gym'?db.cats.map(function(c){return '<span><i class="dot" style="background:'+c.color+'"></i>'+esc(c.name)+'</span>'}).join(''):
+  calKind==='swim'?Object.keys(SKIND).map(function(t){return '<span><i class="dot" style="background:'+SCOLOR[t]+'"></i>'+SKIND[t]+'</span>'}).join(''):
   calKind==='run'?Object.keys(RTCOLOR).filter(function(t){return t!=='race'}).map(function(t){return '<span><i class="dot" style="background:'+RTCOLOR[t]+'"></i>'+RTYPE[t]+'</span>'}).join(''):
   SPORTS.map(function(sp){return '<span'+(sp.soon?' style="opacity:.45"':'')+'><i class="dot" style="background:'+sp.color+'"></i>'+sp.name+(sp.soon?' (준비 중)':'')+'</span>'}).join('');
  g+='</div><div class="legend">'+leg+'</div></div>';
- h+='<div class="meta" style="padding:0 4px">이번 달 <b style="color:var(--ink)">'+cnt+'일</b> '+(calKind==='run'?'뛰었어요':'운동했어요')+'. 날짜를 누르면 그날 기록을 보고 고칠 수 있어요.</div>'+g;
- if(calKind==='all')h+='<div class="btnrow"><a class="secondary" href="#gymcal" style="display:flex;align-items:center;justify-content:center;text-decoration:none">헬스 캘린더 (부위별)</a><a class="secondary" href="#runcal" style="display:flex;align-items:center;justify-content:center;text-decoration:none">러닝 캘린더 (훈련별)</a></div>';
- var rdates={};if(calKind!=='run')Object.keys(db.days).forEach(function(k){if(db.days[k].sets.length)rdates[k]=1});if(calKind!=='gym')db.run.runs.forEach(function(r){rdates[r.date]=1});
+ h+='<div class="meta" style="padding:0 4px">이번 달 <b style="color:var(--ink)">'+cnt+'일</b> '+(calKind==='run'?'뛰었어요':calKind==='swim'?'수영했어요':'운동했어요')+'. 날짜를 누르면 그날 기록을 보고 고칠 수 있어요.</div>'+g;
+ if(calKind==='all')h+='<div class="btnrow"><a class="secondary" href="#gymcal" style="display:flex;align-items:center;justify-content:center;text-decoration:none">헬스 캘린더 (부위별)</a><a class="secondary" href="#runcal" style="display:flex;align-items:center;justify-content:center;text-decoration:none">러닝 캘린더 (훈련별)</a></div><a class="secondary" href="#swimcal" style="display:flex;align-items:center;justify-content:center;text-decoration:none">수영 캘린더</a>';
+ if(calKind==='swim'){var sl2=swimsSorted().reverse().slice(0,10);if(sl2.length)h+='<div class="sectitle">최근 수영</div><div class="list">'+sl2.map(swimRow).join('')+'</div>';return h+'</main>'}
+ var rdates={};if(calKind!=='run')Object.keys(db.days).forEach(function(k){if(db.days[k].sets.length)rdates[k]=1});if(calKind!=='gym')db.run.runs.forEach(function(r){rdates[r.date]=1});if(calKind==='all')db.swim.swims.forEach(function(w){rdates[w.date]=1});
  var recent=Object.keys(rdates).sort().reverse().slice(0,10);
- if(recent.length)h+='<div class="sectitle">최근 운동</div><div class="list">'+recent.map(function(k){var d=db.days[k]||{sets:[],workout:''},w=d.workout?wkById(d.workout):null,ex=calKind!=='run'&&d.sets.length?dayOrder(k).map(exById).filter(Boolean):[],rr=calKind!=='gym'?db.run.runs.filter(function(r){return r.date===k}):[];var parts=[];if(ex.length)parts.push((calKind==='all'?'헬스 ':'')+ex.map(function(e){return e.name}).join(', '));if(rr.length)parts.unshift((calKind==='all'?'러닝 ':'')+rr.map(function(r){return RTYPE[r.type]+' '+r1(r.km)+'km'}).join(', '));return '<button class="li" data-a="'+(calKind==='run'?'run-day':'day-pop')+'" data-k="'+k+'"><div style="min-width:0"><div class="t">'+esc(pretty(k))+(w&&ex.length?' · '+esc(w.name):'')+'</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(parts.join(' · '))+'</div></div>'+I.chev+'</button>'}).join('')+'</div>';
+ if(recent.length)h+='<div class="sectitle">최근 운동</div><div class="list">'+recent.map(function(k){var d=db.days[k]||{sets:[],workout:''},w=d.workout?wkById(d.workout):null,ex=calKind!=='run'&&d.sets.length?dayOrder(k).map(exById).filter(Boolean):[],rr=calKind!=='gym'?db.run.runs.filter(function(r){return r.date===k}):[];var parts=[];if(ex.length)parts.push((calKind==='all'?'헬스 ':'')+ex.map(function(e){return e.name}).join(', '));var swk=calKind==='all'?db.swim.swims.filter(function(w){return w.date===k}):[];if(swk.length)parts.unshift('수영 '+swk.map(function(w){return SKIND[w.kind]+' '+(+w.m).toLocaleString()+'m'}).join(', '));if(rr.length)parts.unshift((calKind==='all'?'러닝 ':'')+rr.map(function(r){return RTYPE[r.type]+' '+r1(r.km)+'km'}).join(', '));return '<button class="li" data-a="'+(calKind==='run'?'run-day':'day-pop')+'" data-k="'+k+'"><div style="min-width:0"><div class="t">'+esc(pretty(k))+(w&&ex.length?' · '+esc(w.name):'')+'</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(parts.join(' · '))+'</div></div>'+I.chev+'</button>'}).join('')+'</div>';
  return h+'</main>';
 }
 
@@ -1056,6 +1059,201 @@ function vRunHist(){
  return h+'<div class="note">기록을 누르면 고치거나 지울 수 있어요.</div></main>';
 }
 
+/* =============== 수영 =============== */
+var STROKE={free:'자유형',back:'배영',breast:'평영',fly:'접영'},GEAR={pull:'풀부이',paddle:'패들',kick:'킥판',fins:'오리발'};
+var SKIND={free:'자유 수영',lesson:'강습'},SCOLOR={free:'#1D9E75',lesson:'#3B6D11'};
+var SSTAGE={1:['익숙해지기','25~50m씩 끊어서, 숨이 고를 때까지 쉬며 자세에 집중해요.'],2:['이어서 수영하기','100m 반복으로 쉬지 않고 가는 힘을 길러요.'],3:['페이스 훈련','CSS(임계 수영 속도)를 기준으로 세트를 돌려요.']};
+var swBuf=null,sl=null,swGraph='m';
+function sset(){return db.swim.setup}
+function swimsSorted(){return db.swim.swims.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts})}
+function mss(t){t=String(t||'').trim();var m=t.match(/^(\d+):(\d{1,2})$/);if(m)return +m[1]*60+(+m[2]);var n=parseFloat(t);return n>0?Math.round(n*60):0}
+function cssOf(b){var a=mss(b.t400),c=mss(b.t200);if(a>c&&c>0)return Math.round((a-c)/2);return mss(b.css)}
+function swimWeekM(k){var from=addDays(k,-6);return db.swim.swims.filter(function(s){return s.date>=from&&s.date<=k}).reduce(function(a,s){return a+(+s.m||0)},0)}
+function swimRx(k){
+ var s=sset(),sh=shiftOf(k);if(!s)return{setup:false,shift:sh};
+ var wd=parseKey(k).getDay(),o={setup:true,shift:sh,stage:s.stage||1,blocks:[],notes:[]};
+ if((s.lessonDays||[]).indexOf(wd)>=0){o.type='lesson';o.why='오늘은 강습 날이에요. 배운 드릴을 메모에 적어 두면 자유 수영 때 복습하기 좋아요.';return o}
+ if(sh==='당번'){o.type='rest';o.why='당번이라 쉬는 날이에요.';return o}
+ if(sh==='휴무'){o.type='rest';o.why='휴무에는 강도 러닝과 하체 운동이 있어서 수영은 쉬어요. 원하면 300~400m를 아주 편하게 풀기만 해도 좋아요.';return o}
+ var st=s.stage||1,has=function(x){return (s.strokes||[]).indexOf(x)>=0},gear=function(x){return (s.gear||[]).indexOf(x)>=0};
+ var free=db.swim.swims.filter(function(w){return w.kind==='free'&&w.date<k}),n=free.filter(function(w){return (w.stage||1)===st}).length;
+ var y=addDays(k,-1),prevLesson=(s.lessonDays||[]).indexOf(parseKey(y).getDay())>=0||db.swim.swims.some(function(w){return w.date===y&&w.kind==='lesson'});
+ var cut=prevLesson?2:0,B=function(lab,txt,m,main){o.blocks.push({lab:lab,txt:txt,m:m,main:!!main})};
+ var other=[has('back')?'배영':'',has('breast')?'평영':''].filter(Boolean).join('·');
+ o.type='free';
+ if(st===1){
+  var r=Math.max(4,Math.min(12,8+2*Math.floor(n/2))-cut);
+  B('워밍업','4×50 자유형 아주 편하게 · 숨이 고를 때까지 쉬기',200);
+  B('드릴','8×25 강습에서 배운 드릴 · 휴식 20~30초',200);
+  B('메인',r+'×50 자유형 편하게 (말할 수 있을 정도의 숨) · 휴식 30초 이상',r*50,true);
+  if(gear('pull'))B('풀','4×25 풀부이 · 팔 동작과 호흡에 집중',100);
+  if(other)B('다른 영법','4×25 '+other+' 번갈아 · 편하게',100);
+  if(has('fly'))B('접영','2~4×25 접영 · 휴식 40초, 자세가 무너지면 멈추기',100);
+  B('쿨다운','100 아주 편하게',100);
+  o.title='짧게 끊어서 편하게';o.why='초보 단계는 거리보다 자세가 먼저예요. 50m씩 끊고 충분히 쉬면서, 매번 같은 자세로 가는 데 집중하세요.';
+ }else if(st===2){
+  var r2=Math.max(4,Math.min(10,6+Math.floor(n/2))-cut),late=n>=6;
+  B('워밍업','자유형 200 + '+(other||'자유형')+' 100 편하게',300);
+  B('드릴','6×50 (드릴 25 + 수영 25) · 휴식 20초',300);
+  B('메인',r2+'×100 자유형 편하게~약간 힘들게 · 휴식 30초',r2*100,true);
+  if(gear('pull'))B('풀',late?'4×100 풀부이'+(gear('paddle')?' + 패들 (어깨가 불편하면 패들 빼기)':''):'4×50 풀부이',late?400:200);
+  if(has('fly'))B('접영',(late?'6':'4')+'×25 접영 · 휴식 30초',late?150:100);
+  B('쿨다운','100 아주 편하게',100);
+  o.title='100m 이어서 수영';o.why='100m를 쉬지 않고 같은 페이스로 가는 연습이에요. 마지막 반복도 첫 반복과 비슷하게 들어오면 잘하고 있는 거예요.';
+ }else{
+  var p=s.css;
+  if(!p){
+   B('워밍업','400 편하게 + 4×25 점점 빠르게',500);B('측정 1','400m 자유형 최대한 일정하게 전력 · 시간 기록',400,true);B('회복','200~300 아주 편하게 (5분 이상)',250);B('측정 2','200m 자유형 전력 · 시간 기록',200,true);B('쿨다운','200 편하게',200);
+   o.title='CSS 측정';o.why='400m와 200m 기록으로 100m당 기준 페이스(CSS)를 계산해요. 끝나면 수영 설정에 두 기록을 넣어 주세요.';
+  }else{
+   var cyc=['css','endur','speed','im'];if(!(has('fly')&&has('back')&&has('breast')))cyc=['css','endur','speed'];
+   var t=cyc[n%cyc.length];o.cyc=cyc;
+   B('워밍업','자유형 200 + '+(other||'자유형')+' 100 편하게',300);
+   B('드릴','4×50 (드릴 25 + 수영 25) · 휴식 15초',200);
+   if(t==='css'){var rc=8-cut;B('메인',rc+'×100 자유형 @'+fmtPace(p+20)+' 출발 (100m '+fmtPace(p+3)+'~'+fmtPace(p+5)+')',rc*100,true);o.title='CSS 세트';o.why='기준 페이스(CSS) 근처에서 오래 버티는 힘을 길러요. 출발 간격 안에 들어오면 남는 시간만큼 쉬어요.'}
+   else if(t==='endur'){var re=3-(cut?1:0);B('메인',re+'×300 자유형 · 100m당 '+fmtPace(p+10)+' · 휴식 30초',re*300,true);o.title='지구력';o.why='CSS보다 조금 느리게, 길게 이어서 수영해요.'}
+   else if(t==='speed'){var rs=8-cut;B('메인',rs+'×50 빠르게 · 휴식 40초 (100m당 '+fmtPace(p-5)+'보다 빠르게)',rs*50,true);B('이어서','4×50 아주 편하게',200);o.title='스피드';o.why='짧고 빠르게, 충분히 쉬면서 속도와 자세를 같이 챙겨요.'}
+   else{B('메인','4×100 개인혼영 (접영·배영·평영·자유형 25씩) · 휴식 30초',400,true);B('이어서','4×50 (접영 25 + 자유형 25) · 휴식 30초',200);o.title='영법';o.why='네 영법을 이어서 하며 전환과 리듬을 익혀요.'}
+   if(gear('pull'))B('풀','4×100 풀부이'+(gear('paddle')?' + 패들':'')+' · 편하게',400);
+   B('쿨다운','100 아주 편하게',100);
+   var last=db.swim.cssHist.length?db.swim.cssHist[db.swim.cssHist.length-1].date:'';
+   if(last&&daysBetween(last,k)>42)o.notes.push('CSS를 잰 지 6주가 지났어요. 수영 설정에서 다시 측정해 보세요.');
+  }
+ }
+ if(prevLesson)o.notes.push('어제 강습이 있어서 메인 반복을 줄였어요.');
+ if(gear('paddle')&&st>=2)o.notes.push('패들은 어깨에 부담이 있어서 한 번에 400m까지만 써요.');
+ if(sh==='비번')o.notes.push('오늘은 리커버리 러닝도 있어요. 둘 다 힘들면 하나만 해도 괜찮아요.');
+ o.m=o.blocks.reduce(function(a,b){return a+b.m},0);
+ return o;
+}
+function swimSuggest(){
+ var s=sset();if(!s)return null;var st=s.stage||1,f=swimsSorted().filter(function(w){return w.kind==='free'&&(w.stage||1)===st});
+ if(st===1){var l2=f.slice(-2);if(l2.length===2&&l2.every(function(w){return (+w.cont||0)>=100}))return{to:2,why:'최근 두 번 모두 100m 이상을 쉬지 않고 갔어요.'}}
+ if(st===2){var l1=f.slice(-3);if(l1.some(function(w){return (+w.cont||0)>=200}))return{to:3,why:'200m 이상을 쉬지 않고 갔어요. 다음엔 CSS를 재고 페이스 훈련으로 넘어가요.'}}
+ return null;
+}
+function swimRow(w){return '<button class="li" data-a="sw-edit" data-id="'+esc(w.id)+'"><div style="min-width:0"><div class="t"><span class="dot" style="background:'+SCOLOR[w.kind]+'"></span>'+esc(short(w.date))+(shiftOf(w.date)?' '+shiftOf(w.date):'')+' · '+SKIND[w.kind]+'</div><div class="meta">'+[(w.strokes||[]).map(function(x){return STROKE[x]}).join('·'),w.sec&&w.m?fmtPace(w.sec/w.m*100)+'/100m':'',w.cont?'최장 연속 '+w.cont+'m':''].filter(Boolean).join(' · ')+'</div></div><div style="text-align:right;font-weight:800">'+(+w.m||0).toLocaleString()+'m</div></button>'}
+function vSwim(){
+ var k=todayKey(),x=swimRx(k),sh=x.shift;
+ var h=hdr('오늘의 수영',esc(pretty(k))+(sh?' · '+sh:''),backBtn('#home','홈으로'),'<div style="display:flex;gap:6px"><a class="icon" href="#swimcal" aria-label="수영 캘린더">'+I.cal+'</a><a class="icon" href="#swimset" aria-label="수영 설정">'+I.gear+'</a></div>')+'<main>';
+ var btns='<div class="btnrow"><button class="'+(x.type==='lesson'?'secondary':'primary')+'" data-a="sw-log" data-v="free">자유 수영 기록</button><button class="'+(x.type==='lesson'?'primary':'secondary')+'" data-a="sw-log" data-v="lesson">강습 기록</button></div>';
+ if(!x.setup){
+  h+='<div class="card"><div class="name">수영 설정부터 해 주세요</div><div class="meta" style="line-height:1.6">자유형으로 갈 수 있는 거리, 강습 요일, 할 줄 아는 영법과 장비를 넣으면 근무 패턴에 맞춰 수영 세트를 짜 드려요.</div><a class="primary" href="#swimset" style="display:flex;align-items:center;justify-content:center;text-decoration:none">수영 설정하기</a></div>';
+  return h+btns+swimRecent()+'</main>';
+ }
+ var st=x.stage;
+ h+='<a class="card" href="#swimset" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><div style="flex:1;min-width:0"><div class="meta">'+st+'단계</div><div style="font-size:15px;font-weight:700">'+SSTAGE[st][0]+'</div></div><div style="text-align:right"><div class="meta">최근 7일</div><div style="font-size:15px;font-weight:900">'+swimWeekM(k).toLocaleString()+'m</div>'+(sset().css?'<div class="meta" style="font-size:11px">CSS '+fmtPace(sset().css)+'/100m</div>':'')+'</div></a>';
+ var sg=swimSuggest();if(sg)h+='<div class="card" style="gap:8px;border:2px solid #1D9E75"><div class="name" style="font-size:15px">'+sg.to+'단계로 올릴 때가 됐어요</div><div class="meta">'+sg.why+'</div><button class="primary" data-a="sw-stage" data-v="'+sg.to+'">'+sg.to+'단계로 올리기</button></div>';
+ var today=db.swim.swims.filter(function(w){return w.date===k});
+ if(x.type!=='free'){
+  h+='<div class="rx" style="background:#12452A"><div class="row"><span style="font-size:13px;opacity:.85">오늘</span><span class="badge" style="background:#C0DD97;color:#173404">'+(x.type==='lesson'?'강습':'쉬는 날')+'</span></div><div class="big">'+(x.type==='lesson'?'수영 강습':'휴식')+'</div><div class="why">'+esc(x.why)+'</div></div>';
+ }else{
+  h+='<div class="rx" style="background:#12452A"><div class="row"><span style="font-size:13px;opacity:.85">오늘 추천</span><span class="badge" style="background:#C0DD97;color:#173404">'+esc(x.title)+'</span></div><div class="big">'+x.m.toLocaleString()+'m</div><div style="font-size:13px;opacity:.85">'+(st<3||!sset().css?'페이스 대신 숨으로 강도를 맞춰요 · '+(sset().pool||25)+'m 풀':'CSS '+fmtPace(sset().css)+'/100m 기준 · '+(sset().pool||25)+'m 풀')+'</div><div class="why">'+esc(x.why)+'</div>'+x.notes.map(function(n){return '<div class="why">· '+esc(n)+'</div>'}).join('')+'</div>';
+  h+='<div class="list">'+x.blocks.map(function(b){return '<div class="li" style="cursor:default"><div style="min-width:0"><div class="meta" style="font-size:12px;'+(b.main?'color:#1D7A44;font-weight:700':'')+'">'+b.lab+'</div><div class="t" style="font-weight:'+(b.main?800:500)+';white-space:normal">'+esc(b.txt)+'</div></div><div class="meta" style="flex-shrink:0">'+b.m+'m</div></div>'}).join('')+'</div>';
+ }
+ if(today.length)h+='<div class="toast ok">오늘 '+today.map(function(w){return SKIND[w.kind]+' '+(+w.m||0)+'m'}).join(', ')+' 기록했어요.</div>';
+ h+='<div class="card" style="gap:8px"><div class="name" style="font-size:14px">주간 계획</div><div class="meta" style="line-height:1.7">강습 요일: 강습 · 비번: 자유 수영<br>휴무·당번: 쉬기 (휴무는 러닝과 하체 운동에 집중)</div></div>';
+ return h+btns+swimRecent()+'</main>';
+}
+function swimRecent(){var l=swimsSorted().reverse().slice(0,5);if(!l.length)return '';return '<div class="sectitle">최근 수영</div><div class="list">'+l.map(swimRow).join('')+'</div><a class="secondary" href="#swimhist" style="display:flex;align-items:center;justify-content:center;text-decoration:none">전체 기록 · 그래프</a>'}
+function vSwimSet(){
+ if(!swBuf){var s=sset()||{};swBuf={stage:s.stage||1,maxFree:s.maxFree||'',t400:s.t400||'',t200:s.t200||'',css:s.cssIn||'',pool:s.pool||25,lessonDays:(s.lessonDays||[2,4]).slice(),strokes:(s.strokes||['free']).slice(),gear:(s.gear||[]).slice()}}
+ var b=swBuf,h=hdr('수영 설정','언제든 바꿀 수 있어요',backBtn('#swim','오늘의 수영으로'))+'<main>';
+ var numA='style="height:42px;width:110px;border:1px solid #DADDE2;border-radius:10px;padding:0 10px;font-size:15px;text-align:right;background:#fff"';
+ h+='<div class="sectitle">단계</div><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+[1,2,3].map(function(n){var on=+b.stage===n;return '<button data-a="sw-b" data-f="stage" data-v="'+n+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+n+'단계</button>'}).join('')+'</div><div class="note">'+SSTAGE[b.stage][0]+': '+SSTAGE[b.stage][1]+'</div>';
+ h+='<div class="list"><div class="field"><label for="sw-maxFree">자유형 최장 연속 거리 (m)</label><input id="sw-maxFree" data-sw="maxFree" type="number" inputmode="numeric" min="0" step="25" value="'+esc(b.maxFree)+'" '+numA+'></div></div><div class="note">정확하지 않아도 괜찮아요. 기록에 "쉬지 않고 간 최장 거리"가 쌓이면 단계를 올릴 때를 앱이 알려줘요.</div>';
+ var c=cssOf(b);
+ h+='<div class="sectitle">CSS (임계 수영 속도, 선택)</div><div class="card" style="gap:10px"><div class="meta" style="line-height:1.6">400m와 200m를 각각 전력으로 수영한 기록을 넣으면 100m당 기준 페이스를 계산해요. 3단계부터 써요.</div>'+
+  '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+[['t400','400m 기록 (8:00)'],['t200','200m 기록 (3:50)']].map(function(f){return '<input data-sw="'+f[0]+'" type="text" inputmode="numeric" placeholder="'+f[1]+'" aria-label="'+f[1]+'" value="'+esc(b[f[0]])+'" style="height:48px;width:100%;min-width:0;box-sizing:border-box;border:1px solid #DADDE2;border-radius:12px;text-align:center;font-size:16px;font-weight:700;background:#fff">'}).join('')+'</div>'+
+  '<div class="row"><label class="meta" for="sw-css">또는 100m 페이스 직접 (2:05)</label><input id="sw-css" data-sw="css" type="text" inputmode="numeric" value="'+esc(b.css)+'" '+numA+'></div>'+
+  '<div class="meta" id="sw-cssout" style="color:#1D7A44;font-weight:700">'+(c?'CSS '+fmtPace(c)+' / 100m':'아직 없어요')+'</div></div>';
+ h+='<div class="sectitle">수영장</div><div class="seg two">'+[25,50].map(function(p){var on=+b.pool===p;return '<button data-a="sw-b" data-f="pool" data-v="'+p+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+p+'m</button>'}).join('')+'</div>';
+ var chips=function(f,list){return '<div class="chips" style="flex-wrap:wrap">'+list.map(function(it){var on=b[f].indexOf(it[0])>=0;return '<button class="chip'+(on?' on':'')+'" data-a="sw-t" data-f="'+f+'" data-v="'+it[0]+'" aria-pressed="'+on+'">'+it[1]+'</button>'}).join('')+'</div>'};
+ h+='<div class="sectitle">강습 요일</div>'+chips('lessonDays',['일','월','화','수','목','금','토'].map(function(d,i){return[i,d]}));
+ h+='<div class="sectitle">할 줄 아는 영법</div>'+chips('strokes',Object.keys(STROKE).map(function(x){return[x,STROKE[x]]}));
+ h+='<div class="sectitle">장비</div>'+chips('gear',Object.keys(GEAR).map(function(x){return[x,GEAR[x]]}));
+ h+='<button class="primary" data-a="sw-save" style="margin-top:8px">저장</button><div class="note">처방은 수영 코칭에서 널리 쓰는 방식(워밍업 → 드릴 → 메인 → 쿨다운, CSS 기준 페이스)을 따라요. 어깨나 몸이 불편한 날은 처방보다 몸 상태를 먼저 따라 주세요.</div></main>';
+ return h;
+}
+function readSwSet(){Array.prototype.forEach.call(document.querySelectorAll('[data-sw]'),function(el){swBuf[el.getAttribute('data-sw')]=el.value})}
+function saveSwSet(){
+ readSwSet();var b=swBuf,old=sset()||{},c=cssOf(b);
+ var s={stage:+b.stage||1,maxFree:Math.max(0,parseInt(b.maxFree,10)||0),t400:b.t400,t200:b.t200,cssIn:b.css,css:c,pool:+b.pool||25,lessonDays:b.lessonDays.map(Number).sort(),strokes:b.strokes,gear:b.gear};
+ if(c&&c!==old.css)db.swim.cssHist.push({date:todayKey(),css:c});
+ db.swim.setup=s;swBuf=null;save();toasts.push({m:'수영 설정을 저장했어요.',k:'ok'});go('#swim');
+}
+function openSwimLog(kind,id){
+ var w=id?db.swim.swims.filter(function(x){return x.id===id})[0]:null;
+ if(w){var t=+w.sec||0;sl={id:w.id,date:w.date,kind:w.kind,m:w.m,h:Math.floor(t/3600)||'',mi:Math.floor(t%3600/60),s:t%60,cont:w.cont||'',strokes:(w.strokes||[]).slice(),memo:w.memo||''}}
+ else{var x=swimRx(todayKey());sl={id:null,date:todayKey(),kind:kind||'free',m:kind!=='lesson'&&x.m?x.m:'',h:'',mi:'',s:'',cont:'',strokes:(sset()&&sset().strokes||['free']).slice(0,kind==='lesson'?4:1),memo:''}}
+ renderSwimLog();
+}
+function readSwimLog(){if(!sl)return;['date','m','h','mi','s','cont','memo'].forEach(function(f){var el=document.getElementById('sl-'+f);if(el)sl[f]=el.value})}
+function slSec(){return (parseInt(sl.h,10)||0)*3600+(parseInt(sl.mi,10)||0)*60+(parseInt(sl.s,10)||0)}
+function renderSwimLog(){
+ var c=sl,sec=slSec(),m=parseFloat(c.m)||0;
+ var inp=function(id,val,ph,extra){return '<input id="sl-'+id+'" type="number" inputmode="numeric" value="'+esc(val)+'" placeholder="'+ph+'" '+(extra||'')+' style="height:52px;width:100%;min-width:0;box-sizing:border-box;border:1px solid #DADDE2;border-radius:12px;text-align:center;font-size:20px;font-weight:700;background:#fff">'};
+ modal('<h2>'+(c.id?'수영 기록 고치기':'수영 기록')+'</h2>'+
+  '<div class="seg two">'+[['free','자유 수영'],['lesson','강습']].map(function(p){var on=c.kind===p[0];return '<button data-a="sl-kind" data-v="'+p[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+p[1]+'</button>'}).join('')+'</div>'+
+  '<div class="btnrow"><div style="display:flex;flex-direction:column;gap:6px"><label class="lbl" for="sl-m">총 거리 (m)</label>'+inp('m',c.m,'0','min="0" step="25" data-sl="1"')+'</div><div style="display:flex;flex-direction:column;gap:6px"><label class="lbl" for="sl-date">날짜</label><input id="sl-date" type="date" value="'+esc(c.date)+'" max="'+todayKey()+'" style="height:52px;width:100%;min-width:0;box-sizing:border-box;border:1px solid #DADDE2;border-radius:12px;padding:0 8px;font-size:15px;background:#fff"></div></div>'+
+  '<div style="display:flex;flex-direction:column;gap:6px"><span class="lbl">시간 (시 : 분 : 초, 쉬는 시간 포함)</span><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">'+inp('h',c.h,'시','min="0" data-sl="1" aria-label="시간"')+inp('mi',c.mi,'분','min="0" max="59" data-sl="1" aria-label="분"')+inp('s',c.s,'초','min="0" max="59" data-sl="1" aria-label="초"')+'</div></div>'+
+  '<div class="row" style="background:#F4F5F2;border-radius:12px;padding:10px 12px"><span class="meta">100m당 평균 (자동)</span><b id="sl-pace" style="font-size:18px">'+(m&&sec?fmtPace(sec/m*100)+' /100m':'–')+'</b></div>'+
+  '<div style="display:flex;flex-direction:column;gap:6px"><label class="lbl" for="sl-cont">쉬지 않고 간 최장 거리 (m)</label>'+inp('cont',c.cont,'예: 100','min="0" step="25"')+'</div>'+
+  '<div class="lbl">영법</div><div class="chips" style="flex-wrap:wrap">'+Object.keys(STROKE).map(function(x){var on=c.strokes.indexOf(x)>=0;return '<button class="chip'+(on?' on':'')+'" data-a="sl-stroke" data-v="'+x+'" aria-pressed="'+on+'">'+STROKE[x]+'</button>'}).join('')+'</div>'+
+  '<div style="display:flex;flex-direction:column;gap:6px"><label class="lbl" for="sl-memo">메모</label><textarea id="sl-memo" style="min-height:60px;font-family:inherit;font-size:14px" placeholder="배운 드릴, 잘 된 점, 어려웠던 점">'+esc(c.memo)+'</textarea></div>'+
+  '<div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="sl-save">저장</button></div>'+(c.id?'<button class="danger" data-a="sl-del">이 기록 삭제</button>':''));
+}
+function saveSwimLog(){
+ readSwimLog();var c=sl,m=Math.round(parseFloat(c.m)||0);
+ if(!(m>0)){toast('총 거리를 입력해 주세요.','err');renderSwimLog();return}
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(c.date))c.date=todayKey();
+ var o={id:c.id||'w'+rid(),date:c.date,kind:c.kind,m:m,sec:slSec(),cont:Math.max(0,parseInt(c.cont,10)||0),strokes:c.strokes,stage:sset()?sset().stage||1:1,memo:String(c.memo||'').slice(0,300),ts:Date.now()};
+ if(c.id)db.swim.swims=db.swim.swims.map(function(w){return w.id===c.id?Object.assign(o,{ts:w.ts,stage:w.stage||o.stage}):w});else db.swim.swims.push(o);
+ sl=null;save();modal('');toast(SKIND[o.kind]+' '+o.m.toLocaleString()+'m 기록했어요.'+(o.sec?' 100m당 '+fmtPace(o.sec/o.m*100):''));
+}
+function swimDaySheet(k){
+ var l=db.swim.swims.filter(function(w){return w.date===k}).sort(function(a,b){return a.ts-b.ts});if(!l.length){modal('');return}
+ var tot=l.reduce(function(a,w){return a+(+w.m||0)},0),sh=shiftOf(k);
+ modal('<h2>'+esc(pretty(k,{month:'long',day:'numeric',weekday:'long'}))+'</h2><div class="meta">'+[sh?sh+'일':'',l.length>1?'수영 '+l.length+'회 · 합계 '+tot.toLocaleString()+'m':''].filter(Boolean).join(' · ')+'</div><div style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto">'+l.map(function(w){
+  return '<button class="card" data-a="sw-edit" data-id="'+esc(w.id)+'" style="text-align:left;border:1px solid var(--line);gap:6px;padding:14px"><div class="row" style="align-items:baseline"><div style="font-size:20px;font-weight:800"><span class="dot" style="background:'+SCOLOR[w.kind]+';width:10px;height:10px"></span>'+SKIND[w.kind]+' '+(+w.m).toLocaleString()+'m</div></div><div class="meta" style="font-size:14px;color:var(--ink)">'+[w.sec?'시간 <b>'+fmtDur(w.sec)+'</b>':'',w.sec&&w.m?'100m당 <b>'+fmtPace(w.sec/w.m*100)+'</b>':'',w.cont?'최장 연속 <b>'+w.cont+'m</b>':''].filter(Boolean).join(' · ')+'</div>'+((w.strokes||[]).length?'<div class="meta">'+w.strokes.map(function(x){return STROKE[x]}).join(' · ')+'</div>':'')+(w.memo?'<div class="meta" style="white-space:pre-wrap">'+esc(w.memo)+'</div>':'')+'<div class="meta" style="font-size:12px">눌러서 고치거나 지울 수 있어요</div></button>'}).join('')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">닫기</button></div>');
+}
+function vSwimHist(){
+ var h=hdr('수영 기록','전체',backBtn('#swim','오늘의 수영으로'))+'<main>',ws=swimsSorted();
+ if(!ws.length)return h+'<div class="card"><div class="empty">아직 수영 기록이 없어요.</div></div></main>';
+ h+='<div class="chips" style="flex-wrap:wrap">'+[['m','주간 거리'],['pace','100m 페이스'],['cont','최장 연속 거리'],['css','CSS']].map(function(m){return '<button class="chip'+(swGraph===m[0]?' on':'')+'" data-a="sw-g" data-v="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div>';
+ var pts=[],tf=function(v){return fmtPace(v*60)};
+ if(swGraph==='m'){var st=addDays(todayKey(),-7*11);for(var i=0;i<12;i++){var a=addDays(st,7*i-6),b=addDays(st,7*i);pts.push({k:b,v:ws.filter(function(w){return w.date>=a&&w.date<=b}).reduce(function(s,w){return s+(+w.m||0)},0)})}
+  if(pts.some(function(p){return p.v}))h+='<div class="card">'+lineChart(pts,'m','주간 수영 거리','최근 <b>'+pts[11].v.toLocaleString()+'m</b> · 최고 '+Math.max.apply(null,pts.map(function(p){return p.v})).toLocaleString()+'m')+'</div>';else pts=[]}
+ else if(swGraph==='pace'){pts=ws.filter(function(w){return w.kind==='free'&&w.sec&&w.m}).slice(-20).map(function(w){var p=w.sec/w.m*100;return{k:w.date,v:Math.round(p/60*100)/100,lab:fmtPace(p)+'/100m'}});
+  if(pts.length>=2)h+='<div class="card">'+lineChart(pts,'분/100m','100m 페이스','최근 <b>'+pts[pts.length-1].lab+'</b>',tf)+'<div class="note">자유 수영만, 쉬는 시간을 포함한 평균이에요. 내려갈수록 빨라진 거예요.</div></div>'}
+ else if(swGraph==='cont'){pts=ws.filter(function(w){return w.cont}).slice(-20).map(function(w){return{k:w.date,v:+w.cont}});
+  if(pts.length>=2)h+='<div class="card">'+lineChart(pts,'m','최장 연속 거리','최근 <b>'+pts[pts.length-1].v+'m</b> · 최고 '+Math.max.apply(null,pts.map(function(p){return p.v}))+'m')+'<div class="note">초보 단계에서 가장 중요한 성장 지표예요.</div></div>'}
+ else{pts=db.swim.cssHist.map(function(c){return{k:c.date,v:Math.round(c.css/60*100)/100,lab:fmtPace(c.css)+'/100m'}});
+  if(pts.length>=2)h+='<div class="card">'+lineChart(pts,'분/100m','CSS','최근 <b>'+pts[pts.length-1].lab+'</b>',tf)+'<div class="note">수영 설정에 새 CSS를 저장할 때마다 점이 찍혀요.</div></div>'}
+ if(pts.length<2)h+='<div class="card"><div class="empty">기록이 2개 이상 쌓이면 그래프가 그려져요.</div></div>';
+ var months={};ws.slice().reverse().forEach(function(w){var m=w.date.slice(0,7);(months[m]=months[m]||[]).push(w)});
+ Object.keys(months).forEach(function(m){var l=months[m],tot=l.reduce(function(a,w){return a+(+w.m||0)},0);h+='<div class="sectitle" style="justify-content:space-between"><span>'+(+m.slice(0,4))+'년 '+(+m.slice(5))+'월</span><span>'+l.length+'회 · '+tot.toLocaleString()+'m</span></div><div class="list">'+l.map(swimRow).join('')+'</div>'});
+ return h+'</main>';
+}
+function swimAct(a,t,id){
+ var v=t.getAttribute('data-v'),f=t.getAttribute('data-f');
+ switch(a){
+  case 'sw-log':openSwimLog(v);break;
+  case 'sw-edit':openSwimLog(null,id);break;
+  case 'sw-stage':db.swim.setup.stage=+v;save();toast(v+'단계로 올렸어요.');render();break;
+  case 'sw-b':readSwSet();swBuf[f]=+v;render();break;
+  case 'sw-t':readSwSet();var val=f==='lessonDays'?+v:v,arr=swBuf[f],ix=arr.indexOf(val);if(ix>=0)arr.splice(ix,1);else arr.push(val);render();break;
+  case 'sw-save':saveSwSet();break;
+  case 'sw-g':swGraph=v;render();break;
+  case 'sl-kind':readSwimLog();sl.kind=v;renderSwimLog();break;
+  case 'sl-stroke':readSwimLog();var j=sl.strokes.indexOf(v);if(j>=0)sl.strokes.splice(j,1);else sl.strokes.push(v);renderSwimLog();break;
+  case 'sl-save':saveSwimLog();break;
+  case 'sl-del':readSwimLog();confirmSheet('수영 기록 삭제','이 기록을 지울까요? 지운 기록은 되돌릴 수 없어요.','삭제','sl-del-ok',sl.id);break;
+  case 'sl-del-ok':db.swim.swims=db.swim.swims.filter(function(w){return w.id!==id});sl=null;save();modal('');toast('기록을 지웠어요.');break;
+  case 'sw-day':swimDaySheet(t.getAttribute('data-k'));break;
+ }
+}
+
 /* =============== 홈 =============== */
 function vHome(){
  var k=todayKey(),sh=shiftOf(k);
@@ -1063,18 +1261,19 @@ function vHome(){
  if(sh)h+='<div style="display:flex;gap:6px">'+[-1,0,1].map(function(o){var kk=addDays(k,o),s2=shiftOf(kk),on=o===0;return '<div style="flex:1;text-align:center;font-size:12px;padding:7px 0;border-radius:10px;background:'+(on?'var(--ink)':'#E6E8E4')+';color:'+(on?'#fff':'#4A4F57')+';font-weight:'+(on?700:500)+'">'+(o<0?'어제':o>0?'내일':'오늘')+' · '+s2+'</div>'}).join('')+'</div>';
  var gd=db.days[k],gymDone=gd&&gd.sets.length,nx=nextWk(k),gw=gd&&gd.workout?wkById(gd.workout):null;
  var runToday=db.run.runs.filter(function(r){return r.date===k}),rx2=runRx(k);
+ var swToday=db.swim.swims.filter(function(w){return w.date===k}),sx=swimRx(k),swTxt=swToday.length?'오늘 '+swToday.map(function(w){return (+w.m).toLocaleString()+'m'}).join(' + ')+' 완료':!sx.setup?'설정하고 시작하기':sx.type==='lesson'?'오늘은 <b style="color:var(--ink)">강습</b> 날':sx.type==='rest'?'오늘은 쉬는 날':'오늘 추천<br><b style="color:var(--ink)">'+esc(sx.title)+' '+sx.m.toLocaleString()+'m</b>';
  var gymTxt=gymDone?'오늘 '+(gw?esc(gw.name):'운동')+(gd.done?' 완료':' 진행 중'):(nx?'다음 차례<br><b style="color:var(--ink)">'+esc(nx.name)+'</b>':'워크아웃 만들기');
  var runTxt=runToday.length?'오늘 '+runToday.map(function(r){return r1(r.km)+'km'}).join(' + ')+' 완료':(!rx2.setup?'목표를 설정하세요':rx2.type==='rest'?'오늘은 쉬는 날':'오늘 추천<br><b style="color:var(--ink)">'+RTYPE[rx2.type]+(rx2.km?' '+r1(rx2.km)+'km':'')+'</b>');
  function tile(href,name,color,bg,icon,txt,done,disabled){return (disabled?'<div':'<a href="'+href+'"')+' style="text-decoration:none;color:inherit;background:#fff;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:150px;'+(disabled?'opacity:.55':'')+'"><div class="row"><div style="width:44px;height:44px;border-radius:14px;background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+'">'+icon+'</div>'+(done?'<span class="badge b-new">완료</span>':'')+'</div><div style="font-size:18px;font-weight:900">'+name+'</div><div class="meta" style="font-size:12px;line-height:1.45">'+txt+'</div>'+(disabled?'</div>':'</a>')}
  h+='<div class="sectitle">오늘 할 운동을 고르세요</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+
   tile('#today','헬스','#1F55D6','#E5EEFB','<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>',gymTxt,gd&&gd.done)+
   tile('#run','러닝','#B4441C','#FCE9DF','<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14" cy="4" r="2"/><path d="M9 20l3-6 3 3v4M6 12l3-3 4 1 3 3 3 1"/></svg>',runTxt,runToday.length)+
-  tile('','수영','#1F7A44','#E0F4EC','<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 16c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M2 20c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><circle cx="15" cy="7" r="2"/><path d="M6 12l4-5 4 3"/></svg>','준비 중',false,true)+
+  tile('#swim','수영','#1F7A44','#E0F4EC','<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 16c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M2 20c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><circle cx="15" cy="7" r="2"/><path d="M6 12l4-5 4 3"/></svg>',swTxt,swToday.length)+
   tile('','자전거','#6250D6','#F2EEFC','<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="17" r="3.5"/><circle cx="18.5" cy="17" r="3.5"/><path d="M5.5 17l4-8h6l3 8M9.5 9l3 8M14 5h2"/></svg>','준비 중',false,true)+'</div>';
  var from=addDays(k,-6),gymN=0,act={};
  Object.keys(db.days).forEach(function(d){if(d>=from&&d<=k&&db.days[d].sets.length){gymN++;act[d]=1}});
- db.run.runs.forEach(function(r){if(r.date>=from&&r.date<=k)act[r.date]=1});
- h+='<div class="card" style="gap:10px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:15px">최근 7일</div><div class="meta">'+esc(short(from))+' ~ '+esc(short(k))+'</div></div><div class="row" style="justify-content:space-around;text-align:center"><div><div class="meta">헬스</div><div style="font-size:20px;font-weight:900">'+gymN+'<small class="meta">회</small></div></div><div><div class="meta">러닝</div><div style="font-size:20px;font-weight:900">'+weekKm(k)+'<small class="meta">km</small></div></div><div><div class="meta">운동한 날</div><div style="font-size:20px;font-weight:900">'+Object.keys(act).length+'<small class="meta">일</small></div></div></div></div>';
+ db.run.runs.forEach(function(r){if(r.date>=from&&r.date<=k)act[r.date]=1});db.swim.swims.forEach(function(w){if(w.date>=from&&w.date<=k)act[w.date]=1});
+ h+='<div class="card" style="gap:10px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:15px">최근 7일</div><div class="meta">'+esc(short(from))+' ~ '+esc(short(k))+'</div></div><div class="row" style="justify-content:space-around;text-align:center"><div><div class="meta">헬스</div><div style="font-size:20px;font-weight:900">'+gymN+'<small class="meta">회</small></div></div><div><div class="meta">러닝</div><div style="font-size:20px;font-weight:900">'+weekKm(k)+'<small class="meta">km</small></div></div><div><div class="meta">수영</div><div style="font-size:20px;font-weight:900">'+swimWeekM(k).toLocaleString()+'<small class="meta">m</small></div></div><div><div class="meta">운동한 날</div><div style="font-size:20px;font-weight:900">'+Object.keys(act).length+'<small class="meta">일</small></div></div></div></div>';
  if(!sh)h+='<div class="note">설정에서 근무 패턴(당번 기준 날짜)을 켜면 오늘 근무에 맞춰 운동을 추천해요.</div>';
  return h+'</main>';
 }
@@ -1084,7 +1283,7 @@ function render(){
  if(!db)return;
  graphData=null;
  var h;
- switch(view){case 'home':h=vHome();break;case 'run':h=vRun();break;case 'runset':h=vRunSet();break;case 'runhist':h=vRunHist();break;case 'ex':h=vEx();break;case 'exedit':h=vExEdit();break;case 'cal':h=vCal();break;case 'plan':h=vPlan();break;case 'cat':h=vCat();break;case 'wk':h=vWk();break;case 'prog':h=vProg();break;case 'me':h=vMe();break;case 'guide':h=vGuide();break;case 'runguide':h=vRunGuide();break;default:h=vToday()}
+ switch(view){case 'home':h=vHome();break;case 'run':h=vRun();break;case 'runset':h=vRunSet();break;case 'runhist':h=vRunHist();break;case 'swim':h=vSwim();break;case 'swimset':h=vSwimSet();break;case 'swimhist':h=vSwimHist();break;case 'ex':h=vEx();break;case 'exedit':h=vExEdit();break;case 'cal':h=vCal();break;case 'plan':h=vPlan();break;case 'cat':h=vCat();break;case 'wk':h=vWk();break;case 'prog':h=vProg();break;case 'me':h=vMe();break;case 'guide':h=vGuide();break;case 'runguide':h=vRunGuide();break;default:h=vToday()}
  if(toasts.length){var tt=toasts.map(function(t){return '<div class="toast '+t.k+'" role="'+(t.k==='err'?'alert':'status')+'">'+esc(t.m)+'</div>'}).join('');h=h.replace('<main>','<main>'+tt);toasts=[]}
  var app=document.getElementById('app'),act=document.activeElement,aid=act&&act.id;
  app.innerHTML=h;
@@ -1156,11 +1355,12 @@ function runDaySheet(k){
 }
 function daySheet(k){
  popDay=k;var d=db.days[k]||{sets:[],workout:'',plan:[]},runsK=db.run.runs.filter(function(r){return r.date===k});
- if(!d.sets.length&&!runsK.length){modal('');popDay=null;render();return}
+ var swK=db.swim.swims.filter(function(w){return w.date===k});
+ if(!d.sets.length&&!runsK.length&&!swK.length){modal('');popDay=null;render();return}
  var w=d.workout?wkById(d.workout):null,order=d.sets.length?dayOrder(k).filter(function(id){return setsOn(k,id).length}):[];
  var rows=order.map(function(id){var e=exById(id),c=e?catById(e.cat):catById(''),ws=setsOn(k,id,true),ss=setsOn(k,id,false);
   return '<div class="swipewrap"><div class="swipebg" aria-hidden="true">삭제</div><div class="swipe" data-swipe="'+esc(id)+'"><div class="row"><div style="min-width:0"><div class="name" style="font-size:15px"><span class="dot" style="background:'+c.color+'"></span>'+esc(e?e.name:'삭제된 종목')+'</div><div class="meta" style="margin-top:2px">'+(e&&isCardio(e)?esc(setsOn(k,id).map(cardioTxt).join(' / ')):ss.length?ss.map(setTxt).join(', '):'본세트 없음')+(ws.length?' · 웜업 '+ws.length+'세트':'')+'</div></div><button class="ghost" data-a="daydel" data-id="'+esc(id)+'" aria-label="'+esc(e?e.name:'종목')+' 기록 삭제" style="flex-shrink:0;color:var(--red);border-color:#F0C9B8">삭제</button></div></div></div>'}).join('');
- modal('<h2>'+esc(pretty(k,{month:'long',day:'numeric',weekday:'long'}))+'</h2><div class="meta">'+(w&&order.length?esc(w.name)+' · ':'')+[order.length?order.length+'개 종목':'',runsK.length?'러닝 '+runsK.length+'회':''].filter(Boolean).join(' · ')+(d.done?' · 완료':'')+' · 왼쪽으로 밀면 지울 수 있어요</div><div style="max-height:56vh;overflow-y:auto;border-top:1px solid var(--line)">'+runsK.map(function(r){return '<div class="swipewrap"><div class="swipebg" aria-hidden="true">삭제</div><div class="swipe" data-swipe="run:'+esc(r.id)+'"><div class="row"><div style="min-width:0"><div class="name" style="font-size:15px"><span class="dot" style="background:'+(RTCOLOR[r.type]||RUNCOLOR)+'"></span>러닝 · '+RTYPE[r.type]+' '+r1(r.km)+'km'+'</div><div class="meta" style="margin-top:2px">'+r1(r.km)+'km'+(r.sec?' · '+fmtDur(r.sec)+' · '+fmtPace(r.sec/r.km)+'/km':'')+(r.hr?' · '+r.hr+'bpm':'')+'</div></div><button class="ghost" data-a="daydel" data-id="run:'+esc(r.id)+'" style="flex-shrink:0;color:var(--red);border-color:#F0C9B8">삭제</button></div></div></div>'}).join('')+rows+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">닫기</button><button class="primary" data-a="goto" data-k="'+k+'">이날 기록 열기</button></div>');
+ modal('<h2>'+esc(pretty(k,{month:'long',day:'numeric',weekday:'long'}))+'</h2><div class="meta">'+(w&&order.length?esc(w.name)+' · ':'')+[order.length?order.length+'개 종목':'',runsK.length?'러닝 '+runsK.length+'회':'',swK.length?'수영 '+swK.length+'회':''].filter(Boolean).join(' · ')+(d.done?' · 완료':'')+' · 왼쪽으로 밀면 지울 수 있어요</div><div style="max-height:56vh;overflow-y:auto;border-top:1px solid var(--line)">'+runsK.map(function(r){return '<div class="swipewrap"><div class="swipebg" aria-hidden="true">삭제</div><div class="swipe" data-swipe="run:'+esc(r.id)+'"><div class="row"><div style="min-width:0"><div class="name" style="font-size:15px"><span class="dot" style="background:'+(RTCOLOR[r.type]||RUNCOLOR)+'"></span>러닝 · '+RTYPE[r.type]+' '+r1(r.km)+'km'+'</div><div class="meta" style="margin-top:2px">'+r1(r.km)+'km'+(r.sec?' · '+fmtDur(r.sec)+' · '+fmtPace(r.sec/r.km)+'/km':'')+(r.hr?' · '+r.hr+'bpm':'')+'</div></div><button class="ghost" data-a="daydel" data-id="run:'+esc(r.id)+'" style="flex-shrink:0;color:var(--red);border-color:#F0C9B8">삭제</button></div></div></div>'}).join('')+swK.map(function(w){return '<button class="li" data-a="sw-edit" data-id="'+esc(w.id)+'" style="width:100%"><div style="min-width:0"><div class="name" style="font-size:15px"><span class="dot" style="background:'+SCOLOR[w.kind]+'"></span>수영 · '+SKIND[w.kind]+' '+(+w.m).toLocaleString()+'m</div><div class="meta" style="margin-top:2px">'+[w.sec?fmtDur(w.sec):'',w.sec&&w.m?fmtPace(w.sec/w.m*100)+'/100m':''].filter(Boolean).join(' · ')+'</div></div>'+I.chev+'</button>'}).join('')+rows+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">닫기</button><button class="primary" data-a="goto" data-k="'+k+'">이날 기록 열기</button></div>');
 }
 function askDayDel(exId){
  var k=popDay;if(!k)return;
@@ -1303,13 +1503,13 @@ function ensureProgs(o){
 }
 /* v3 백업 또는 이전 아티팩트 버전(v2) 백업을 받아들임 */
 function normalize(o){
- if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.run=o.run||{setup:null,runs:[],shoes:[]};o.run.runs=o.run.runs||[];o.run.shoes=o.run.shoes||[];o.settings=Object.assign({shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},o.settings||{});ensureProgs(o);ensureCardio(o);return o}
+ if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.run=o.run||{setup:null,runs:[],shoes:[]};o.run.runs=o.run.runs||[];o.run.shoes=o.run.shoes||[];o.swim=o.swim||{setup:null,swims:[],cssHist:[]};o.swim.swims=o.swim.swims||[];o.swim.cssHist=o.swim.cssHist||[];o.settings=Object.assign({shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},o.settings||{});ensureProgs(o);ensureCardio(o);return o}
  if(o&&o.app==='hc'&&o.cfg&&Array.isArray(o.cfg.exercises)){
   var c=o.cfg,d={v:3,cats:(c.categories||[]).map(function(x){return{id:x.id,name:x.name,color:x.color}}),exercises:[],workouts:(c.routines||[]).map(function(r){return{id:r.id,name:r.name,exIds:r.exIds||[]}}),days:{},body:(o.body&&o.body.entries)||[],settings:{bar:20,rest:(c.settings&&c.settings.rest)||90,restWarm:60,restOn:false},lastBackup:''};
   c.exercises.forEach(function(e){var lin=e.method!=='double';d.exercises.push({id:e.id,name:e.name,cat:e.cat,method:lin?'linear':'double',sets:e.method==='gzclp'?5:(e.sets||3),repsMin:e.method==='gzclp'?3:(e.repsMin||8),repsMax:e.method==='gzclp'?3:(e.repsMax||12),increment:e.increment||2.5,startWeight:+e.startWeight||0,anchor:e.anchor||'',warm:(+e.startWeight||0)>0?(lin?'full':'light'):'none',failLimit:e.failLimit||3,deloadPct:e.deloadPct==null?10:e.deloadPct,rest:e.rest||0,deleted:!!e.deleted})});
   Object.keys(o.days||{}).forEach(function(k){var x=o.days[k];if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!x)return;d.days[k]={date:k,workout:x.workout||'',plan:x.plan||[],sets:(x.sets||[]).map(function(s){return{id:s.id||rid(),exId:s.exId,w:+s.w||0,r:+s.r||0,warm:false,ts:s.ts||0}}),wo:{}}});
   if(!d.cats.length)return null;
-  d.run={setup:null,runs:[],shoes:[]};d.settings.shiftAnchor='2026-11-07';ensureProgs(d);return d;
+  d.run={setup:null,runs:[],shoes:[]};d.swim={setup:null,swims:[],cssHist:[]};d.settings.shiftAnchor='2026-11-07';ensureProgs(d);return d;
  }
  return null;
 }
@@ -1321,6 +1521,7 @@ document.addEventListener('click',function(ev){
  var a=t.getAttribute('data-a'),id=t.getAttribute('data-id');
  if(a==='modal-bg'&&tgt!==t)return;
  var e=(view==='ex'||view==='exedit')?exById(param):null;
+ if(a&&(a.indexOf('sw-')===0||a.indexOf('sl-')===0)){swimAct(a,t,id);return}
  switch(a){
   case 'to-today':curDate=todayKey();go('#today');break;
   case 'goto':curDate=t.getAttribute('data-k');go('#today');break;
@@ -1435,6 +1636,8 @@ document.addEventListener('input',function(ev){
  if(el.getAttribute('data-wk')==='name'){var wn=wkById(param);if(wn){wn.name=el.value.trim().slice(0,30)||'워크아웃';save()}return}
  if(el.getAttribute('data-s')==='shiftAnchor'){if(/^\d{4}-\d{2}-\d{2}$/.test(el.value)){db.settings.shiftAnchor=el.value;save()}return}
  if(el.getAttribute('data-rs')&&rsBuf){rsBuf[el.getAttribute('data-rs')]=el.value;return}
+ if(el.getAttribute('data-sl')&&sl){readSwimLog();var sm=parseFloat(sl.m)||0,ss=slSec(),se=document.getElementById('sl-pace');if(se)se.textContent=sm&&ss?fmtPace(ss/sm*100)+' /100m':'–';return}
+ if(el.getAttribute('data-sw')&&swBuf){swBuf[el.getAttribute('data-sw')]=el.value;var co=document.getElementById('sw-cssout'),cv=cssOf(swBuf);if(co)co.textContent=cv?'CSS '+fmtPace(cv)+' / 100m':'아직 없어요';return}
  if(el.getAttribute('data-rl')&&rl){readRunLog();var pk=parseFloat(rl.km)||0,ps=rlSec(),pe=document.getElementById('rl-pace');if(pe)pe.textContent=pk&&ps?fmtPace(ps/pk)+' /km':'–';return}
  if(el.getAttribute('data-s')==='bar'){var v=parseFloat(el.value);if(v>=0){db.settings.bar=v;save()}return}
  if(el.getAttribute('data-s')==='rest'||el.getAttribute('data-s')==='restWarm'){var v2=Math.round(parseFloat(el.value));if(v2>=0){db.settings[el.getAttribute('data-s')]=v2;save()}return}
@@ -1517,10 +1720,12 @@ function route(hash){
  var h=full.slice(1),m;
  if(!(view==='exedit'&&h.indexOf('exedit-')===0))editBuf=null;
  if(!(view==='runset'&&h==='runset'))rsBuf=null;
+ if(!(view==='swimset'&&h==='swimset'))swBuf=null;
  if(h==='home'||h===''){view='home'}
  else if(h==='run'){view='run'}
  else if(h==='runset'){view='runset'}
  else if(h==='runhist'){view='runhist'}
+ else if(h==='swim'||h==='swimset'||h==='swimhist'){view=h}
  else if(h==='today'){view='today'}
  else if(h==='plan'){view='plan'}
  else if((m=h.match(/^wk-(.+)$/))){view='wk';param=m[1]}
@@ -1528,7 +1733,7 @@ function route(hash){
  else if((m=h.match(/^cat-(.+)$/))){view='cat';param=m[1]}
  else if((m=h.match(/^exedit-(.+)$/))){view='exedit';param=m[1]}
  else if((m=h.match(/^ex-(.+)$/))){if(view!=='ex'||param!==m[1])exTab='today';view='ex';param=m[1]}
- else if(h==='cal'||h==='gymcal'||h==='runcal'){view='cal';calKind=h==='gymcal'?'gym':h==='runcal'?'run':'all';calMonth=h==='gymcal'?curDate.slice(0,7):todayKey().slice(0,7)}
+ else if(h==='cal'||h==='gymcal'||h==='runcal'||h==='swimcal'){view='cal';calKind=h==='gymcal'?'gym':h==='runcal'?'run':h==='swimcal'?'swim':'all';calMonth=h==='gymcal'?curDate.slice(0,7):todayKey().slice(0,7)}
  else if(h==='me'){view='me'}
  else if(h==='guide'){view='guide'}
  else if(h==='runguide'){view='runguide'}
