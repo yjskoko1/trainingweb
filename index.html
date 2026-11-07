@@ -686,7 +686,7 @@ function vCal(){
 
 /* =============== view: guide =============== */
 function vGuide(){
- var h=hdr('규칙 안내','무게·웜업·1RM은 이렇게 정해져요',backBtn('#me'))+'<main>';
+ var h=hdr('헬스 규칙 안내','무게·웜업·1RM은 이렇게 정해져요',backBtn('#me'))+'<main>';
  function sec(title,items){return '<div class="sectitle">'+title+'</div><div class="list">'+items.map(function(it){return '<div class="li" style="align-items:flex-start;flex-direction:column;gap:4px"><div class="row" style="justify-content:flex-start;gap:8px">'+(it[0]?'<span class="badge '+it[0]+'">'+it[1]+'</span>':'<span class="t">'+it[1]+'</span>')+'</div><div style="font-size:14px;line-height:1.6;color:#33373C">'+it[2]+'</div></div>'}).join('')+'</div>'}
  h+=sec('본세트 무게',[
   ['b-up','올림','지난번 본세트를 <b>모든 세트 목표 횟수만큼</b> 성공하면 다음 운동에서 증량 단위만큼 올려요. (예: 벤치 60kg 5×5 성공 → 62.5kg)'],
@@ -710,8 +710,15 @@ function vGuide(){
  ]);
  h+=sec('루틴과 워크아웃',[['','루틴','2분할·3분할 같은 운동 방식이에요. 여러 개 만들어 두고 하나를 골라 사용해요.'],['','워크아웃','루틴 안의 하루치 운동(A, B, C…)이에요. 순서대로 돌아가며 "다음 차례"가 되고, 오늘 탭에서 <b>운동 완료</b>를 눌러야 다음 차례로 넘어가요.']]);
  h+=sec('근비대·근력',[['','무게 따로 관리','워크아웃 목적을 근비대·근력으로 정하면, 같은 종목이라도 목적별로 기록과 무게를 따로 계산해요. (예: 벤치프레스 근력 80kg, 근비대 60kg)'],['','설정','종목 설정의 일반·근비대·근력 탭에서 목적별 세트·횟수·휴식·목표 무게를 정해요. <b>추천 보기</b>를 누르면 운동 구분(핵심·복합·고립·맨몸)에 맞는 추천이 나와요.'],['','RIR','근비대·근력 모두 RIR 1~3이 기본이에요. 1~3회 더 할 수 있을 때 세트를 마쳐요.']]);
- h+=sec('러닝',[['','근무 패턴','당번은 쉬고, 비번은 리커버리, 휴무는 목표별 순서(풀코스: 롱런 → 템포런 → 롱런 → 인터벌)로 강도 있게 뛰어요.'],['','10% 규칙','한 번 뛰는 거리는 최근 30일 최장 거리의 10%를 넘지 않게 처방해요. 이보다 길게 뛰면 과사용 부상 위험이 높아졌다는 연구(Frandsen 외, 2025)를 따랐어요.'],['','80% 쉬운 강도','기량 좋은 지구력 선수들처럼 전체 거리의 약 80%를 쉬운 강도로 채워요(Seiler 2010). 최근 4주 쉬운 강도 비율을 러닝 화면에 보여줘요.'],['','예상 기록','최근 기록으로 5km~풀코스 기록을 예측하고(Riegel 공식), 기록이 쌓이면 최근 8주 주당 거리와 평균 페이스로 풀코스 기록을 예측해요(Tanda 2011).'],['','테이퍼','대회 2주 전부터 거리를 30~50% 줄이고 강도는 유지해요(Bosquet 2007 메타분석).'],['','심박','최대 심박수를 모르면 208 − 0.7 × 나이로 추정해요(Tanaka 공식). 가민에 나오는 값이 더 정확해요.']]);
  h+=sec('휴식',[['','휴식 타이머','설정 탭에서 켜고 끌 수 있어요(처음엔 꺼져 있어요). 켜면 세트를 체크할 때 자동으로 시작하고, 시간은 설정과 종목 설정에서 바꿀 수 있어요.']]);
+ return h+'</main>';
+}
+
+function vRunGuide(){
+ var h=hdr('러닝 처방 근거','러닝 처방은 이렇게 정해져요',backBtn('#me'))+'<main>';
+ function sec(title,items){return '<div class="sectitle">'+title+'</div><div class="list">'+items.map(function(it){return '<div class="li" style="align-items:flex-start;flex-direction:column;gap:4px"><div class="row" style="justify-content:flex-start;gap:8px">'+(it[0]?'<span class="badge '+it[0]+'">'+it[1]+'</span>':'<span class="t">'+it[1]+'</span>')+'</div><div style="font-size:14px;line-height:1.6;color:#33373C">'+it[2]+'</div></div>'}).join('')+'</div>'}
+ h+=sec('러닝',[['','근무 패턴','당번은 쉬고, 비번은 리커버리, 휴무는 목표별 순서(풀코스: 롱런 → 템포런 → 롱런 → 인터벌)로 강도 있게 뛰어요.'],['','10% 규칙','한 번 뛰는 거리는 최근 30일 최장 거리의 10%를 넘지 않게 처방해요. 이보다 길게 뛰면 과사용 부상 위험이 높아졌다는 연구(Frandsen 외, 2025)를 따랐어요.'],['','80% 쉬운 강도','기량 좋은 지구력 선수들처럼 전체 거리의 약 80%를 쉬운 강도로 채워요(Seiler 2010). 최근 4주 쉬운 강도 비율을 러닝 화면에 보여줘요.'],['','예상 기록','최근 기록으로 5km~풀코스 기록을 예측하고(Riegel 공식), 기록이 쌓이면 최근 8주 주당 거리와 평균 페이스로 풀코스 기록을 예측해요(Tanda 2011).'],['','테이퍼','대회 2주 전부터 거리를 30~50% 줄이고 강도는 유지해요(Bosquet 2007 메타분석).'],['','심박','최대 심박수를 모르면 208 − 0.7 × 나이로 추정해요(Tanaka 공식). 가민에 나오는 값이 더 정확해요.']]);
+ h+='<div class="note">처방은 일반적인 연구 결과를 바탕으로 해요. 통증이 있거나 몸이 안 좋은 날은 처방보다 몸 상태를 먼저 따라 주세요.</div>';
  return h+'</main>';
 }
 
@@ -761,7 +768,7 @@ function vMe(){
  var rs0=rset(),act=db.run.shoes.filter(function(x){return !x.retired});
  h+='<div class="sectitle">러닝 목표</div><div class="list"><a class="li" href="#runset"><div style="min-width:0"><div class="t">'+(rs0.goal?esc(RGOAL[rs0.goal].name)+(rs0.raceDate?' · '+esc(pretty(rs0.raceDate,{year:'numeric',month:'long',day:'numeric'})):''):'목표 설정하기')+'</div><div class="meta">'+(rs0.goal?[rs0.age?'나이 '+rs0.age:'',hrMax()?'최대 심박 '+hrMax()+(rs0.hrMax?'':'(추정)'):'',rs0.recKm&&rs0.recSec?'최근 기록 '+r1(rs0.recKm)+'km '+fmtDur(rs0.recSec):''].filter(Boolean).join(' · '):'나이·최대 심박·최근 기록·목표를 넣으면 처방해 드려요')+'</div></div>'+I.chev+'</a></div>';
  h+='<div class="sectitle">신발</div><div class="list"><a class="li" href="#runset"><div style="min-width:0"><div class="t">신발 '+act.length+'켤레</div><div class="meta">'+(act.length?esc(act.map(function(x){return x.name+' '+shoeKm(x)+'km'}).join(', ')):'등록한 신발이 없어요')+'</div></div>'+I.chev+'</a></div>';
- h+='<div class="list" style="margin-top:8px"><a class="li" href="#guide"><div><div class="t">러닝 처방 근거 안내</div><div class="meta">10% 규칙, 80% 쉬운 강도, 예상 기록, 테이퍼</div></div>'+I.chev+'</a></div>';
+ h+='<div class="list" style="margin-top:8px"><a class="li" href="#runguide"><div><div class="t">러닝 처방 근거 안내</div><div class="meta">10% 규칙, 80% 쉬운 강도, 예상 기록, 테이퍼</div></div>'+I.chev+'</a></div>';
  h+='<div class="note">러닝 '+db.run.runs.length+'회 · 총 '+r1(db.run.runs.reduce(function(x,r){return x+(+r.km||0)},0))+'km 기록</div>';
  }
  h+='</main>';
@@ -1002,12 +1009,12 @@ function render(){
  if(!db)return;
  graphData=null;
  var h;
- switch(view){case 'home':h=vHome();break;case 'run':h=vRun();break;case 'runset':h=vRunSet();break;case 'runhist':h=vRunHist();break;case 'ex':h=vEx();break;case 'exedit':h=vExEdit();break;case 'cal':h=vCal();break;case 'plan':h=vPlan();break;case 'cat':h=vCat();break;case 'wk':h=vWk();break;case 'prog':h=vProg();break;case 'me':h=vMe();break;case 'guide':h=vGuide();break;default:h=vToday()}
+ switch(view){case 'home':h=vHome();break;case 'run':h=vRun();break;case 'runset':h=vRunSet();break;case 'runhist':h=vRunHist();break;case 'ex':h=vEx();break;case 'exedit':h=vExEdit();break;case 'cal':h=vCal();break;case 'plan':h=vPlan();break;case 'cat':h=vCat();break;case 'wk':h=vWk();break;case 'prog':h=vProg();break;case 'me':h=vMe();break;case 'guide':h=vGuide();break;case 'runguide':h=vRunGuide();break;default:h=vToday()}
  if(toasts.length){var tt=toasts.map(function(t){return '<div class="toast '+t.k+'" role="'+(t.k==='err'?'alert':'status')+'">'+esc(t.m)+'</div>'}).join('');h=h.replace('<main>','<main>'+tt);toasts=[]}
  var app=document.getElementById('app'),act=document.activeElement,aid=act&&act.id;
  app.innerHTML=h;
  if(aid==='sq'){var s=document.getElementById('sq');if(s){s.focus();var L=s.value.length;try{s.setSelectionRange(L,L)}catch(e){}}}
- var tab={cal:'cal',me:'me',guide:'me'}[view]||'home';
+ var tab={cal:'cal',me:'me',guide:'me',runguide:'me'}[view]||'home';
  Array.prototype.forEach.call(document.querySelectorAll('nav.tabs a'),function(a){var on=a.getAttribute('data-tab')===tab;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
  syncWake();
  Array.prototype.forEach.call(document.querySelectorAll('.repchips[role=group]'),function(c){var p=c.querySelector('.plan');if(p)c.scrollLeft=p.offsetLeft-c.offsetLeft-(c.clientWidth-p.offsetWidth)/2});
@@ -1437,6 +1444,7 @@ function route(hash){
  else if(h==='cal'){view='cal';calMonth=curDate.slice(0,7)}
  else if(h==='me'){view='me'}
  else if(h==='guide'){view='guide'}
+ else if(h==='runguide'){view='runguide'}
  else{view='home'}
  if(view!=='plan')catQuery='';
  picker=null;rowCtx=null;modal('');render();window.scrollTo(0,0);
