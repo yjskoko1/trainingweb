@@ -800,7 +800,11 @@ function riegel(d1,t1,d2){return t1*Math.pow(d2/d1,1.06)} /* Riegel 1981 */
 function recRec(){var s=rset();return s.recKm>0&&s.recSec>0?{km:+s.recKm,sec:+s.recSec}:null}
 function runsSorted(){return db.run.runs.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts})}
 function runsBefore(k){return db.run.runs.filter(function(r){return r.date<k})}
-function longest30(k){var from=addDays(k,-30),mx=0;db.run.runs.forEach(function(r){if(r.date>=from&&r.date<k&&r.km>mx)mx=+r.km});return mx||(+rset().longest||0)}
+function longest30(k){var from=addDays(k,-30),mx=0;db.run.runs.forEach(function(r){if(r.date>=from&&r.date<k&&r.km>mx)mx=+r.km});if(mx)return mx;
+ /* 30일 넘게 쉬었으면 예전 최장 거리의 절반부터 다시 시작 */
+ var past=db.run.runs.filter(function(r){return r.date<k&&r.km>0});if(past.length)return r1(Math.max.apply(null,past.map(function(r){return +r.km}))*0.5);
+ return +rset().longest||0}
+function breakDays(k){var past=db.run.runs.filter(function(r){return r.date<k&&r.km>0});if(!past.length)return 0;var last=past.reduce(function(a,r){return r.date>a?r.date:a},'');var g=daysBetween(last,k);return g>30?g:0}
 function weekKm(k){var from=addDays(k,-6);return r1(db.run.runs.filter(function(r){return r.date>=from&&r.date<=k}).reduce(function(a,r){return a+(+r.km||0)},0))}
 function easyShare(k){var from=addDays(k,-27),rs=db.run.runs.filter(function(r){return r.date>=from&&r.date<=k});var t=rs.reduce(function(a,r){return a+(+r.km||0)},0);if(!t)return null;var e=rs.filter(function(r){return EASYT[r.type]}).reduce(function(a,r){return a+(+r.km||0)},0);return Math.round(e/t*100)}
 /* Tanda 2011: 최근 8주 주당 거리와 평균 페이스로 풀코스 예측 */
@@ -842,7 +846,7 @@ function runRx(k){
    var base=lastL?+lastL.km:(L30||g.rec[1]+2),km=base*1.1,why=(lastL?'지난 롱런 ':'최근 4주 최장 거리 ')+r1(base)+'km에서 10% 늘렸어요.';
    if(taper<1){km=base;why='대회 전 테이퍼 기간이라 롱런을 줄여요.'}
    else if(nl>0&&nl%4===3){km=base*0.75;why='롱런 4번째마다 한 번은 25% 줄여서 회복해요.'}
-   km=Math.min(km,g.longMax);if(cap&&km>cap+0.05){km=cap;why+=' 최근 30일 최장 '+r1(L30)+'km의 10% 이내로 맞췄어요.'}
+   km=Math.min(km,g.longMax);var bd=breakDays(k);if(cap&&km>cap+0.05){km=cap;why=bd?bd+'일 만의 러닝이라 예전 최장 거리의 절반 정도부터 다시 시작해요.':why+' 최근 30일 최장 '+r1(L30)+'km의 10% 이내로 맞췄어요.'}
    o.km=Math.max(g.rec[1],rHalf(km));o.pace=ph?[ph+60,ph+90]:null;o.hr=hr(0.65,0.78);o.why=why;o.detail='처음부터 끝까지 대화할 수 있는 속도로 일정하게.';
   }else if(o.type==='tempo'){
    var nt=countTypes(k,['tempo']),tmin=Math.min(40,20+5*nt),tk=pr.ph?r1(tmin*60/pr.ph):r1(tmin/5.5);
