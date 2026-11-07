@@ -235,7 +235,7 @@ function isCardio(e){return !!e&&e.kind==='cardio'}
 function mkAny(it,cat){return it[1]==='C'?mkCardio(it[0],cat):mkEx(it[0],cat,it[1],it[2],it[3])}
 function mkEx(name,cat,type,inc,start){
  var t=type||'D';
- return{id:'e'+rid(),name:name,cat:cat,method:t==='L'?'linear':'double',sets:t==='L'?5:3,repsMin:t==='L'?5:t==='D'?8:12,repsMax:t==='L'?5:t==='D'?12:15,increment:inc||2.5,startWeight:start||0,anchor:'',warm:start>0?(t==='L'?'full':t==='D'?'light':'none'):'none',barbell:t==='L',failLimit:3,deloadPct:10,rest:0};
+ return{id:'e'+rid(),name:name,cat:cat,method:t==='L'?'linear':'double',sets:t==='L'?5:3,repsMin:t==='L'?5:t==='D'?8:12,repsMax:t==='L'?5:t==='D'?12:15,increment:inc||2.5,startWeight:start||0,anchor:'',warm:start>0?(t==='L'?'full':t==='D'?'light':'none'):'none',barbell:t==='L',warmN:start>0?(t==='L'?4:t==='D'?1:0):0,failLimit:3,deloadPct:10,rest:0};
 }
 function defaults(){
  var cats=DEFAULT_CATS.map(function(n,i){return{id:'c'+i+rid(),name:n,color:COLORS[i]}});
@@ -316,12 +316,17 @@ function plateTxt(w){
  if(left>0.001)t+=(parts.length?' ':'')+'('+fmt(left)+'kg 원판 없음)';
  return t;
 }
+function warmN(e){return e.warmN!=null?+e.warmN:(e.warm==='full'?4:e.warm==='light'?1:0)}
+var WSTEPS={1:[[0.5,8]],2:[[0.4,8],[0.7,3]],3:[[0.4,8],[0.6,5],[0.8,2]],4:[[0,10],[0.5,5],[0.65,3],[0.8,2]]};
 function warmups(e,W){
- if(e.warm==='none'||W<=0)return[];
- var inc=e.increment||2.5,bar=db.settings.bar||20,out=[];
- if(e.warm==='light'){var lw=isDumbbell(e)&&dbList().length?snapDb(W*0.5,'near'):roundTo(W*0.5,inc);return lw>0&&lw<W?[{w:lw,r:10}]:[]}
- var steps=[[0,10],[0.5,5],[0.65,3],[0.8,2]];
- steps.forEach(function(s){var w=s[0]===0?bar:Math.max(bar,roundTo(W*s[0],inc));if(w<W&&!out.some(function(o){return o.w===w}))out.push({w:w,r:s[1]})});
+ var n=warmN(e);if(!n||W<=0)return[];
+ var inc=e.increment||2.5,bar=db.settings.bar||20,out=[],bb=isBarbell(e),dbx=isDumbbell(e)&&dbList().length;
+ WSTEPS[Math.min(4,n)].forEach(function(st){
+  var w=st[0]===0?bar:W*st[0];
+  w=dbx?snapDb(w,'near'):roundTo(w,inc);
+  if(bb)w=Math.max(bar,w);
+  if(w>0&&w<W&&!out.some(function(o){return o.w===w}))out.push({w:w,r:st[1]});
+ });
  return out;
 }
 /* 오늘 처방: 웜업 + 본세트 */
@@ -572,7 +577,7 @@ function recSheet(e){
 function numField(label,k,step,suf){return '<div class="field"><label for="f-'+k+'">'+label+'</label><div style="display:flex;align-items:center;gap:6px"><input id="f-'+k+'" type="number" inputmode="decimal" step="'+step+'" min="0" data-f="'+k+'" value="'+esc(editBuf[k])+'">'+(suf?'<span class="meta">'+suf+'</span>':'')+'</div></div>'}
 function vExEdit(){
  var o=exById(param);if(!o)return vPlan();
- if(!editBuf||editBuf.id!==o.id){editBuf=JSON.parse(JSON.stringify(o));editBuf.em=editBuf.em||'';editBuf.M={};
+ if(!editBuf||editBuf.id!==o.id){editBuf=JSON.parse(JSON.stringify(o));editBuf.em=editBuf.em||'';editBuf.M={};if(!isCardio(o)){editBuf.barbell=isBarbell(o);editBuf.dumbbell=isDumbbell(o);editBuf.cls=exCls(o);editBuf.warmN=warmN(o)}
   if(!isCardio(o))['','h','s'].forEach(function(m){var c=ec(o,m),t=progress(o,addDays(todayKey(),1),m).t;editBuf.M[m]={method:c.method,sets:c.sets,repsMin:c.repsMin,repsMax:c.repsMax,rest:c.rest||0,_t:t,_t0:t}})}
  var b=editBuf;
  var h=hdr('종목 설정',esc(o.name),backBtn('#ex-'+esc(o.id)))+'<main>';
@@ -588,8 +593,9 @@ function vExEdit(){
  h+=mf('휴식 (0 = 기본 '+db.settings.rest+'초)','rest','5','초')+'</div>';
  h+='<div class="list" style="margin-top:4px">';
  h+=numField('증량 단위','increment','any','kg')+'</div>';
- h+='<div class="sectitle">웜업</div><div class="seg">'+[['full','4세트'],['light','1세트'],['none','없음']].map(function(m){return '<button data-a="warmset" data-v="'+m[0]+'" class="'+(b.warm===m[0]?'on':'')+'" aria-pressed="'+(b.warm===m[0])+'">'+m[1]+'</button>'}).join('')+'</div>';
- h+='<div class="note">4세트: 빈 봉 ×10 → 50% ×5 → 65% ×3 → 80% ×2 (바벨 운동용). 1세트: 50% ×10 (덤벨·머신용).</div>';
+ var wn=b.warmN!=null?+b.warmN:warmN(b);
+ h+='<div class="sectitle">웜업</div><div class="seg" style="grid-template-columns:repeat(5,minmax(0,1fr))">'+[[0,'없음'],[1,'1세트'],[2,'2세트'],[3,'3세트'],[4,'4세트']].map(function(m){var on=wn===m[0];return '<button data-a="warmset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'" style="font-size:13px">'+m[1]+'</button>'}).join('')+'</div>';
+ h+='<div class="note">'+['웜업 없이 바로 본세트를 해요.','본세트의 50% × 8회','40% × 8 → 70% × 3','40% × 8 → 60% × 5 → 80% × 2','빈 봉 × 10 → 50% × 5 → 65% × 3 → 80% × 2'][wn]+'</div>';
  h+='<div class="sectitle">덤벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isDumbbell(b);return '<button data-a="dbset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">바벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isBarbell(b);return '<button data-a="barbell" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">무게를 내리는 조건</div><div class="list">'+numField('연속 실패 허용','failLimit','1','회')+numField('내리는 비율','deloadPct','1','%')+'</div>';
@@ -690,6 +696,7 @@ function vGuide(){
  ]);
  h+='<div class="note">판정은 그날 가장 무거운 무게로 한 본세트를 기준으로 해요. 웜업 세트는 판정에 들어가지 않아요. 연속 실패 횟수, 내리는 비율, 증량 단위는 종목 설정에서 바꿀 수 있어요.</div>';
  h+=sec('웜업',[
+  ['','1~4세트 선택','종목 설정에서 웜업을 없음·1~4세트 중에 골라요. 바벨 운동은 4세트, 덤벨·머신은 1세트가 기본이에요.'],
   ['','4세트 (바벨 운동)','빈 봉 ×10 → 본세트의 50% ×5 → 65% ×3 → 80% ×2. 빈 봉보다 가볍거나 본세트와 같아지는 세트는 빼요.'],
   ['','1세트 (덤벨·머신)','본세트의 50% ×10'],
   ['','없음 (맨몸 운동, 가벼운 운동)','바로 본세트를 해요. 사이드 레터럴 레이즈처럼 가벼운 무게로 하는 운동도 웜업 없이 시작하게 해 뒀어요. 종목 설정에서 바꿀 수 있어요.']
@@ -910,7 +917,7 @@ function saveEdit(){
  var num=function(k,def,min){var v=parseFloat(b[k]);return isNaN(v)||v<min?def:v};
  var name=String(b.name||'').trim().slice(0,40);if(!name){toast('이름을 입력해 주세요.','err');return}
  if(isCardio(o)){o.name=name;o.cat=b.cat;editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});go('#ex-'+o.id);return}
- o.name=name;o.cat=b.cat;o.warm=b.warm;if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;if(b.cls)o.cls=b.cls;
+ o.name=name;o.cat=b.cat;if(b.warmN!=null){o.warmN=+b.warmN;o.warm=o.warmN>=4?'full':o.warmN>=1?'light':'none'}else o.warm=b.warm;if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;if(b.cls)o.cls=b.cls;
  o.increment=fix(num('increment',2.5,0.25));o.failLimit=Math.round(num('failLimit',3,1));o.deloadPct=Math.min(50,num('deloadPct',10,0));
  var tk=todayKey();
  ['','h','s'].forEach(function(m){
@@ -1035,7 +1042,7 @@ document.addEventListener('click',function(ev){
   case 'rec-open':if(editBuf){readEdit();recSheet(editBuf)}else if(e)recSheet(e);break;
   case 'dbset':readEdit();editBuf.dumbbell=t.getAttribute('data-v')==='1';render();break;
   case 'barbell':readEdit();editBuf.barbell=t.getAttribute('data-v')==='1';render();break;
-  case 'warmset':readEdit();editBuf.warm=t.getAttribute('data-v');render();break;
+  case 'warmset':readEdit();editBuf.warmN=+t.getAttribute('data-v');render();break;
   case 'ex-save':saveEdit();break;
   case 'ex-del':if(e)confirmSheet(esc(e.name)+' 삭제','종목 목록과 워크아웃에서 빠져요. 지난 기록은 날짜별 기록에 남아 있어요.','삭제','ex-del-ok',e.id);break;
   case 'ex-del-ok':var xd=exById(id);if(xd){xd.deleted=true;save()}modal('');editBuf=null;go(xd?'#cat-'+xd.cat:'#plan');break;
