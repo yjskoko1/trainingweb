@@ -419,7 +419,7 @@ function vToday(){
    h+='<div class="sectitle" style="justify-content:space-between"><span>오늘 할 워크아웃 · '+esc(ap.name)+'</span><a href="#plan" class="meta" style="font-weight:500">루틴 바꾸기</a></div>'+aw.map(function(w){return wkBtn(w,nx)}).join('');
    h+='<div class="note">누르면 워크아웃 종목이 한 번에 들어가요. 운동을 마치고 <b>운동 완료</b>를 누르면 다음 차례로 넘어가요.</div>';
   }else h+='<div class="card"><div class="empty" style="padding:12px">사용 중인 루틴에 워크아웃이 없어요.<br>운동 관리 → 루틴에서 만들어 두면 한 번에 불러올 수 있어요.</div></div>';
-  h+='<button class="secondary" data-a="add-ex">종목 직접 고르기</button></main>';
+  h+='<button class="secondary" data-a="add-ex">종목 직접 고르기</button>'+weekSetsCard(k)+'</main>';
   return h;
  }
  var stats=order.map(function(id){var e=exById(id);return e&&!e.deleted?{e:e,s:exStatus(e,k)}:{e:e,s:null}});
@@ -440,6 +440,7 @@ function vToday(){
  h+='<div class="btnrow"><button class="secondary" data-a="add-ex">+ 종목 추가</button><button class="secondary" data-a="wk-sheet">워크아웃 불러오기</button></div>';
  if(d&&d.done){var nx2=nextWk(addDays(k,1));h+='<div class="card" style="background:var(--greenBg);gap:6px"><div class="name" style="color:#174D2E">'+(wk?esc(wk.name)+' ':'')+'운동 완료!</div><div class="meta" style="color:#174D2E">'+(nx2?'다음 차례는 <b>'+esc(nx2.name)+'</b>예요.':'수고했어요.')+'</div><button class="ghost" data-a="day-undone" style="align-self:flex-start">완료 취소</button></div>'}
  else h+='<button class="primary" data-a="day-done">운동 완료</button><div class="note" style="text-align:center">완료를 눌러야 워크아웃 "다음 차례"가 넘어가요.</div>';
+ h+=weekSetsCard(k);
  return h+'</main>';
 }
 function wkBtn(w,nx){var ex=wkEx(w);return '<button class="wkbtn'+(nx===w?' next':'')+'" data-a="wk-start" data-id="'+esc(w.id)+'"><div style="min-width:0"><div class="t">'+esc(w.name)+(w.mode?' <span class="badge b-keep" style="padding:2px 8px">'+MODE[w.mode]+'</span>':'')+'</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(ex.length?ex.length+'개 · '+esc(ex.map(function(e){return e.name}).join(', ')):'종목 없음')+'</div></div>'+(nx===w?'<span class="tag">다음 차례</span>':I.chev)+'</button>'}
@@ -449,7 +450,7 @@ function vEx(){
  var e=exById(param);if(!e)return vToday();
  var k=curDate,order=dayOrder(k),pos=order.indexOf(e.id),d=db.days[k],wk=d&&d.workout?wkById(d.workout):null;
  var eyebrow=(wk?esc(wk.name)+' · ':'')+(pos>=0?(pos+1)+'/'+order.length:esc(catById(e.cat).name));
- var h=hdr(esc(e.name),eyebrow,backBtn('#today','오늘 운동으로'),'<a class="icon" href="#exedit-'+esc(e.id)+'" aria-label="종목 설정">'+I.gear+'</a>')+'<main>';
+ var h=hdr(esc(e.name),eyebrow,backBtn('#today','오늘 운동으로'),'<div style="display:flex;gap:6px"><button class="icon" data-a="form-pop" aria-label="자세 보기" style="width:auto;padding:0 12px;font-size:13px;font-weight:700">자세</button><a class="icon" href="#exedit-'+esc(e.id)+'" aria-label="종목 설정">'+I.gear+'</a></div>')+'<main>';
  h+='<div class="tabs3" role="tablist">'+[['today','오늘'],['history','히스토리'],['graph','그래프']].map(function(t){return '<button role="tab" aria-selected="'+(exTab===t[0])+'" class="'+(exTab===t[0]?'on':'')+'" data-a="extab" data-v="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div>';
  if(isCardio(e))h+=exTab==='history'?vCHistory(e):exTab==='graph'?vCGraph(e):vCardio(e,k,order,pos);
  else if(exTab==='history')h+=vHistory(e);else if(exTab==='graph')h+=vGraph(e);else h+=vSets(e,k,order,pos);
@@ -602,6 +603,7 @@ function vExEdit(){
  h+='<div class="sectitle">바벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isBarbell(b);return '<button data-a="barbell" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">무게를 내리는 조건</div><div class="list">'+numField('연속 실패 허용','failLimit','1','회')+numField('내리는 비율','deloadPct','1','%')+'</div>';
  h+='<div class="sectitle">운동 구분 (추천에 써요)</div><div class="seg" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+[['core','핵심'],['comp','복합'],['iso','고립'],['bw','맨몸']].map(function(m){var on=exCls(b)===m[0];return '<button data-a="clsset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'" style="font-size:13px">'+m[1]+'</button>'}).join('')+'</div>';
+ h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea><div class="note">종목 화면의 <b>자세</b> 버튼을 누르면 기본 설명과 함께 보여요.</div>';
  h+='<div class="btnrow"><a class="secondary" href="#ex-'+esc(o.id)+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';
  return h;
 }
@@ -732,6 +734,8 @@ function vGuide(){
  h+=sec('루틴과 워크아웃',[['','루틴','2분할·3분할 같은 운동 방식이에요. 여러 개 만들어 두고 하나를 골라 사용해요.'],['','워크아웃','루틴 안의 하루치 운동(A, B, C…)이에요. 순서대로 돌아가며 "다음 차례"가 되고, 오늘 탭에서 <b>운동 완료</b>를 눌러야 다음 차례로 넘어가요.']]);
  h+=sec('근비대·근력',[['','무게 따로 관리','워크아웃 목적을 근비대·근력으로 정하면, 같은 종목이라도 목적별로 기록과 무게를 따로 계산해요. (예: 벤치프레스 근력 80kg, 근비대 60kg)'],['','설정','종목 설정의 일반·근비대·근력 탭에서 목적별 세트·횟수·휴식·목표 무게를 정해요. <b>추천 보기</b>를 누르면 운동 구분(핵심·복합·고립·맨몸)에 맞는 추천이 나와요.'],['','RIR','근비대·근력 모두 RIR 1~3이 기본이에요. 1~3회 더 할 수 있을 때 세트를 마쳐요.']]);
  h+=sec('휴식',[['','휴식 타이머','설정 탭에서 켜고 끌 수 있어요(처음엔 꺼져 있어요). 켜면 세트를 체크할 때 자동으로 시작하고, 시간은 설정과 종목 설정에서 바꿀 수 있어요.']]);
+ h+=sec('부위별 주간 세트',[['','계산 방법','최근 7일 동안 부위별 본세트 수를 세요. 다른 부위를 함께 쓰는 운동은 그 부위에 0.5세트로 더해요(예: 벤치프레스 1세트 → 가슴 1, 삼두·어깨 0.5). 근비대는 부위당 주 10~20세트를 권장 범위로 보여줘요.']]);
+ h+='<div class="list"><a class="li" href="#refs"><div><div class="t">연구 근거 · 참고문헌</div><div class="meta">헬스·러닝·수영 처방의 근거 논문</div></div>'+I.chev+'</a></div>';
  return h+'</main>';
 }
 
@@ -757,6 +761,7 @@ function vMe(){
  if(meTab==='common'){
  var so=!db.settings.shiftOff;
  h+='<div class="sectitle">근무 패턴</div><div class="list"><div class="field"><label for="s-shift">당번 → 비번 → 휴무 사용</label><button id="s-shift" role="switch" aria-checked="'+so+'" data-a="shift-toggle" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(so?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(so?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff"></span></button></div>'+(so?'<div class="field"><label for="s-anchor">당번일</label><input id="s-anchor" type="date" value="'+esc(db.settings.shiftAnchor||'')+'" data-s="shiftAnchor" style="height:42px;border:1px solid #DADDE2;border-radius:10px;padding:0 8px;font-size:15px;background:#fff"></div>':'')+'</div>'+(so&&db.settings.shiftAnchor?'<div class="note">오늘은 <b>'+shiftOf(todayKey())+'</b>이에요. 러닝 처방과 홈 화면에 써요.</div>':'');
+ h+='<div class="list" style="margin-top:8px"><a class="li" href="#refs"><div><div class="t">연구 근거 · 참고문헌</div><div class="meta">헬스·러닝·수영 처방의 근거 논문</div></div>'+I.chev+'</a></div>';
  h+='<div class="sectitle" style="padding-top:12px">몸 기록</div>';
  if(memOnly)h+='<div class="toast err">이 브라우저에서는 저장이 되지 않아요. 기록이 사라질 수 있어요.</div>';
  if(lastW||lastH){var diff=lastW&&prev&&prev!==lastW?fix(lastW.w-prev.w):null,b=bmi(lastH,lastW&&lastW.w);
@@ -774,7 +779,7 @@ function vMe(){
  h+='<div class="sectitle" style="padding-top:12px">백업</div><div class="card"><div class="meta" style="line-height:1.6">기록은 이 휴대폰에만 저장돼요. 폰을 바꾸거나 브라우저 데이터를 지우면 사라지니, 가끔 백업 파일을 저장해 두세요.<br><b style="color:var(--ink)">마지막 백업: '+(db.lastBackup?(since===0?'오늘':since+'일 전'):'없음')+'</b></div><button class="primary" data-a="backup">백업 파일 저장</button><button class="secondary" data-a="import">백업 파일에서 복원</button><button class="secondary" data-a="paste">글자로 붙여넣어 복원</button></div>';
  }
  if(meTab==='gym'){
- h+='<div class="list"><a class="li" href="#guide"><div><div class="t">헬스 규칙 안내</div><div class="meta">올림·유지·내림, 웜업, 1RM 계산 방법</div></div>'+I.chev+'</a></div>';
+ h+='<div class="list"><a class="li" href="#guide"><div><div class="t">헬스 규칙 안내</div><div class="meta">올림·유지·내림, 웜업, 1RM 계산 방법</div></div>'+I.chev+'</a><a class="li" href="#refs"><div><div class="t">연구 근거 · 참고문헌</div><div class="meta">헬스·러닝·수영 처방의 근거 논문</div></div>'+I.chev+'</a></div>';
  h+='<div class="sectitle" style="padding-top:12px">바벨 · 원판</div><div class="list"><div class="field"><label for="s-bar">빈 봉 무게</label><div style="display:flex;align-items:center;gap:6px"><input id="s-bar" type="number" min="0" step="0.5" value="'+db.settings.bar+'" data-s="bar"><span class="meta">kg</span></div></div></div>'+
   '<div class="list" style="margin-top:8px"><button class="li" data-a="plates-open"><div><div class="t" style="font-weight:500">헬스장에 있는 원판</div><div class="meta">'+((db.settings.plates||[]).slice().sort(function(a,b){return b-a}).map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note" style="margin-bottom:6px">바벨 종목을 할 때 무게 아래에 "EACH SIDE 25kg"처럼 한쪽 무게와 끼울 원판이 표시돼요.</div>';
  h+='<div class="sectitle" style="padding-top:12px">덤벨</div><div class="list"><button class="li" data-a="dbs-open"><div style="min-width:0"><div class="t" style="font-weight:500">헬스장에 있는 덤벨</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(dbList().map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note">덤벨 종목은 무게를 올리거나 내릴 때 여기 있는 덤벨 무게로 맞춰요. 예: 14kg 다음은 16kg</div>';
@@ -790,7 +795,7 @@ function vMe(){
  var rs0=rset(),act=db.run.shoes.filter(function(x){return !x.retired});
  h+='<div class="sectitle">러닝 목표</div><div class="list"><a class="li" href="#runset"><div style="min-width:0"><div class="t">'+(rs0.goal?esc(RGOAL[rs0.goal].name)+(rs0.raceDate?' · '+esc(pretty(rs0.raceDate,{year:'numeric',month:'long',day:'numeric'})):''):'목표 설정하기')+'</div><div class="meta">'+(rs0.goal?[rs0.age?'나이 '+rs0.age:'',hrMax()?'최대 심박 '+hrMax()+(rs0.hrMax?'':'(추정)'):'',rs0.recKm&&rs0.recSec?'최근 기록 '+r1(rs0.recKm)+'km '+fmtDur(rs0.recSec):''].filter(Boolean).join(' · '):'나이·최대 심박·최근 기록·목표를 넣으면 처방해 드려요')+'</div></div>'+I.chev+'</a></div>';
  h+='<div class="sectitle">신발</div><div class="list"><a class="li" href="#runset"><div style="min-width:0"><div class="t">신발 '+act.length+'켤레</div><div class="meta">'+(act.length?esc(act.map(function(x){return x.name+' '+shoeKm(x)+'km'}).join(', ')):'등록한 신발이 없어요')+'</div></div>'+I.chev+'</a></div>';
- h+='<div class="list" style="margin-top:8px"><a class="li" href="#runguide"><div><div class="t">러닝 처방 근거 안내</div><div class="meta">10% 규칙, 80% 쉬운 강도, 예상 기록, 테이퍼</div></div>'+I.chev+'</a></div>';
+ h+='<div class="list" style="margin-top:8px"><a class="li" href="#runguide"><div><div class="t">러닝 처방 근거 안내</div><div class="meta">10% 규칙, 80% 쉬운 강도, 예상 기록, 테이퍼</div></div>'+I.chev+'</a><a class="li" href="#refs"><div><div class="t">연구 근거 · 참고문헌</div><div class="meta">헬스·러닝·수영 처방의 근거 논문</div></div>'+I.chev+'</a></div>';
  h+='<div class="note">러닝 '+db.run.runs.length+'회 · 총 '+r1(db.run.runs.reduce(function(x,r){return x+(+r.km||0)},0))+'km 기록</div>';
  }
  h+='</main>';
@@ -1061,6 +1066,180 @@ function vRunHist(){
  return h+'<div class="note">기록을 누르면 고치거나 지울 수 있어요.</div></main>';
 }
 
+/* =============== 자세 안내 · 부위별 주간 세트 =============== */
+/* 간접 자극 부위: 주간 세트 계산 때 0.5세트로 셈 (Pelland 외, 2026) */
+var SECONDARY={
+ '벤치프레스':['삼두','어깨'],'인클라인 벤치프레스':['삼두','어깨'],'디클라인 벤치프레스':['삼두','어깨'],'덤벨 벤치프레스':['삼두','어깨'],'인클라인 덤벨 프레스':['삼두','어깨'],'체스트 프레스 머신':['삼두','어깨'],'스미스 머신 벤치프레스':['삼두','어깨'],'딥스':['삼두','어깨'],'푸시업':['삼두','어깨'],
+ '데드리프트':['하체'],'바벨 로우':['이두'],'펜들레이 로우':['이두'],'풀업':['이두'],'친업':['이두'],'랫풀다운':['이두'],'시티드 케이블 로우':['이두'],'원암 덤벨 로우':['이두'],'T바 로우':['이두'],'머신 로우':['이두'],
+ '오버헤드 프레스':['삼두'],'덤벨 숄더 프레스':['삼두'],'아놀드 프레스':['삼두'],'머신 숄더 프레스':['삼두'],'리어 델트 플라이':['등'],'페이스 풀':['등'],
+ '루마니안 데드리프트':['등'],'클로즈 그립 벤치프레스':['가슴','어깨'],'벤치 딥스':['어깨']
+};
+/* 자세 안내: [순서들, 주의할 점들] */
+var FORM={
+ '벤치프레스':[['벤치에 누워 눈이 바 바로 아래 오게 하고, 어깨뼈를 모아 아래로 눌러 고정해요.','손은 어깨너비보다 조금 넓게 잡고, 발은 바닥을 단단히 디뎌요.','숨을 들이마시고 바를 명치~가슴 아래쪽으로 천천히 내려요.','가슴에 살짝 닿으면 바닥을 밀듯이 위로 밀어 올려요.'],['팔꿈치를 몸통과 45~70도 정도로 유지해요(완전히 벌리지 않기).','엉덩이가 벤치에서 뜨지 않게 해요.','무거운 무게는 보조자나 안전바와 함께 하세요.']],
+ '인클라인 벤치프레스':[['벤치 각도를 30~45도로 세우고 어깨뼈를 모아 고정해요.','바를 쇄골 아래 윗가슴 쪽으로 내려요.','윗가슴에 닿으면 위로 밀어 올려요.'],['각도가 너무 높으면 어깨 운동이 돼요.','팔꿈치가 손목 바로 아래 있게 해요.']],
+ '디클라인 벤치프레스':[['다리를 고정하고 머리가 낮게 누워요.','바를 아랫가슴 쪽으로 내려요.','가슴에 닿으면 밀어 올려요.'],['머리로 피가 몰리니 세트 사이엔 일어나 쉬어요.','보조자와 함께 하는 게 안전해요.']],
+ '덤벨 벤치프레스':[['덤벨을 무릎 위에 올리고 누우면서 가슴 옆으로 가져와요.','어깨뼈를 모으고 덤벨을 가슴 옆까지 내려요.','가슴을 모으듯 위로 밀어 올려요.'],['덤벨끼리 부딪치지 않게 해요.','내릴 때 바벨보다 조금 더 깊게 내려도 돼요.']],
+ '인클라인 덤벨 프레스':[['벤치를 30~45도로 세우고 덤벨을 어깨 옆에 둬요.','윗가슴 옆까지 천천히 내려요.','위로 밀어 올리며 끝에서 살짝 모아요.'],['허리가 과하게 뜨지 않게 해요.','팔꿈치를 너무 벌리지 않아요.']],
+ '체스트 프레스 머신':[['손잡이가 가슴 중간 높이에 오게 의자를 맞춰요.','어깨뼈를 등받이에 붙이고 앞으로 밀어요.','천천히 돌아오며 가슴이 늘어나는 느낌을 받아요.'],['팔을 끝까지 펴서 팔꿈치를 잠그지 않아요.','어깨가 앞으로 말리지 않게 해요.']],
+ '스미스 머신 벤치프레스':[['바가 가슴 아래쪽에 오게 벤치 위치를 맞춰요.','바를 풀고 가슴까지 천천히 내려요.','위로 밀어 올리고 끝나면 걸쇠를 돌려 걸어요.'],['궤도가 고정돼서 벤치 위치가 중요해요.','안전 스토퍼를 가슴 바로 위 높이로 맞춰요.']],
+ '펙덱 플라이':[['손잡이가 가슴 높이에 오게 의자를 맞춰요.','팔꿈치를 살짝 굽힌 채 앞으로 모아요.','천천히 벌리며 가슴이 늘어나는 곳까지만 돌아와요.'],['어깨가 아프면 벌리는 범위를 줄여요.','반동 없이 천천히 해요.']],
+ '케이블 플라이':[['도르래를 어깨 높이 이상에 두고 한 발 앞으로 나와 서요.','팔꿈치를 살짝 굽힌 채 큰 원을 그리며 앞으로 모아요.','천천히 벌리며 돌아와요.'],['팔꿈치 각도를 처음부터 끝까지 유지해요.','몸통을 앞으로 숙여 반동을 쓰지 않아요.']],
+ '덤벨 플라이':[['벤치에 누워 덤벨을 가슴 위로 들어요.','팔꿈치를 살짝 굽힌 채 양옆으로 천천히 벌려요.','가슴이 늘어나면 안는 느낌으로 모아요.'],['너무 깊게 내리면 어깨에 부담이 커요.','가벼운 무게로 천천히 해요.']],
+ '케이블 크로스오버':[['도르래를 높게 두고 가운데 서서 손잡이를 잡아요.','팔을 아래 앞쪽으로 모아 손이 배꼽 앞에서 만나게 해요.','천천히 벌리며 돌아와요.'],['상체를 살짝 숙인 자세를 유지해요.','팔로 당기기보다 가슴으로 모으는 느낌으로 해요.']],
+ '딥스':[['평행봉을 잡고 팔을 펴서 몸을 들어요.','상체를 살짝 앞으로 숙이고 팔꿈치를 굽혀 내려가요.','어깨가 팔꿈치 높이쯤 오면 밀어 올라와요.'],['어깨가 아프면 깊이를 줄여요.','어깨가 귀 쪽으로 올라가지 않게 해요.']],
+ '푸시업':[['손을 어깨너비보다 조금 넓게 짚고 몸을 일직선으로 만들어요.','가슴이 바닥 가까이 갈 때까지 내려가요.','바닥을 밀어 올라와요.'],['허리가 처지거나 엉덩이가 들리지 않게 해요.','힘들면 무릎을 대고 해도 돼요.']],
+ '데드리프트':[['발을 엉덩이 너비로 벌리고 바가 발 중앙 위에 오게 서요.','엉덩이를 뒤로 빼며 바를 잡고, 등을 곧게 펴고 가슴을 들어요.','바닥을 밀듯이 다리로 들어 올리고, 바가 무릎을 지나면 엉덩이를 앞으로 밀어 일어서요.','같은 길로 엉덩이를 먼저 빼며 내려놔요.'],['등이 굽지 않게 해요(가장 중요).','바가 몸에서 멀어지지 않게 정강이·허벅지에 붙여 움직여요.','끝에서 허리를 뒤로 젖히지 않아요.']],
+ '바벨 로우':[['바를 잡고 엉덩이를 뒤로 빼며 상체를 45도 정도 숙여요.','등을 편 채 바를 배꼽 쪽으로 당겨요.','천천히 내려요.'],['상체를 들썩이며 반동을 쓰지 않아요.','어깨뼈를 모으며 당겨요.']],
+ '펜들레이 로우':[['상체를 바닥과 거의 평행하게 숙이고 바를 바닥에 둬요.','바닥에서 배 쪽으로 빠르게 당겨요.','매 회 바닥에 내려놓고 다시 시작해요.'],['등을 곧게 유지해요.','허리가 아프면 바벨 로우로 바꿔요.']],
+ '풀업':[['손바닥이 앞을 보게 어깨너비보다 조금 넓게 잡고 매달려요.','어깨를 아래로 내리며 가슴을 바 쪽으로 당겨 올라가요.','턱이 바를 넘으면 천천히 내려와 팔을 펴요.'],['다리를 흔들어 반동을 쓰지 않아요.','안 되면 밴드나 어시스트 머신으로 시작해요.']],
+ '친업':[['손바닥이 나를 보게 어깨너비로 잡고 매달려요.','팔꿈치를 옆구리로 당기며 올라가요.','천천히 내려와요.'],['풀업보다 이두를 많이 써요.','끝까지 내려와 팔을 펴요.']],
+ '랫풀다운':[['허벅지를 패드에 고정하고 바를 어깨너비보다 넓게 잡아요.','상체를 살짝 뒤로 기울이고 바를 윗가슴 쪽으로 당겨요.','천천히 올려 팔을 펴요.'],['목 뒤로 당기지 않아요.','몸을 크게 젖혀 반동을 쓰지 않아요.']],
+ '시티드 케이블 로우':[['발을 받침에 대고 무릎을 살짝 굽혀 앉아요.','가슴을 펴고 손잡이를 배 쪽으로 당기며 어깨뼈를 모아요.','팔을 펴며 천천히 돌아가요.'],['상체를 앞뒤로 크게 흔들지 않아요.','어깨가 올라가지 않게 해요.']],
+ '원암 덤벨 로우':[['한 손과 한 무릎을 벤치에 대고 등을 평평하게 해요.','덤벨을 엉덩이 쪽으로 당겨 올려요.','천천히 내려 팔을 펴요.'],['몸통을 비틀어 들지 않아요.','팔이 아니라 등으로 당기는 느낌으로 해요.']],
+ 'T바 로우':[['바를 다리 사이에 두고 상체를 숙여 손잡이를 잡아요.','등을 편 채 가슴 쪽으로 당겨요.','천천히 내려요.'],['허리가 굽지 않게 해요.','무게보다 자세를 우선해요.']],
+ '머신 로우':[['가슴 패드에 몸을 대고 손잡이를 잡아요.','팔꿈치를 뒤로 보내며 당기고 어깨뼈를 모아요.','천천히 돌아가요.'],['어깨가 올라가지 않게 해요.','끝까지 펴서 등을 늘려줘요.']],
+ '스트레이트 암 풀다운':[['케이블 앞에 서서 팔을 거의 편 채 바를 잡아요.','팔을 편 채 허벅지 쪽으로 바를 끌어내려요.','천천히 올려요.'],['팔꿈치를 굽혀 삼두로 밀지 않아요.','상체를 살짝 숙인 자세를 유지해요.']],
+ '백 익스텐션':[['패드에 골반을 걸치고 발을 고정해요.','상체를 숙였다가 몸이 일직선이 될 때까지 들어 올려요.','천천히 내려가요.'],['위에서 허리를 과하게 젖히지 않아요.','쉬우면 원판을 안고 해요.']],
+ '오버헤드 프레스':[['바를 쇄골 위에 두고 손을 어깨너비로 잡고 서요.','엉덩이와 배에 힘을 주고 바를 머리 위로 밀어 올려요.','바가 얼굴을 지나면 머리를 살짝 앞으로 넣어 바 아래 오게 해요.','천천히 쇄골까지 내려요.'],['허리를 뒤로 젖혀 밀지 않아요.','손목이 꺾이지 않게 바를 손바닥 아래쪽에 올려요.']],
+ '덤벨 숄더 프레스':[['등받이를 세운 벤치에 앉아 덤벨을 귀 옆에 둬요.','머리 위로 밀어 올려요.','귀 높이까지 천천히 내려요.'],['허리를 등받이에 붙여요.','덤벨을 너무 낮게 내리지 않아요.']],
+ '아놀드 프레스':[['덤벨을 손바닥이 나를 보게 가슴 앞에 둬요.','밀어 올리면서 손바닥이 앞을 보게 돌려요.','내려오면서 다시 돌려 처음 자세로 와요.'],['가벼운 무게로 천천히 해요.','허리를 젖히지 않아요.']],
+ '머신 숄더 프레스':[['손잡이가 어깨 높이에 오게 의자를 맞춰요.','위로 밀어 올려요.','천천히 내려요.'],['팔꿈치를 끝까지 잠그지 않아요.','등을 등받이에 붙여요.']],
+ '사이드 레터럴 레이즈':[['덤벨을 옆에 들고 팔꿈치를 살짝 굽혀요.','팔을 옆으로 어깨 높이까지 들어 올려요.','천천히 내려요.'],['어깨를 으쓱하지 않아요.','반동 없이 가벼운 무게로 해요.']],
+ '케이블 레터럴 레이즈':[['도르래를 가장 낮게 두고 옆으로 서서 반대 손으로 잡아요.','팔을 옆으로 어깨 높이까지 들어요.','천천히 내려요.'],['몸을 기울여 반동을 쓰지 않아요.','한쪽씩 같은 횟수로 해요.']],
+ '프론트 레이즈':[['덤벨을 허벅지 앞에 들어요.','팔을 앞으로 어깨 높이까지 들어 올려요.','천천히 내려요.'],['상체를 젖히지 않아요.','프레스를 많이 하면 생략해도 돼요.']],
+ '리어 델트 플라이':[['상체를 숙이고 덤벨을 아래로 늘어뜨려요.','팔꿈치를 살짝 굽힌 채 옆으로 벌려 올려요.','천천히 내려요.'],['등 근육이 아니라 어깨 뒤로 드는 느낌으로 해요.','가벼운 무게로 해요.']],
+ '페이스 풀':[['도르래를 얼굴 높이에 두고 로프를 잡아요.','로프를 얼굴 쪽으로 당기며 양손을 귀 옆으로 벌려요.','천천히 돌아가요.'],['팔꿈치를 어깨 높이로 유지해요.','어깨 건강에 좋은 보조 운동이에요.']],
+ '업라이트 로우':[['바를 어깨너비로 잡고 허벅지 앞에 둬요.','팔꿈치를 앞으로 들며 바를 가슴 높이까지 당겨요.','천천히 내려요.'],['어깨가 찝히면 높이를 낮추거나 넓게 잡아요.','가벼운 무게로 해요.']],
+ '슈러그':[['바나 덤벨을 들고 바르게 서요.','어깨를 귀 쪽으로 곧게 들어 올려요.','잠깐 멈췄다가 천천히 내려요.'],['어깨를 돌리지 않아요.','목을 앞으로 빼지 않아요.']],
+ '스쿼트':[['바를 승모근 위에 얹고 발을 어깨너비로 벌려 발끝을 살짝 바깥으로 둬요.','숨을 들이마셔 배에 힘을 주고, 엉덩이를 뒤로 빼며 앉아요.','허벅지가 바닥과 평행 이하로 내려가면 바닥을 밀어 일어나요.'],['무릎이 안쪽으로 모이지 않게 발끝 방향으로 밀어요.','등을 곧게, 발 전체로 바닥을 디뎌요.','무거운 무게는 안전바를 걸고 해요.']],
+ '프론트 스쿼트':[['바를 어깨 앞(쇄골 위)에 얹고 팔꿈치를 높이 들어요.','상체를 세운 채 곧게 앉아요.','바닥을 밀어 일어나요.'],['팔꿈치가 떨어지면 바가 앞으로 쏠려요.','손목이 불편하면 팔을 교차해 잡아요.']],
+ '루마니안 데드리프트':[['바를 들고 서서 무릎을 살짝 굽혀요.','등을 편 채 엉덩이를 뒤로 빼며 바를 허벅지 따라 내려요.','허벅지 뒤가 당기면 엉덩이를 앞으로 밀어 일어서요.'],['등이 굽지 않게 해요.','바를 다리에 붙여 움직여요.']],
+ '레그 프레스':[['발판에 발을 어깨너비로 올리고 등을 붙여요.','무릎을 굽혀 천천히 내려요.','발 전체로 밀어 올려요.'],['무릎을 끝까지 잠그지 않아요.','엉덩이가 들릴 만큼 깊게 내리지 않아요.']],
+ '핵 스쿼트':[['어깨 패드 아래 서서 발을 발판 중간에 둬요.','천천히 앉아요.','발 전체로 밀어 일어나요.'],['무릎이 안으로 모이지 않게 해요.','허리를 패드에 붙여요.']],
+ '고블릿 스쿼트':[['덤벨을 가슴 앞에 세워 들어요.','상체를 세운 채 깊게 앉아요.','바닥을 밀어 일어나요.'],['스쿼트 자세를 익히기 좋아요.','팔꿈치가 무릎 안쪽을 지나게 앉아요.']],
+ '런지':[['바르게 서서 한 발을 크게 앞으로 내딛어요.','두 무릎이 90도가 되게 내려가요.','앞발로 밀어 돌아와요.'],['앞무릎이 안쪽으로 꺾이지 않게 해요.','상체를 세워요.']],
+ '불가리안 스플릿 스쿼트':[['뒷발을 벤치에 올리고 앞발을 충분히 앞에 둬요.','앞 무릎을 굽혀 내려가요.','앞발로 밀어 올라와요.'],['균형이 어려우면 가벼운 덤벨로 시작해요.','양쪽 같은 횟수로 해요.']],
+ '힙 쓰러스트':[['등 윗부분을 벤치에 대고 바를 골반 위에 둬요.','발로 밀어 엉덩이를 들어 몸이 일직선이 되게 해요.','엉덩이를 조이고 천천히 내려요.'],['허리를 젖히지 말고 엉덩이로 들어요.','바에 패드를 감아요.']],
+ '레그 익스텐션':[['무릎이 기계 축과 맞게 앉아요.','다리를 펴서 올려요.','천천히 내려요.'],['반동 없이 해요.','무릎이 아프면 범위를 줄여요.']],
+ '레그 컬':[['무릎이 기계 축과 맞게 엎드리거나 앉아요.','발목 패드를 엉덩이 쪽으로 당겨요.','천천히 펴요.'],['엉덩이가 들리지 않게 해요.','내릴 때 천천히 해요.']],
+ '힙 어브덕션':[['기계에 앉아 무릎 바깥에 패드를 대요.','다리를 바깥으로 벌려요.','천천히 모아요.'],['상체를 세워요.','반동 없이 해요.']],
+ '카프 레이즈':[['발 앞부분을 받침에 올리고 뒤꿈치를 내려요.','발끝으로 최대한 높이 올라가요.','천천히 끝까지 내려와요.'],['반동 없이 위에서 잠깐 멈춰요.','무릎은 거의 편 채 해요.']],
+ '바벨 컬':[['바를 어깨너비로 잡고 팔을 펴서 서요.','팔꿈치를 옆구리에 고정하고 바를 들어 올려요.','천천히 내려요.'],['몸을 흔들어 들지 않아요.','끝까지 내려 팔을 펴요.']],
+ 'EZ바 컬':[['EZ바 굽은 부분을 잡아요.','팔꿈치를 고정하고 들어 올려요.','천천히 내려요.'],['손목 부담이 바벨보다 적어요.','반동 없이 해요.']],
+ '덤벨 컬':[['덤벨을 옆에 들고 서요.','손바닥이 위를 보게 돌리며 들어 올려요.','천천히 내려요.'],['팔꿈치를 앞으로 빼지 않아요.','양팔 번갈아 해도 돼요.']],
+ '해머 컬':[['손바닥이 서로 보게 덤벨을 들어요.','그 상태로 들어 올려요.','천천히 내려요.'],['손목을 곧게 유지해요.','팔뚝 근육도 같이 써요.']],
+ '프리처 컬':[['패드에 팔 뒤쪽을 대고 바를 잡아요.','들어 올려요.','천천히 거의 펴질 때까지 내려요.'],['맨 아래에서 팔을 확 펴지 않아요.','가벼운 무게로 시작해요.']],
+ '인클라인 덤벨 컬':[['벤치를 45~60도로 세우고 기대 앉아 팔을 늘어뜨려요.','팔꿈치를 고정하고 들어 올려요.','천천히 내려요.'],['어깨가 앞으로 나오지 않게 해요.','가벼운 무게로 해요.']],
+ '케이블 컬':[['도르래를 낮게 두고 바를 잡아요.','팔꿈치를 고정하고 당겨 올려요.','천천히 내려요.'],['몸을 뒤로 젖히지 않아요.','끝에서 잠깐 조여요.']],
+ '컨센트레이션 컬':[['앉아서 팔꿈치를 허벅지 안쪽에 대요.','덤벨을 들어 올려요.','천천히 내려요.'],['상체로 들지 않아요.','양쪽 같은 횟수로 해요.']],
+ '클로즈 그립 벤치프레스':[['손을 어깨너비 정도로 잡고 누워요.','팔꿈치를 몸에 붙이며 아랫가슴으로 내려요.','밀어 올려요.'],['너무 좁게 잡으면 손목이 아파요.','팔꿈치를 벌리지 않아요.']],
+ '트라이셉 푸시다운':[['도르래를 높게 두고 바를 잡아요.','팔꿈치를 옆구리에 고정하고 팔을 아래로 펴요.','천천히 올려요.'],['팔꿈치가 앞뒤로 움직이지 않게 해요.','상체를 숙여 체중으로 누르지 않아요.']],
+ '로프 푸시다운':[['로프를 잡고 팔꿈치를 옆구리에 붙여요.','팔을 펴며 끝에서 로프를 양옆으로 벌려요.','천천히 올려요.'],['팔꿈치를 고정해요.','반동 없이 해요.']],
+ '오버헤드 트라이셉 익스텐션':[['덤벨이나 로프를 머리 위로 들어요.','팔꿈치를 고정하고 머리 뒤로 내려요.','팔을 펴서 올려요.'],['팔꿈치가 벌어지지 않게 해요.','허리를 젖히지 않아요.']],
+ '라잉 트라이셉 익스텐션':[['벤치에 누워 바를 가슴 위로 들어요.','팔꿈치를 고정하고 이마 쪽으로 내려요.','팔을 펴서 올려요.'],['팔꿈치가 벌어지지 않게 해요.','가벼운 무게로 천천히 해요.']],
+ '덤벨 킥백':[['상체를 숙이고 팔꿈치를 몸통 옆에 고정해요.','팔을 뒤로 펴요.','천천히 돌아와요.'],['팔꿈치가 내려가지 않게 해요.','가벼운 무게로 해요.']],
+ '벤치 딥스':[['벤치 끝을 손으로 짚고 다리를 앞으로 뻗어요.','팔꿈치를 굽혀 엉덩이를 내려요.','팔을 펴서 올라와요.'],['어깨가 아프면 깊이를 줄여요.','엉덩이를 벤치 가까이 두세요.']],
+ '크런치':[['누워서 무릎을 세우고 손을 가슴이나 귀 옆에 둬요.','배에 힘을 주고 어깨를 바닥에서 들어 올려요.','천천히 내려요.'],['목을 손으로 당기지 않아요.','허리는 바닥에 붙여요.']],
+ '케이블 크런치':[['도르래 앞에 무릎 꿇고 로프를 머리 옆에 잡아요.','배를 말듯이 몸을 숙여요.','천천히 돌아와요.'],['엉덩이로 앉지 말고 배로 말아요.','팔은 고정해요.']],
+ '행잉 레그 레이즈':[['바에 매달려요.','배에 힘을 주고 다리를 들어 올려요.','천천히 내려요.'],['몸을 흔들지 않아요.','어려우면 무릎을 굽혀서 해요.']],
+ '레그 레이즈':[['누워서 다리를 펴고 손을 엉덩이 옆에 둬요.','다리를 위로 들어 올려요.','바닥에 닿기 직전까지 천천히 내려요.'],['허리가 뜨지 않게 해요.','어려우면 무릎을 굽혀요.']],
+ '앱 롤아웃':[['무릎을 꿇고 롤러를 잡아요.','몸을 곧게 유지한 채 앞으로 굴려 나가요.','배 힘으로 끌고 돌아와요.'],['허리가 처지지 않게 해요.','처음엔 짧은 거리만 가요.']],
+ '러시안 트위스트':[['앉아서 상체를 살짝 뒤로 기울이고 다리를 들어요.','몸통을 좌우로 돌려요.','천천히 반복해요.'],['팔만 흔들지 말고 몸통을 돌려요.','허리가 아프면 발을 바닥에 둬요.']],
+ '디클라인 싯업':[['디클라인 벤치에 다리를 고정하고 누워요.','배에 힘을 주고 상체를 일으켜요.','천천히 내려가요.'],['반동으로 일어나지 않아요.','목을 당기지 않아요.']],
+ '실내 사이클':[['안장 높이를 페달이 가장 아래일 때 무릎이 살짝 굽게 맞춰요.','상체를 편하게 두고 일정하게 돌려요.'],['무릎이 안쪽으로 모이지 않게 해요.']],
+ '로잉머신':[['다리 → 몸통 → 팔 순서로 당겨요.','돌아갈 땐 팔 → 몸통 → 다리 순서로 가요.'],['팔로만 당기지 않아요. 힘의 대부분은 다리에서 나와요.','등을 곧게 펴요.']],
+ '러닝머신':[['경사를 1% 정도로 두면 야외와 비슷해요.','손잡이를 잡지 않고 자연스럽게 뛰어요.'],['러닝 기록은 러닝 화면의 트레드밀 기록하기로 남겨도 돼요.']],
+ '스텝밀 (천국의 계단)':[['손잡이는 균형만 잡을 정도로 가볍게 잡아요.','발 전체로 계단을 디뎌요.'],['손잡이에 기대면 운동 효과가 줄어요.']],
+ '일립티컬':[['상체를 세우고 발 전체로 밀어요.','팔과 다리를 같이 써요.'],['무릎·발목 부담이 적은 유산소예요.']],
+ '인클라인 걷기':[['경사를 올리고 편하게 걸어요.','손잡이를 잡지 않아요.'],['경사가 높으면 종아리가 금방 지쳐요. 천천히 올려요.']],
+ '줄넘기':[['손목으로 줄을 돌리고 발끝으로 가볍게 뛰어요.'],['착지를 부드럽게 해요.']],
+ '어썰트 바이크':[['팔과 다리를 같이 밀고 당겨요.'],['짧은 인터벌에 잘 맞아요.']],
+ '스키에르그':[['팔을 머리 위에서 아래로 당기며 엉덩이를 접어요.','일어나며 처음 자세로 돌아가요.'],['팔만 쓰지 말고 몸통과 엉덩이를 같이 써요.']]
+};
+function formSheet(e){
+ var f=FORM[e.name],yt='https://www.youtube.com/results?search_query='+encodeURIComponent(e.name+' 자세');
+ var h='<h2>'+esc(e.name)+' 자세</h2>';
+ if(f){h+='<div class="card" style="background:#F4F5F2;gap:8px"><div class="name" style="font-size:15px">순서</div><ol style="margin:0;padding-left:20px;line-height:1.7;font-size:14px">'+f[0].map(function(s){return '<li>'+esc(s)+'</li>'}).join('')+'</ol></div>';
+  if(f[1]&&f[1].length)h+='<div class="card" style="background:#FFF6E5;gap:8px"><div class="name" style="font-size:15px">주의할 점</div><ul style="margin:0;padding-left:20px;line-height:1.7;font-size:14px">'+f[1].map(function(s){return '<li>'+esc(s)+'</li>'}).join('')+'</ul></div>'}
+ else h+='<div class="note" style="padding:0">직접 추가한 종목이라 기본 설명이 없어요. 아래 영상 검색으로 확인해 보세요.</div>';
+ if(e.memo)h+='<div class="card" style="gap:6px"><div class="name" style="font-size:15px">내 메모</div><div class="meta" style="white-space:pre-wrap">'+esc(e.memo)+'</div></div>';
+ h+='<a class="secondary" href="'+yt+'" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;text-decoration:none">유튜브에서 자세 영상 찾기</a><div class="note" style="padding:0">처음 하는 운동이나 무거운 무게는 트레이너에게 자세를 한 번 확인받는 게 가장 안전해요.</div><button class="primary" data-a="modal-close">닫기</button>';
+ modal(h);
+}
+/* 부위별 주간 세트: 직접 1세트, 간접 0.5세트 */
+function weekSets(k){
+ var from=addDays(k,-6),res={},det={};
+ db.cats.forEach(function(c){if(c.name!=='카디오'){res[c.name]=0;det[c.name]={}}});
+ Object.keys(db.days).forEach(function(dk){if(dk<from||dk>k)return;db.days[dk].sets.forEach(function(s){
+  if(s.warm)return;var e=exById(s.exId);if(!e||isCardio(e))return;var cn=catById(e.cat).name;if(res[cn]==null)return;
+  res[cn]+=1;det[cn][e.name]=(det[cn][e.name]||0)+1;
+  (SECONDARY[e.name]||[]).forEach(function(sc){if(res[sc]==null||sc===cn)return;res[sc]+=0.5;det[sc][e.name+' (간접)']=(det[sc][e.name+' (간접)']||0)+0.5});
+ })});
+ return{sets:res,det:det,from:from};
+}
+function weekSetsCard(k){
+ var w=weekSets(k),names=Object.keys(w.sets);if(!names.some(function(n){return w.sets[n]>0}))return '';
+ var mx=Math.max(22,Math.max.apply(null,names.map(function(n){return w.sets[n]})));
+ var col=function(v){return v>20?'#B4441C':v>=10?'#1F7A44':v>=5?'#C98A1A':'#9AA0A8'};
+ return '<div class="card" style="gap:8px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:15px">부위별 주간 세트</div><div class="meta">최근 7일</div></div>'+
+  names.map(function(n){var v=Math.round(w.sets[n]*10)/10;return '<button data-a="ws-pop" data-v="'+esc(n)+'" style="all:unset;cursor:pointer;display:grid;grid-template-columns:44px 1fr 38px;align-items:center;gap:8px"><span style="font-size:13px">'+esc(n)+'</span><span style="position:relative;height:12px;background:#ECEEEA;border-radius:6px;overflow:hidden"><span style="position:absolute;left:'+(10/mx*100)+'%;width:'+(10/mx*100)+'%;top:0;bottom:0;background:rgba(31,122,68,.13)"></span><span style="position:absolute;left:0;top:0;bottom:0;width:'+Math.min(100,v/mx*100)+'%;background:'+col(v)+';border-radius:6px"></span></span><b style="font-size:13px;text-align:right">'+v+'</b></button>'}).join('')+
+  '<div class="meta" style="font-size:12px;line-height:1.5">옅은 초록 칸이 근비대 권장 범위(10~20세트)예요. 다른 부위를 함께 쓰는 운동은 0.5세트로 세요(예: 벤치프레스 → 삼두·어깨 0.5). 웜업은 빼요. 부위를 누르면 종목별로 보여요.</div></div>';
+}
+function weekSetsPop(n){
+ var w=weekSets(todayKey()),d=w.det[n]||{},v=Math.round((w.sets[n]||0)*10)/10;
+ var msg=v>20?'20세트를 넘었어요. 회복이 잘 되는지 살펴보고, 관절이나 컨디션이 안 좋으면 줄여요.':v>=10?'근비대 권장 범위 안이에요.':v>=5?'조금 부족해요. 근비대가 목표라면 세트를 조금 늘려 보세요.':'적어요. 근력 유지에는 괜찮지만 근비대에는 부족할 수 있어요.';
+ modal('<h2>'+esc(n)+' · 최근 7일 '+v+'세트</h2><div class="meta">'+esc(short(w.from))+' ~ 오늘</div><div class="list">'+(Object.keys(d).length?Object.keys(d).map(function(x){return '<div class="li" style="cursor:default"><span class="t">'+esc(x)+'</span><b>'+d[x]+'</b></div>'}).join(''):'<div class="li" style="cursor:default"><span class="meta">기록이 없어요</span></div>')+'</div><div class="note" style="padding:0;line-height:1.6">'+msg+' 근력은 주당 적은 세트로도 늘지만, 근비대는 세트가 늘수록 효과가 커지다가 점점 줄어들어요(Pelland 외, 2026).</div><button class="primary" data-a="modal-close">닫기</button>');
+}
+
+/* =============== 연구 근거 · 참고문헌 =============== */
+var REFS=[
+ {sec:'헬스',items:[
+  {use:'부위별 주간 세트 · 근비대 권장 10세트 이상',ref:'Schoenfeld BJ, Ogborn D, Krieger JW (2017). Dose-response relationship between weekly resistance training volume and increases in muscle mass: A systematic review and meta-analysis. Journal of Sports Sciences, 35(11), 1073-1082.',doi:'10.1080/02640414.2016.1210197',sum:'주간 세트가 많을수록 근육이 더 커지는 용량-반응 관계가 있었어요. 부위당 주 10세트 이상에서 효과가 가장 컸어요.'},
+  {use:'간접 세트 0.5세트 계산 · 근력은 적은 볼륨에서도 충분',ref:'Pelland JC, Remmert JF, Robinson ZP, Hinson SR, Zourdos MC (2026). The resistance training dose response: meta-regressions exploring the effects of weekly volume and frequency on muscle hypertrophy and strength gains. Sports Medicine, 56(2), 481-505.',doi:'10.1007/s40279-025-02344-w',sum:'67개 연구 메타회귀예요. 보조로 쓰이는 부위의 세트를 0.5세트로 셀 때 결과를 가장 잘 예측했어요. 근비대는 볼륨이 늘수록 계속 좋아지고, 근력은 적은 볼륨에서 빨리 한계에 닿았어요.'},
+  {use:'RIR 1~3 (실패 몇 회 전에 멈추기)',ref:'Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC (2024). Exploring the dose-response relationship between estimated resistance training proximity to failure, strength gain, and muscle hypertrophy: a series of meta-regressions. Sports Medicine, 54(9), 2209-2231.',doi:'10.1007/s40279-024-02069-2',sum:'근력은 실패와의 거리와 크게 상관없었고, 근비대는 실패에 가까울수록 조금 더 좋았어요.'},
+  {use:'RIR 1~3 (실패까지 갈 필요는 없음)',ref:'Refalo MC, Helms ER, Trexler ET, Hamilton DL, Fyfe JJ (2023). Influence of resistance training proximity-to-failure on skeletal muscle hypertrophy: a systematic review with meta-analysis. Sports Medicine, 53(3), 649-665.',doi:'10.1007/s40279-022-01784-y',sum:'실패 직전에 멈춰도 실패까지 간 것과 근비대 차이가 크지 않았어요.'},
+  {use:'근력 3~6회, 근비대 6~20회 · 반복 범위',ref:'Schoenfeld BJ, Grgic J, Van Every DW, Plotkin DL (2021). Loading recommendations for muscle strength, hypertrophy, and local endurance: a re-examination of the repetition continuum. Sports, 9(2), 32.',doi:'10.3390/sports9020032',sum:'근력은 무겁게 적게(1~5회) 할 때 가장 잘 늘었고, 근비대는 넓은 반복 범위에서 비슷하게 일어났어요.'},
+  {use:'휴식 시간 (근비대 1~2분 이상)',ref:'Singer A, Wolf M, Generoso L, et al., Schoenfeld BJ (2024). Give it a rest: a systematic review with Bayesian meta-analysis on the effect of inter-set rest interval duration on muscle hypertrophy. Frontiers in Sports and Active Living, 6, 1429789.',doi:'10.3389/fspor.2024.1429789',sum:'60초보다 길게 쉬는 게 근비대에 조금 유리했고, 90초를 넘으면 큰 차이가 없었어요.'},
+  {use:'성공하면 무게 올리기 (점진적 과부하)',ref:'American College of Sports Medicine (2009). Progression models in resistance training for healthy adults. Medicine & Science in Sports & Exercise, 41(3), 687-708.',doi:'10.1249/MSS.0b013e3181915670',sum:'목표 횟수를 넘기면 다음에 무게를 2~10% 올리는 점진적 과부하를 권해요.'},
+  {use:'추정 1RM 공식 (무게 × (1 + 횟수 ÷ 30))',ref:'Epley B (1985). Poundage Chart. Boyd Epley Workout. Lincoln, NE: Body Enterprises.',sum:'널리 쓰이는 1RM 추정식이에요. 반복이 많을수록 오차가 커져서 15회 넘는 세트는 계산에서 빼요.'},
+  {use:'3번 연속 실패 시 10% 내리기 · 14일 쉬면 10% 내리기 · 웜업 순서',note:'특정 논문의 수치가 아니라 근력 운동 프로그램에서 흔히 쓰는 코칭 관행이에요. 종목 설정에서 바꿀 수 있어요.'}
+ ]},
+ {sec:'러닝',items:[
+  {use:'쉬운 강도 약 80% (근무 패턴별 강도 배치)',ref:'Seiler S (2010). What is best practice for training intensity and duration distribution in endurance athletes? International Journal of Sports Physiology and Performance, 5(3), 276-291.',doi:'10.1123/ijspp.5.3.276',sum:'잘하는 지구력 선수들은 훈련의 약 80%를 낮은 강도로 하고 나머지만 높은 강도로 했어요.'},
+  {use:'쉬운 강도 약 80%',ref:'Haugen T, Sandbakk Ø, Seiler S, Tønnessen E (2022). The training characteristics of world-class distance runners: an integration of scientific literature and results-proven practice. Sports Medicine - Open, 8, 46.',doi:'10.1186/s40798-022-00438-7',sum:'세계 정상급 장거리 선수들의 훈련도 대부분 낮은 강도였어요.'},
+  {use:'쉬운 강도 약 80% (아마추어 마라토너)',ref:'Muniz-Pumares D, Hunter B, Meyler S, Maunder E, Smyth B (2025). The training intensity distribution of marathon runners across performance levels. Sports Medicine, 55(4), 1023-1035.',doi:'10.1007/s40279-024-02137-7',sum:'마라톤 약 15만 건을 분석했어요. 빠른 러너일수록 쉬운 강도 훈련량이 많았어요.'},
+  {use:'한 번 뛰는 거리는 최근 30일 최장의 1.1배까지',ref:'Frandsen JSB, Hulme A, Parner ET, et al., Nielsen RØ (2025). How much running is too much? Identifying high-risk running sessions in a 5200-person cohort study. British Journal of Sports Medicine, 59(17), 1203-1210.',doi:'10.1136/bjsports-2024-109380',sum:'한 번 뛴 거리가 최근 30일 최장 거리보다 10% 넘게 길면 과사용 부상 위험이 올라갔어요.'},
+  {use:'대회 전 테이퍼 (거리 줄이고 강도·빈도 유지)',ref:'Wang Z, Wang YT, Gao W, Zhong Y (2023). Effects of tapering on performance in endurance athletes: a systematic review and meta-analysis. PLOS ONE, 18(5), e0282838.',doi:'10.1371/journal.pone.0282838',sum:'21일 이내로 훈련량을 41~60% 줄이고 강도와 빈도는 유지하는 테이퍼가 효과적이었어요.'},
+  {use:'대회 전 테이퍼',ref:'Bosquet L, Montpetit J, Arvisais D, Mujika I (2007). Effects of tapering on performance: a meta-analysis. Medicine & Science in Sports & Exercise, 39(8), 1358-1365.',doi:'10.1249/mss.0b013e31806010e0',sum:'약 2주 동안 훈련량을 40~60% 줄이고 강도와 빈도는 유지할 때 기록이 가장 좋아졌어요.'},
+  {use:'예상 기록 (5km~하프)',ref:'Riegel PS (1981). Athletic records and human endurance. American Scientist, 69(3), 285-290.',sum:'기록 하나로 다른 거리 기록을 추정하는 공식이에요(시간 × (거리 비율)^1.06).'},
+  {use:'풀코스는 Riegel 대신 다른 방법 사용',ref:'Vickers AJ, Vertosick EA (2016). An empirical study of race times in recreational endurance runners. BMC Sports Science, Medicine and Rehabilitation, 8, 26.',doi:'10.1186/s13102-016-0052-y',sum:'Riegel 공식은 아마추어의 풀코스 기록을 실제보다 빠르게 예측했어요.'},
+  {use:'풀코스 예상 기록 (훈련 기록 기준)',ref:'Tanda G (2011). Prediction of marathon performance time on the basis of training indices. Journal of Human Sport and Exercise, 6(3), 511-520.',sum:'최근 8주 주당 거리와 평균 페이스로 풀코스 기록을 예측하는 식이에요.'},
+  {use:'최대 심박수 추정 (208 − 0.7 × 나이)',ref:'Tanaka H, Monahan KD, Seals DR (2001). Age-predicted maximal heart rate revisited. Journal of the American College of Cardiology, 37(1), 153-156.',doi:'10.1016/S0735-1097(00)01054-8',sum:'220 − 나이보다 정확한 나이 기반 최대 심박 추정식이에요. 개인차가 커서 실제 측정값이 있으면 그걸 써요.'},
+  {use:'하체 운동한 날·다음 날 러닝 강도 조절',ref:'Doma K, Deakin GB, Bentley DJ (2017). Implications of impaired endurance performance following single bouts of resistance training: an alternate concurrent training perspective. Sports Medicine, 47(11), 2187-2200.',doi:'10.1007/s40279-017-0758-3',sum:'근력 운동 한 번으로도 피로가 남아 몇 시간에서 며칠 동안 지구력 운동의 질이 떨어질 수 있어요. 같은 속도에서 심박과 힘듦도 올라가요.'},
+  {use:'하체 운동 뒤 48시간',ref:'Doma K, Schumann M, Leicht AS, et al. (2017). The repeated bout effect of traditional resistance exercises on running performance across three bouts. Applied Physiology, Nutrition, and Metabolism, 42(9).',doi:'10.1139/apnm-2017-0214',sum:'하체 운동에 익숙해질수록 피로가 줄었지만, 48시간 뒤에도 고강도 러닝 능력은 평소보다 낮았어요.'},
+  {use:'당번 다음 날(비번) 리커버리 · 잠 컨디션 선택 · 롱런 4번째마다 줄이기',note:'수면 부족 뒤에는 강도를 낮추는 일반적인 원칙과 코칭 관행을 따랐어요. 특정 논문의 수치는 아니에요.'}
+ ]},
+ {sec:'수영',items:[
+  {use:'CSS(임계 수영 속도) 측정과 기준 페이스',ref:'Wakayoshi K, Yoshida T, Udo M, et al., Miyashita M (1992). A simple method for determining critical speed as swimming fatigue threshold in competitive swimming. International Journal of Sports Medicine, 13(5), 367-371.',doi:'10.1055/s-2007-1021282',sum:'여러 거리를 전력으로 수영한 기록으로 임계 속도를 구할 수 있고, 이것이 지구력 수준을 잘 나타냈어요.'},
+  {use:'CSS(임계 수영 속도)',ref:'Wakayoshi K, Ikuta K, Yoshida T, et al., Miyashita M (1992). Determination and validity of critical velocity as an index of swimming performance in the competitive swimmer. European Journal of Applied Physiology and Occupational Physiology, 64(2), 153-157.',doi:'10.1007/BF00717953',sum:'임계 속도가 젖산 역치 속도, 400m 기록과 밀접했어요.'},
+  {use:'초보 3단계 · 워밍업 → 드릴 → 메인 → 쿨다운 · 패들 400m 제한',note:'수영 지도에서 널리 쓰는 진행 방식과 코칭 관행을 따랐어요. 특정 논문의 수치는 아니에요.'}
+ ]}
+];
+function vRefs(){
+ var h=hdr('연구 근거 · 참고문헌','앱의 처방이 어디서 왔는지',backBtn('#me','설정으로'))+'<main>';
+ h+='<div class="note" style="padding:0 4px;line-height:1.6">각 항목은 <b>앱에서 쓰는 곳</b> → 논문 → 한 줄 요약 순서예요. 논문 아래 링크(DOI)를 누르면 원문 페이지가 열려요. 연구는 평균적인 결과라서 개인차가 있어요.</div>';
+ REFS.forEach(function(s){
+  h+='<div class="sectitle">'+s.sec+'</div><div class="list">'+s.items.map(function(it){
+   return '<div class="li" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:default"><span class="badge" style="background:#E5EEFB;color:#1F55D6;white-space:normal;text-align:left">'+esc(it.use)+'</span>'+
+    (it.ref?'<div style="font-size:13px;line-height:1.55;color:#33373C">'+esc(it.ref)+'</div>':'')+
+    (it.doi?'<a href="https://doi.org/'+esc(it.doi)+'" target="_blank" rel="noopener" style="font-size:12px;color:#1F55D6;word-break:break-all">doi.org/'+esc(it.doi)+'</a>':'')+
+    (it.sum?'<div class="meta" style="font-size:13px;line-height:1.55">'+esc(it.sum)+'</div>':'')+
+    (it.note?'<div class="meta" style="font-size:13px;line-height:1.55">'+esc(it.note)+'</div>':'')+'</div>'}).join('')+'</div>';
+ });
+ return h+'</main>';
+}
+
 /* =============== 수영 =============== */
 var STROKE={free:'자유형',back:'배영',breast:'평영',fly:'접영'},GEAR={pull:'풀부이',paddle:'패들',kick:'킥판',fins:'오리발'};
 var SKIND={free:'자유 수영',lesson:'강습'},SCOLOR={free:'#1D9E75',lesson:'#3B6D11'};
@@ -1174,7 +1353,7 @@ function vSwimSet(){
  h+='<div class="sectitle">강습 요일</div>'+chips('lessonDays',['일','월','화','수','목','금','토'].map(function(d,i){return[i,d]}));
  h+='<div class="sectitle">할 줄 아는 영법</div>'+chips('strokes',Object.keys(STROKE).map(function(x){return[x,STROKE[x]]}));
  h+='<div class="sectitle">장비</div>'+chips('gear',Object.keys(GEAR).map(function(x){return[x,GEAR[x]]}));
- h+='<button class="primary" data-a="sw-save" style="margin-top:8px">저장</button><div class="note">처방은 수영 코칭에서 널리 쓰는 방식(워밍업 → 드릴 → 메인 → 쿨다운, CSS 기준 페이스)을 따라요. 어깨나 몸이 불편한 날은 처방보다 몸 상태를 먼저 따라 주세요.</div></main>';
+ h+='<button class="primary" data-a="sw-save" style="margin-top:8px">저장</button><div class="note">처방은 수영 코칭에서 널리 쓰는 방식(워밍업 → 드릴 → 메인 → 쿨다운, CSS 기준 페이스)을 따라요. 어깨나 몸이 불편한 날은 처방보다 몸 상태를 먼저 따라 주세요. <a href="#refs">근거 보기</a></div></main>';
  return h;
 }
 function readSwSet(){Array.prototype.forEach.call(document.querySelectorAll('[data-sw]'),function(el){swBuf[el.getAttribute('data-sw')]=el.value})}
@@ -1285,12 +1464,12 @@ function render(){
  if(!db)return;
  graphData=null;
  var h;
- switch(view){case 'home':h=vHome();break;case 'run':h=vRun();break;case 'runset':h=vRunSet();break;case 'runhist':h=vRunHist();break;case 'swim':h=vSwim();break;case 'swimset':h=vSwimSet();break;case 'swimhist':h=vSwimHist();break;case 'ex':h=vEx();break;case 'exedit':h=vExEdit();break;case 'cal':h=vCal();break;case 'plan':h=vPlan();break;case 'cat':h=vCat();break;case 'wk':h=vWk();break;case 'prog':h=vProg();break;case 'me':h=vMe();break;case 'guide':h=vGuide();break;case 'runguide':h=vRunGuide();break;default:h=vToday()}
+ switch(view){case 'home':h=vHome();break;case 'run':h=vRun();break;case 'runset':h=vRunSet();break;case 'runhist':h=vRunHist();break;case 'swim':h=vSwim();break;case 'swimset':h=vSwimSet();break;case 'swimhist':h=vSwimHist();break;case 'refs':h=vRefs();break;case 'ex':h=vEx();break;case 'exedit':h=vExEdit();break;case 'cal':h=vCal();break;case 'plan':h=vPlan();break;case 'cat':h=vCat();break;case 'wk':h=vWk();break;case 'prog':h=vProg();break;case 'me':h=vMe();break;case 'guide':h=vGuide();break;case 'runguide':h=vRunGuide();break;default:h=vToday()}
  if(toasts.length){var tt=toasts.map(function(t){return '<div class="toast '+t.k+'" role="'+(t.k==='err'?'alert':'status')+'">'+esc(t.m)+'</div>'}).join('');h=h.replace('<main>','<main>'+tt);toasts=[]}
  var app=document.getElementById('app'),act=document.activeElement,aid=act&&act.id;
  app.innerHTML=h;
  if(aid==='sq'){var s=document.getElementById('sq');if(s){s.focus();var L=s.value.length;try{s.setSelectionRange(L,L)}catch(e){}}}
- var tab=view==='cal'&&calKind!=='all'?'home':({cal:'cal',me:'me',guide:'me',runguide:'me'}[view]||'home');
+ var tab=view==='cal'&&calKind!=='all'?'home':({cal:'cal',me:'me',guide:'me',runguide:'me',refs:'me'}[view]||'home');
  Array.prototype.forEach.call(document.querySelectorAll('nav.tabs a'),function(a){var on=a.getAttribute('data-tab')===tab;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
  syncWake();
  Array.prototype.forEach.call(document.querySelectorAll('.repchips[role=group]'),function(c){var p=c.querySelector('.plan');if(p)c.scrollLeft=p.offsetLeft-c.offsetLeft-(c.clientWidth-p.offsetWidth)/2});
@@ -1459,6 +1638,7 @@ function saveEdit(){
  readEdit();var b=editBuf,o=exById(b.id);if(!o)return;
  var num=function(k,def,min){var v=parseFloat(b[k]);return isNaN(v)||v<min?def:v};
  var name=String(b.name||'').trim().slice(0,40);if(!name){toast('이름을 입력해 주세요.','err');return}
+ o.memo=String(b.memo||'').slice(0,500);
  if(isCardio(o)){o.name=name;o.cat=b.cat;editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});go('#ex-'+o.id);return}
  o.name=name;o.cat=b.cat;if(b.warmN!=null){o.warmN=+b.warmN;o.warm=o.warmN>=4?'full':o.warmN>=1?'light':'none'}else o.warm=b.warm;if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;if(b.cls)o.cls=b.cls;
  o.increment=fix(num('increment',2.5,0.25));o.failLimit=Math.round(num('failLimit',3,1));o.deloadPct=Math.min(50,num('deloadPct',10,0));
@@ -1537,6 +1717,8 @@ document.addEventListener('click',function(ev){
   case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
   case 'day-pop':daySheet(t.getAttribute('data-k'));break;
   case 'run-day':runDaySheet(t.getAttribute('data-k'));break;
+  case 'form-pop':if(e)formSheet(e);break;
+  case 'ws-pop':weekSetsPop(t.getAttribute('data-v'));break;
   case 'daydel':askDayDel(id);break;
   case 'daydel-cancel':var pk=pendingDel&&pendingDel.k;pendingDel=null;if(pk)daySheet(pk);else modal('');break;
   case 'daydel-ok':if(pendingDel){var dk=pendingDel.k;if(String(pendingDel.id).indexOf('run:')===0){var rid2=pendingDel.id.slice(4);db.run.runs=db.run.runs.filter(function(r){return r.id!==rid2});save()}else{var dd2=db.days[dk];if(dd2){dd2.sets=dd2.sets.filter(function(x){return x.exId!==pendingDel.id});cleanDay(dk);save()}}pendingDel=null;render();if((db.days[dk]&&db.days[dk].sets.length)||db.run.runs.some(function(r){return r.date===dk}))daySheet(dk);else{modal('');toast(pretty(dk)+' 기록을 모두 지웠어요.')}}break;
@@ -1727,7 +1909,7 @@ function route(hash){
  else if(h==='run'){view='run'}
  else if(h==='runset'){view='runset'}
  else if(h==='runhist'){view='runhist'}
- else if(h==='swim'||h==='swimset'||h==='swimhist'){view=h}
+ else if(h==='swim'||h==='swimset'||h==='swimhist'||h==='refs'){view=h}
  else if(h==='today'){view='today'}
  else if(h==='plan'){view='plan'}
  else if((m=h.match(/^wk-(.+)$/))){view='wk';param=m[1]}
