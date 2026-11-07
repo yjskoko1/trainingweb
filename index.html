@@ -717,7 +717,8 @@ function vGuide(){
 function vRunGuide(){
  var h=hdr('러닝 처방 근거','러닝 처방은 이렇게 정해져요',backBtn('#me'))+'<main>';
  function sec(title,items){return '<div class="sectitle">'+title+'</div><div class="list">'+items.map(function(it){return '<div class="li" style="align-items:flex-start;flex-direction:column;gap:4px"><div class="row" style="justify-content:flex-start;gap:8px">'+(it[0]?'<span class="badge '+it[0]+'">'+it[1]+'</span>':'<span class="t">'+it[1]+'</span>')+'</div><div style="font-size:14px;line-height:1.6;color:#33373C">'+it[2]+'</div></div>'}).join('')+'</div>'}
- h+=sec('러닝',[['','근무 패턴','당번은 쉬고, 비번은 잠 컨디션에 따라 쉬운 달리기·리커버리·짧은 리커버리 중 하나, 휴무는 목표별 순서(풀코스: 롱런 → 템포런 → 롱런 → 인터벌)로 강도 있게 뛰어요.'],['','10% 규칙','한 번 뛰는 거리는 최근 30일 최장 거리의 10%를 넘지 않게 처방해요. 이보다 길게 뛰면 과사용 부상 위험이 높아졌다는 연구(Frandsen 외, 2025)를 따랐어요.'],['','80% 쉬운 강도','전체 거리의 약 80%를 쉬운 강도로 채워요. 마라톤 러너 15만여 명을 분석한 연구에서 가장 빠른 그룹의 80% 이상이 이런 배분을 썼고(Muniz-Pumares 외, 2025), 세계적인 장거리 선수들도 80% 이상을 낮은 강도로 뛰어요(Haugen 외, 2022). 최근 4주 쉬운 강도 비율을 러닝 화면에 보여줘요.'],['','예상 기록·페이스','5km~하프 기록은 최근 기록으로 예측해요(Riegel 공식). 이 공식은 아마추어 러너의 풀코스를 10분 이상 빠르게 예측하는 경우가 많아서(Vickers & Vertosick 2016), 훈련 페이스는 하프 예측 페이스를 기준으로 정해요. 풀코스는 기록이 쌓이면 최근 8주 주당 거리와 평균 페이스로 예측해요(Tanda 2011).'],['','테이퍼','대회 2주 전부터 거리를 30~50% 줄이고, 강도와 뛰는 날 수는 유지해요. 21일 이내로 훈련량을 41~60% 줄이고 강도·빈도를 유지하는 방식이 효과적이었다는 메타분석을 따랐어요(Wang 외, 2023; Bosquet 외, 2007).'],['','심박','최대 심박수를 모르면 208 − 0.7 × 나이로 추정해요(Tanaka 공식, 2001). 추정값은 사람마다 오차가 커서, 가민에 나오는 값이나 실제로 잰 값이 더 정확해요.']]);
+ h+=sec('러닝',[['','근무 패턴','당번은 쉬고, 비번은 잠 컨디션에 따라 쉬운 달리기·리커버리·짧은 리커버리 중 하나, 휴무는 목표별 순서(풀코스: 롱런 → 템포런 → 롱런 → 인터벌)로 강도 있게 뛰어요.'],
+  ['','하체 운동한 날','하체를 3세트 이상 한 날은 쉬운 러닝으로 바꾸고 거리를 25% 줄여요. 다음 날은 템포·인터벌을 다음 휴무로 미루고, 롱런은 거리를 유지한 채 심박 상한(최대 심박의 75%)을 걸어요. 하체 운동 피로는 24~48시간 러닝 능력을 떨어뜨리고 같은 속도에서 심박을 올려요(Doma 2017). 하체는 휴무에 러닝을 먼저 하고 몇 시간 뒤에 하면, 다음 날 당번에 쉬고 비번 러닝까지 약 48시간이 생겨 가장 잘 맞아요.'],['','10% 규칙','한 번 뛰는 거리는 최근 30일 최장 거리의 10%를 넘지 않게 처방해요. 이보다 길게 뛰면 과사용 부상 위험이 높아졌다는 연구(Frandsen 외, 2025)를 따랐어요.'],['','80% 쉬운 강도','전체 거리의 약 80%를 쉬운 강도로 채워요. 마라톤 러너 15만여 명을 분석한 연구에서 가장 빠른 그룹의 80% 이상이 이런 배분을 썼고(Muniz-Pumares 외, 2025), 세계적인 장거리 선수들도 80% 이상을 낮은 강도로 뛰어요(Haugen 외, 2022). 최근 4주 쉬운 강도 비율을 러닝 화면에 보여줘요.'],['','예상 기록·페이스','5km~하프 기록은 최근 기록으로 예측해요(Riegel 공식). 이 공식은 아마추어 러너의 풀코스를 10분 이상 빠르게 예측하는 경우가 많아서(Vickers & Vertosick 2016), 훈련 페이스는 하프 예측 페이스를 기준으로 정해요. 풀코스는 기록이 쌓이면 최근 8주 주당 거리와 평균 페이스로 예측해요(Tanda 2011).'],['','테이퍼','대회 2주 전부터 거리를 30~50% 줄이고, 강도와 뛰는 날 수는 유지해요. 21일 이내로 훈련량을 41~60% 줄이고 강도·빈도를 유지하는 방식이 효과적이었다는 메타분석을 따랐어요(Wang 외, 2023; Bosquet 외, 2007).'],['','심박','최대 심박수를 모르면 208 − 0.7 × 나이로 추정해요(Tanaka 공식, 2001). 추정값은 사람마다 오차가 커서, 가민에 나오는 값이나 실제로 잰 값이 더 정확해요.']]);
  h+='<div class="note">처방은 일반적인 연구 결과를 바탕으로 해요. 통증이 있거나 몸이 안 좋은 날은 처방보다 몸 상태를 먼저 따라 주세요.</div>';
  return h+'</main>';
 }
@@ -804,6 +805,9 @@ function longest30(k){var from=addDays(k,-30),mx=0;db.run.runs.forEach(function(
  /* 30일 넘게 쉬었으면 예전 최장 거리의 절반부터 다시 시작 */
  var past=db.run.runs.filter(function(r){return r.date<k&&r.km>0});if(past.length)return r1(Math.max.apply(null,past.map(function(r){return +r.km}))*0.5);
  return +rset().longest||0}
+/* 하체 운동 뒤 남은 피로: 같은 날이면 'same', 전날이면 'next' (Doma 2017 Sports Med, Doma 2017 APNM) */
+function legSets(k){var d=db.days[k];if(!d)return 0;return d.sets.filter(function(s){if(s.warm)return false;var e=exById(s.exId);return e&&catById(e.cat).name==='하체'}).length}
+function legFatigue(k){return legSets(k)>=3?'same':legSets(addDays(k,-1))>=3?'next':null}
 function breakDays(k){var past=db.run.runs.filter(function(r){return r.date<k&&r.km>0});if(!past.length)return 0;var last=past.reduce(function(a,r){return r.date>a?r.date:a},'');var g=daysBetween(last,k);return g>30?g:0}
 function weekKm(k){var from=addDays(k,-6);return r1(db.run.runs.filter(function(r){return r.date>=from&&r.date<=k}).reduce(function(a,r){return a+(+r.km||0)},0))}
 function easyShare(k){var from=addDays(k,-27),rs=db.run.runs.filter(function(r){return r.date>=from&&r.date<=k});var t=rs.reduce(function(a,r){return a+(+r.km||0)},0);if(!t)return null;var e=rs.filter(function(r){return EASYT[r.type]}).reduce(function(a,r){return a+(+r.km||0)},0);return Math.round(e/t*100)}
@@ -868,6 +872,20 @@ function runRx(k){
    o.km=g.rec[1];o.pace=ph?[ph+75,ph+105]:null;o.hr=hr(0.65,0.78);o.detail='편하게 뛰다가 1분씩 빠르게 × 6~8회';o.why='체력 유지 단계에서는 즐겁게, 가끔 속도를 섞어요.';
   }
  }
+ var lf=legFatigue(k),QT={tempo:1,interval:1,fartlek:1};
+ if(lf&&o.type!=='race'){
+  o.leg=lf;var hc=hm?Math.round(hm*0.75):null;
+  if(lf==='same'){
+   if(QT[o.type]||o.type==='long'){o.moved=o.type;o.type='easy';o.km=rHalf(g.rec[1]*0.75);o.pace=ph?[ph+80,ph+110]:null;o.hr=hr(0.6,0.75);o.detail='처음부터 끝까지 편하게. 다리가 무거우면 걷기를 섞어도 돼요.'}
+   else{o.km=rHalf(Math.max(3,o.km*0.75));o.hr=hr(0.6,0.72)}
+   o.hrCap=hc;o.why='오늘 하체 운동을 해서 다리에 피로가 남아 있어요. 쉬운 러닝으로 바꾸고 거리를 25% 줄였어요.'+(o.moved?' '+RTYPE[o.moved]+'은 다음 휴무로 미뤄요.':'')+' 가능하면 하체 운동과 3~6시간 이상 떨어뜨려 뛰세요.';
+  }else{
+   if(QT[o.type]){o.moved=o.type;o.type='easy';o.km=g.rec[1];o.pace=ph?[ph+75,ph+105]:null;o.hr=hr(0.65,0.75);o.detail='편하게 뛰다가 마지막에 20초 가볍게 빠르게 × 4회';o.why='어제 하체 운동의 피로가 24시간 정도 남아 빠른 러닝 능력이 떨어져 있어요. '+RTYPE[o.moved]+'은 다음 휴무로 미루고 오늘은 쉽게 뛰어요.'}
+   else if(o.type==='long'){if(o.pace)o.pace=[o.pace[0]+15,o.pace[1]+15];o.hr=hr(0.65,0.75);o.notes.push('어제 하체 운동을 해서 롱런 거리는 그대로, 속도는 15초 늦추고 심박 상한을 걸었어요.')}
+   else o.notes.push('어제 하체 운동을 했어요. 다리가 무거우면 더 천천히 뛰어도 돼요.');
+   o.hrCap=hc;
+  }
+ }
  if(taper<1&&o.type!=='interval'){o.km=r1(o.km*taper);o.notes.push('대회 D-'+dR+': 테이퍼 기간이라 거리를 '+Math.round((1-taper)*100)+'% 줄였어요. 강도와 뛰는 날 수는 그대로 유지해요.')}
  else if(taper<1)o.notes.push('대회 D-'+dR+': 테이퍼 기간이라 반복 횟수를 줄였어요. 강도와 뛰는 날 수는 그대로 유지해요.');
  if(cap&&o.km>cap+0.05){o.km=cap;o.notes.push('최근 30일 최장 거리('+r1(L30)+'km)의 10%를 넘지 않게 줄였어요.')}
@@ -892,9 +910,10 @@ function vRun(){
  if(x.type==='rest'){
   h+='<div class="rx"><div class="row"><span style="font-size:13px;opacity:.85">오늘</span><span class="badge b-keep">쉬는 날</span></div><div class="big">휴식</div><div class="why">'+esc(x.why)+'</div></div>';
  }else{
-  h+='<div class="rx"><div class="row"><span style="font-size:13px;opacity:.85">오늘 추천</span><span class="badge" style="background:#EB6834;color:#fff">'+RTYPE[x.type]+'</span></div>'+
+  h+='<div class="rx"><div class="row"><span style="font-size:13px;opacity:.85">오늘 추천</span><span>'+(x.leg?'<span class="badge" style="background:#fff;color:#B4441C;margin-right:6px">'+(x.leg==='same'?'오늘 하체':'어제 하체')+'</span>':'')+'<span class="badge" style="background:#EB6834;color:#fff">'+RTYPE[x.type]+'</span></span></div>'+
    '<div class="big">'+(x.km?r1(x.km)+'km':RTYPE[x.type])+'</div>'+
-   '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px">'+(x.pace?'<div><span style="opacity:.75">페이스</span> <b>'+paceTxt(x.pace)+'</b></div>':'')+(x.hr?'<div><span style="opacity:.75">심박</span> <b>'+x.hr[0]+'~'+x.hr[1]+'</b></div>':'')+'</div>'+
+   (x.hrCap?'<div style="background:rgba(255,255,255,.16);border-radius:10px;padding:8px 10px;font-size:14px">심박 <b>'+x.hrCap+'</b> 넘으면 속도를 줄이세요<div style="font-size:12px;opacity:.8;margin-top:2px">피로한 날은 같은 속도에서도 심박이 올라가요. 오늘은 페이스보다 심박을 따르세요.</div></div>':(x.leg?'<div style="font-size:13px;opacity:.85">오늘은 페이스보다 몸 느낌을 따르세요. 설정에 나이를 넣으면 심박 상한도 알려드려요.</div>':''))+
+   '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px">'+(x.pace?'<div><span style="opacity:.75">페이스'+(x.hrCap?' (참고)':'')+'</span> <b>'+paceTxt(x.pace)+'</b></div>':'')+(x.hr?'<div><span style="opacity:.75">심박</span> <b>'+x.hr[0]+'~'+x.hr[1]+'</b></div>':'')+'</div>'+
    (x.detail?'<div class="why" style="opacity:1">'+esc(x.detail)+'</div>':'')+'<div class="why">'+esc(x.why||'')+'</div>'+x.notes.map(function(n){return '<div class="why">· '+esc(n)+'</div>'}).join('')+
    (!x.pace?'<div class="why">· 러닝 설정에 최근 기록을 넣으면 페이스도 알려드려요.</div>':'')+(!x.hr?'<div class="why">· 설정에 나이나 최대 심박수를 넣으면 심박 구간도 알려드려요.</div>':'')+'</div>';
  }
