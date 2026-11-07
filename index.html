@@ -578,12 +578,14 @@ function recSheet(e){
  modal('<h2>'+esc(e.name)+' 추천</h2><div class="meta">운동 구분: <b>'+CLS[c]+'</b> · 종목 설정에서 바꿀 수 있어요.</div>'+blk('근비대',r.h)+blk('근력',r.s)+'<div class="note" style="padding:0;line-height:1.6">'+r.note+'</div><button class="primary" data-a="modal-close">확인</button>');
 }
 function numField(label,k,step,suf){return '<div class="field"><label for="f-'+k+'">'+label+'</label><div style="display:flex;align-items:center;gap:6px"><input id="f-'+k+'" type="number" inputmode="decimal" step="'+step+'" min="0" data-f="'+k+'" value="'+esc(editBuf[k])+'">'+(suf?'<span class="meta">'+suf+'</span>':'')+'</div></div>'}
+var exBack=null,exEm=null;
 function vExEdit(){
  var o=exById(param);if(!o)return vPlan();
- if(!editBuf||editBuf.id!==o.id){editBuf=JSON.parse(JSON.stringify(o));editBuf.em=editBuf.em||'';editBuf.M={};if(!isCardio(o)){editBuf.barbell=isBarbell(o);editBuf.dumbbell=isDumbbell(o);editBuf.cls=exCls(o);editBuf.warmN=warmN(o)}
+ if(!editBuf||editBuf.id!==o.id){editBuf=JSON.parse(JSON.stringify(o));editBuf.em=exEm!=null?exEm:(editBuf.em||'');exEm=null;editBuf.M={};if(!isCardio(o)){editBuf.barbell=isBarbell(o);editBuf.dumbbell=isDumbbell(o);editBuf.cls=exCls(o);editBuf.warmN=warmN(o)}
   if(!isCardio(o))['','h','s'].forEach(function(m){var c=ec(o,m),t=progress(o,addDays(todayKey(),1),m).t;editBuf.M[m]={method:c.method,sets:c.sets,repsMin:c.repsMin,repsMax:c.repsMax,rest:c.rest||0,_t:t,_t0:t}})}
  var b=editBuf;
- var h=hdr('종목 설정',esc(o.name),backBtn('#ex-'+esc(o.id)))+'<main>';
+ var back=exBack||'#ex-'+esc(o.id);
+ var h=hdr('종목 설정',esc(o.name)+(exBack?' · 워크아웃에서':''),backBtn(back))+'<main>';
  if(isCardio(o))return h+'<div class="list"><div class="field"><label for="f-name">이름</label><input id="f-name" type="text" maxlength="40" data-f="name" value="'+esc(b.name)+'"></div><div class="field"><label for="f-cat">부위</label><select id="f-cat" data-f="cat">'+db.cats.map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===b.cat?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div></div><div class="note">카디오 종목은 시간·거리·레벨을 기록해요. 무게 처방은 없어요.</div><div class="btnrow"><a class="secondary" href="#ex-'+esc(o.id)+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';
  h+='<div class="list"><div class="field"><label for="f-name">이름</label><input id="f-name" type="text" maxlength="40" data-f="name" value="'+esc(b.name)+'"></div><div class="field"><label for="f-cat">부위</label><select id="f-cat" data-f="cat">'+db.cats.map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===b.cat?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div></div>';
  var em=b.em||'',M=b.M[em];
@@ -604,7 +606,7 @@ function vExEdit(){
  h+='<div class="sectitle">무게를 내리는 조건</div><div class="list">'+numField('연속 실패 허용','failLimit','1','회')+numField('내리는 비율','deloadPct','1','%')+'</div>';
  h+='<div class="sectitle">운동 구분 (추천에 써요)</div><div class="seg" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+[['core','핵심'],['comp','복합'],['iso','고립'],['bw','맨몸']].map(function(m){var on=exCls(b)===m[0];return '<button data-a="clsset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'" style="font-size:13px">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea><div class="note">종목 화면의 <b>자세</b> 버튼을 누르면 기본 설명과 함께 보여요.</div>';
- h+='<div class="btnrow"><a class="secondary" href="#ex-'+esc(o.id)+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';
+ h+='<div class="btnrow"><a class="secondary" href="'+back+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';
  return h;
 }
 
@@ -660,9 +662,9 @@ function vWk(){
  var ex=wkEx(w);
  var pw=progById(w.prog);var h=hdr(esc(w.name),'워크아웃 편집'+(pw?' · '+esc(pw.name):''),backBtn(pw?'#prog-'+esc(pw.id):'#plan'))+'<main>';
  h+='<div class="card" style="gap:6px;padding:12px 14px"><label for="wn" class="meta">이름</label><input id="wn" type="text" maxlength="30" value="'+esc(w.name)+'" data-wk="name" style="width:100%;box-sizing:border-box;height:46px;border:1px solid #DADDE2;border-radius:12px;padding:0 12px;font-size:16px;background:#fff"></div>';
- h+='<div class="sectitle">목적</div><div class="seg two">'+[['h','근비대'],['s','근력']].map(function(t){var on=(w.mode||'h')===t[0];return '<button data-a="wk-mode" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+t[1]+'</button>'}).join('')+'</div><div class="note">근비대·근력으로 정하면 이 워크아웃의 종목들은 종목 설정의 근비대·근력 탭 설정과 무게를 따로 써요. 종목 줄의 <b>추천</b>을 누르면 목적별 추천 세트·횟수·휴식이 나와요.</div>';
+ h+='<div class="sectitle">목적</div><div class="seg two">'+[['h','근비대'],['s','근력']].map(function(t){var on=(w.mode||'h')===t[0];return '<button data-a="wk-mode" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+t[1]+'</button>'}).join('')+'</div><div class="note">이 워크아웃에 넣은 종목은 <b>모두 '+MODE[w.mode||'h']+'로</b> 기록되고 무게도 '+MODE[w.mode||'h']+' 무게로 따로 올라가요. 종목마다 따로 정할 필요 없어요. 같은 벤치프레스라도 근비대 워크아웃과 근력 워크아웃의 무게는 따로 관리돼요.<br>종목을 누르면 '+MODE[w.mode||'h']+' 세트·횟수·무게를 바로 고칠 수 있어요. <b>추천</b>은 목적별 추천값이에요.</div>';
  h+='<div class="sectitle">종목 '+ex.length+'개 · 이 순서대로 나와요 · 점 6개를 잡고 끌어서 순서 변경</div>';
- h+=ex.length?'<div class="list" data-sortable="wke">'+ex.map(function(e,i){var c=catById(e.cat);return '<div class="li" data-i="'+i+'"><button class="drag" aria-label="'+esc(e.name)+' 순서 옮기기 (끌거나 위아래 화살표 키)">'+I.grip+'</button><div style="min-width:0;flex:1"><div class="t">'+esc(e.name)+'</div><div class="meta"><span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)+'</div></div><div style="display:flex;gap:6px">'+(isCardio(e)?'':'<button class="mini" data-a="rec-ex" data-id="'+esc(e.id)+'" aria-label="'+esc(e.name)+' 추천 보기" style="width:auto;padding:0 10px;font-size:13px">추천</button>')+'<button class="mini" data-a="wk-rm" data-n="'+i+'" aria-label="'+esc(e.name)+' 빼기" style="background:var(--redBg);color:var(--red)">✕</button></div></div>'}).join('')+'</div>':'<div class="card"><div class="empty">종목을 추가해 주세요.</div></div>';
+ h+=ex.length?'<div class="list" data-sortable="wke">'+ex.map(function(e,i){var c=catById(e.cat);return '<div class="li" data-i="'+i+'"><button class="drag" aria-label="'+esc(e.name)+' 순서 옮기기 (끌거나 위아래 화살표 키)">'+I.grip+'</button><button data-a="wk-exset" data-id="'+esc(e.id)+'" style="all:unset;cursor:pointer;min-width:0;flex:1"><div class="t">'+esc(e.name)+'</div><div class="meta"><span class="dot" style="background:'+c.color+'"></span>'+esc(c.name)+(isCardio(e)?'':(function(){var md=w.mode||'h',cc=ec(e,md),nt=progress(e,addDays(todayKey(),1),md).t;return ' · <b style="color:'+(md==='s'?'#B4441C':'#1F55D6')+'">'+MODE[md]+'</b> '+cc.sets+'×'+(cc.repsMin===cc.repsMax?cc.repsMax:cc.repsMin+'~'+cc.repsMax)+(nt>0?' · 다음 '+fmt(nt)+'kg':'')})())+'</div></button><div style="display:flex;gap:6px">'+(isCardio(e)?'':'<button class="mini" data-a="rec-ex" data-id="'+esc(e.id)+'" aria-label="'+esc(e.name)+' 추천 보기" style="width:auto;padding:0 10px;font-size:13px">추천</button>')+'<button class="mini" data-a="wk-rm" data-n="'+i+'" aria-label="'+esc(e.name)+' 빼기" style="background:var(--redBg);color:var(--red)">✕</button></div></div>'}).join('')+'</div>':'<div class="card"><div class="empty">종목을 추가해 주세요.</div></div>';
  h+='<button class="secondary" data-a="wk-pick">+ 종목 추가 · 부위로 한번에</button>';
  h+='<button class="danger" data-a="wk-del">이 워크아웃 삭제</button></main>';
  return h;
@@ -1657,7 +1659,7 @@ function saveEdit(){
  var num=function(k,def,min){var v=parseFloat(b[k]);return isNaN(v)||v<min?def:v};
  var name=String(b.name||'').trim().slice(0,40);if(!name){toast('이름을 입력해 주세요.','err');return}
  o.memo=String(b.memo||'').slice(0,500);
- if(isCardio(o)){o.name=name;o.cat=b.cat;editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});go('#ex-'+o.id);return}
+ if(isCardio(o)){o.name=name;o.cat=b.cat;editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});var eb=exBack;exBack=null;go(eb||'#ex-'+o.id);return}
  o.name=name;o.cat=b.cat;if(b.warmN!=null){o.warmN=+b.warmN;o.warm=o.warmN>=4?'full':o.warmN>=1?'light':'none'}else o.warm=b.warm;if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;if(b.cls)o.cls=b.cls;
  o.increment=fix(num('increment',2.5,0.25));o.failLimit=Math.round(num('failLimit',3,1));o.deloadPct=Math.min(50,num('deloadPct',10,0));
  var tk=todayKey();
@@ -1672,7 +1674,7 @@ function saveEdit(){
   var differs=Object.keys(v).some(function(k){return v[k]!==base[k]});
   if(o[m]||differs||changed){var prev=o[m]||{};o[m]=Object.assign({},v,{startWeight:prev.startWeight!=null?prev.startWeight:o.startWeight,anchor:prev.anchor!=null?prev.anchor:''});if(changed){o[m].startWeight=nt;o[m].anchor=anchor}}
  });
- editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});go('#ex-'+o.id);
+ editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});var eb=exBack;exBack=null;go(eb||'#ex-'+o.id);
 }
 function doBackup(){
  var data=JSON.stringify(db);
@@ -1735,6 +1737,7 @@ document.addEventListener('click',function(ev){
   case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
   case 'day-pop':daySheet(t.getAttribute('data-k'));break;
   case 'run-day':runDaySheet(t.getAttribute('data-k'));break;
+  case 'wk-exset':exBack='#wk-'+param;exEm=(wkById(param)||{}).mode||'h';editBuf=null;go('#exedit-'+id);break;
   case 'calpop':calPop.kind=t.getAttribute('data-v');calPop.month=calMonth;renderCalPop();break;
   case 'calpop-mon':var cpm=parseKey(calPop.month+'-01');cpm.setMonth(cpm.getMonth()+(+t.getAttribute('data-n')));calPop.month=key(cpm).slice(0,7);renderCalPop();break;
   case 'noop':break;
@@ -1924,6 +1927,7 @@ function route(hash){
  var full=hash||location.hash||'#home';routed=full;
  var h=full.slice(1),m;
  if(!(view==='exedit'&&h.indexOf('exedit-')===0))editBuf=null;
+ if(h.indexOf('exedit-')!==0)exBack=null;
  if(!(view==='runset'&&h==='runset'))rsBuf=null;
  if(!(view==='swimset'&&h==='swimset'))swBuf=null;
  if(h==='home'||h===''){view='home'}
