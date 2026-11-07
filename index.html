@@ -543,21 +543,21 @@ function vGraph(e){
  var vs=pts.map(function(p){return p.v}),u=GM[graphMetric][1];
  return h+'<div class="card">'+lineChart(pts,u,GM[graphMetric][0],'최근 <b>'+fmt(pts[pts.length-1].v)+u+'</b> · 최고 '+fmt(Math.max.apply(null,vs))+u)+'<div class="note">점을 누르면 그날 값이 보여요. 웜업 세트는 빼고 계산해요.</div></div>';
 }
-function lineChart(pts,unit,label,headline){
+function lineChart(pts,unit,label,headline,yf){
  var W=340,H=200,L=40,R=12,T=14,B=26;
  var vs=pts.map(function(p){return p.v}),mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs);
  if(mx===mn){mx+=1;mn=Math.max(0,mn-1)}
  var pad=(mx-mn)*0.12;mn=Math.max(0,mn-pad);mx+=pad;
  var x=function(i){return L+(W-L-R)*(pts.length===1?0.5:i/(pts.length-1))},y=function(v){return T+(H-T-B)*(1-(v-mn)/(mx-mn))};
  var dec=(mx-mn)<6?1:0,grid='';
- for(var g=0;g<=3;g++){var gv=mn+(mx-mn)*g/3,gy=y(gv);grid+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+gy+'" y2="'+gy+'" stroke="#E4E6E9" stroke-width="1"/><text x="'+(L-6)+'" y="'+(gy+4)+'" text-anchor="end" font-size="10" fill="#5B6068">'+gv.toFixed(dec)+'</text>'}
+ for(var g=0;g<=3;g++){var gv=mn+(mx-mn)*g/3,gy=y(gv);grid+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+gy+'" y2="'+gy+'" stroke="#E4E6E9" stroke-width="1"/><text x="'+(L-6)+'" y="'+(gy+4)+'" text-anchor="end" font-size="10" fill="#5B6068">'+(yf?yf(gv):gv.toFixed(dec))+'</text>'}
  var path=pts.map(function(p,i){return(i?'L':'M')+x(i).toFixed(1)+' '+y(p.v).toFixed(1)}).join(' ');
  var lbl='<text x="'+L+'" y="'+(H-6)+'" font-size="10" fill="#5B6068">'+short(pts[0].k)+'</text><text x="'+(W-R)+'" y="'+(H-6)+'" font-size="10" fill="#5B6068" text-anchor="end">'+short(pts[pts.length-1].k)+'</text>';
  var dots=pts.map(function(p,i){return '<circle cx="'+x(i)+'" cy="'+y(p.v)+'" r="4" fill="#2a78d6" stroke="#fff" stroke-width="2"/><circle cx="'+x(i)+'" cy="'+y(p.v)+'" r="16" fill="transparent" data-gi="'+i+'"/>'}).join('');
  graphData={pts:pts,x:x,unit:unit};
  return '<div class="readout" id="readout" aria-live="polite">'+headline+'</div><div class="chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(label)+' 변화: '+pts.map(function(p){return short(p.k)+' '+p.v}).join(', ')+'">'+grid+'<path d="'+path+'" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+lbl+'<line id="gcross" x1="0" x2="0" y1="'+T+'" y2="'+(H-B)+'" stroke="#9AA0A8" stroke-width="1" visibility="hidden"/>'+dots+'</svg></div>';
 }
-function showPoint(i){if(!graphData)return;var p=graphData.pts[i],ro=document.getElementById('readout'),cr=document.getElementById('gcross');if(!p||!ro)return;ro.innerHTML=esc(pretty(p.k))+' <b>'+fmt(p.v)+graphData.unit+'</b>';if(cr){cr.setAttribute('x1',graphData.x(i));cr.setAttribute('x2',graphData.x(i));cr.setAttribute('visibility','visible')}}
+function showPoint(i){if(!graphData)return;var p=graphData.pts[i],ro=document.getElementById('readout'),cr=document.getElementById('gcross');if(!p||!ro)return;ro.innerHTML=esc(pretty(p.k))+' <b>'+(p.lab?esc(p.lab):fmt(p.v)+graphData.unit)+'</b>';if(cr){cr.setAttribute('x1',graphData.x(i));cr.setAttribute('x2',graphData.x(i));cr.setAttribute('visibility','visible')}}
 
 /* =============== view: exercise settings =============== */
 function exCls(e){if(e.cls)return e.cls;if(isBarbell(e)&&e.warm==='full')return 'core';if(!(e.startWeight>0)&&e.warm==='none')return 'bw';if(e.warm==='none'&&e.repsMin>=12)return 'iso';return 'comp'}
@@ -861,7 +861,7 @@ function runRx(k){
 }
 
 /* =============== 러닝: 화면 =============== */
-var rl=null,rsBuf=null,runGraph='km';
+var rl=null,rsBuf=null,runGraph='km',predDist='half';
 function paceTxt(p){return p?fmtPace(p[0])+'~'+fmtPace(p[1])+'/km':null}
 function vRun(){
  var k=todayKey(),x=runRx(k),s=rset(),sh=x.shift;
@@ -972,13 +972,33 @@ function vRunHist(){
  var h=hdr('러닝 기록','전체',backBtn('#run','오늘의 러닝으로'))+'<main>';
  var rs=runsSorted();
  if(!rs.length)return h+'<div class="card"><div class="empty">아직 러닝 기록이 없어요.</div></div></main>';
- h+='<div class="chips">'+[['km','주간 거리'],['pace','평균 페이스'],['long','롱런 거리']].map(function(m){return '<button class="chip'+(runGraph===m[0]?' on':'')+'" data-a="rg" data-v="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div>';
- var pts=[];
+ h+='<div class="chips" style="flex-wrap:wrap">'+[['km','주간 거리'],['pace','평균 페이스'],['long','롱런 거리'],['pred','예상 기록'],['eff','심박 대비 페이스']].map(function(m){return '<button class="chip'+(runGraph===m[0]?' on':'')+'" data-a="rg" data-v="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div>';
+ var pts=[],extra2='';
  if(runGraph==='km'){var start=addDays(todayKey(),-7*11);for(var w=0;w<12;w++){var a=addDays(start,7*w-6),b2=addDays(start,7*w);pts.push({k:b2,v:r1(rs.filter(function(r){return r.date>=a&&r.date<=b2}).reduce(function(s,r){return s+(+r.km||0)},0))})}}
  else if(runGraph==='pace')pts=rs.filter(function(r){return r.sec&&r.km}).map(function(r){return{k:r.date,v:Math.round(r.sec/r.km)}}).slice(-20);
+ else if(runGraph==='pred'){
+  var D={k10:[10,'10km'],half:[21.0975,'하프'],full:[42.195,'풀코스']}[predDist],st=addDays(todayKey(),-7*11);
+  for(var w2=0;w2<12;w2++){var be=addDays(st,7*w2),v2=null;
+   if(predDist==='full'){var tp=tandaPred(addDays(be,1));v2=tp?tp.sec:null}
+   else{var fr=addDays(be,-55);rs.forEach(function(r){if(r.date>=fr&&r.date<=be&&r.km>=3&&r.sec>0){var t2=riegel(+r.km,+r.sec,D[0]);if(v2===null||t2<v2)v2=t2}})}
+   if(v2)pts.push({k:be,v:r1(v2/60),lab:fmtDur(v2)})}
+  var sub='<div class="chips" style="margin-top:-4px">'+[['k10','10km'],['half','하프'],['full','풀코스']].map(function(m){return '<button class="chip'+(predDist===m[0]?' on':'')+'" data-a="pd" data-v="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div>';
+  h+=sub;
+  if(pts.length>=2){var best=pts.reduce(function(a,p){return p.v<a.v?p:a});
+   extra2='<div class="card">'+lineChart(pts,'분',D[1]+' 예상 기록','최근 <b>'+pts[pts.length-1].lab+'</b> · 가장 좋음 '+best.lab,function(v){var m=Math.round(v);return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')})+'<div class="note">'+(predDist==='full'?'주마다 최근 8주 훈련량과 평균 페이스로 계산해요(Tanda 2011). 8주 안에 기록이 6회 이상 있어야 점이 찍혀요.':'주마다 최근 8주 중 3km 이상 뛴 기록 하나를 골라 계산해요. 그중 가장 좋은 예상 기록을 써요(Riegel 공식). 템포런이나 기록 측정 러닝을 하면 점이 내려가요.')+' 선이 내려갈수록 빨라진 거예요.</div></div>'}
+ }
+ else if(runGraph==='eff'){
+  var easy=rs.filter(function(r){return EASYT[r.type]&&r.hr>0&&r.sec>0&&r.km>=2}),hm=hrMax(),ref;
+  if(hm)ref=Math.round(hm*0.7);else{var hs=easy.map(function(r){return +r.hr}).sort(function(a,b){return a-b});ref=hs.length?hs[Math.floor(hs.length/2)]:140}
+  pts=easy.slice(-20).map(function(r){var pc=r.sec/r.km*r.hr/ref;return{k:r.date,v:Math.round(pc/60*100)/100,lab:fmtPace(pc)+'/km'}});
+  if(pts.length>=2){var fast=pts.reduce(function(a,p){return p.v<a.v?p:a});
+   extra2='<div class="card">'+lineChart(pts,'분/km','심박 '+ref+' 기준 페이스','심박 '+ref+'에서 최근 <b>'+pts[pts.length-1].lab+'</b> · 가장 빠름 '+fast.lab,function(v){return fmtPace(v*60)})+'<div class="note">쉬운 러닝(리커버리·이지·롱런·자유)만 골라, 평균 심박이 '+ref+'였다면 어떤 페이스였을지 환산했어요. 선이 내려가면 같은 힘으로 더 빨리 뛰게 된 거예요. 더운 날, 오르막, 트레드밀은 값이 흔들릴 수 있어요.</div></div>'}
+  else{h+='<div class="card"><div class="empty">쉬운 러닝을 평균 심박과 함께 2번 이상 기록하면 그래프가 그려져요.</div></div>';pts=[{},{}];extra2=''}
+ }
  else pts=rs.filter(function(r){return r.type==='long'}).map(function(r){return{k:r.date,v:r1(r.km)}}).slice(-20);
  if(pts.length>=2){
-  if(runGraph==='pace'){h+='<div class="card">'+lineChart(pts.map(function(p){return{k:p.k,v:p.v/60}}),'분/km','평균 페이스','최근 <b>'+fmtPace(pts[pts.length-1].v)+'/km</b> · 가장 빠름 '+fmtPace(Math.min.apply(null,pts.map(function(p){return p.v})))+'/km')+'<div class="note">숫자가 작을수록 빨라요.</div></div>'}
+  if(runGraph==='pace'){h+='<div class="card">'+lineChart(pts.map(function(p){return{k:p.k,v:p.v/60,lab:fmtPace(p.v)+'/km'}}),'분/km','평균 페이스','최근 <b>'+fmtPace(pts[pts.length-1].v)+'/km</b> · 가장 빠름 '+fmtPace(Math.min.apply(null,pts.map(function(p){return p.v})))+'/km',function(v){return fmtPace(v*60)})+'<div class="note">숫자가 작을수록 빨라요.</div></div>'}
+  else if(runGraph==='pred'||runGraph==='eff')h+=extra2;
   else h+='<div class="card">'+lineChart(pts,'km',runGraph==='km'?'주간 거리':'롱런 거리','최근 <b>'+pts[pts.length-1].v+'km</b> · 최고 '+Math.max.apply(null,pts.map(function(p){return p.v}))+'km')+'</div>';
  }else h+='<div class="card"><div class="empty">기록이 2개 이상 쌓이면 그래프가 그려져요.</div></div>';
  var months={};rs.slice().reverse().forEach(function(r){var m=r.date.slice(0,7);(months[m]=months[m]||[]).push(r)});
@@ -1274,6 +1294,7 @@ document.addEventListener('click',function(ev){
   case 'rs-recd':readRunSet();rsBuf.recKm=t.getAttribute('data-v');render();break;
   case 'rs-save':saveRunSet();break;
   case 'rg':runGraph=t.getAttribute('data-v');render();break;
+  case 'pd':predDist=t.getAttribute('data-v');render();break;
   case 'shoe-retire':var shr=shoeById(id);if(shr){if(rsBuf)readRunSet();shr.retired=!shr.retired;save();render()}break;
   case 'shoe-del':var shd=shoeById(id);if(shd)confirmSheet(esc(shd.name)+' 삭제','신발 목록에서 지워요. 이 신발로 뛴 기록은 남지만 신발 표시는 빠져요.','삭제','shoe-del-ok',shd.id);break;
   case 'shoe-del-ok':db.run.shoes=db.run.shoes.filter(function(s){return s.id!==id});db.run.runs.forEach(function(r){if(r.shoe===id)r.shoe=''});save();modal('');render();break;
