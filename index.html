@@ -72,10 +72,11 @@ main{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
 .srow.done .no{color:var(--green)}
 .srow.next{outline:2px solid var(--blue);outline-offset:-2px}
 .srow.next .no{color:var(--blue)}
-.repchips{display:flex;gap:6px;padding:6px 2px 10px 44px;align-items:center}
-.repchips button{flex:1;min-width:0;height:44px;border-radius:10px;border:1px solid #C9D6F5;background:#fff;font-size:16px;font-weight:700;color:var(--ink)}
+.repchips{display:flex;gap:6px;padding:6px 2px 10px 2px;margin-left:42px;align-items:center;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.repchips::-webkit-scrollbar{display:none}
+.repchips button{flex:0 0 46px;height:44px;scroll-snap-align:center;border-radius:10px;border:1px solid #C9D6F5;background:#fff;font-size:16px;font-weight:700;color:var(--ink)}
 .repchips button.plan{background:var(--blue);border-color:var(--blue);color:#fff}
-.repchips .hint{font-size:11px;color:var(--sub);padding:0 6px 0 44px;margin-top:-4px}
+.repchips.hint{font-size:11px;color:var(--sub);overflow:visible;margin-top:-4px}
 .tick{width:48px;height:48px;border-radius:12px;border:2px solid #C4C8CE;background:#fff;display:flex;align-items:center;justify-content:center}
 .srow.done .tick{background:var(--green);border-color:var(--green)}
 .tabs3{background:var(--chip);border-radius:14px;padding:4px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
@@ -431,9 +432,9 @@ function vSets(e,k,order,pos){
    (isNext&&rw.type==='work'?repChips(rw):'');
  }
  function repChips(rw){
-  var pr=rw.plan.r,lo=Math.max(1,pr-4),hi=lo+6,b='';
+  var pr=rw.plan.r,lo=1,hi=Math.max(20,pr),b='';
   for(var n=lo;n<=hi;n++)b+='<button data-a="row-reps" data-t="'+rw.type+'" data-i="'+rw.i+'" data-r="'+n+'" class="'+(n===pr?'plan':'')+'" aria-label="'+rw.label+'세트 '+n+'회로 기록">'+n+'</button>';
-  return '<div class="repchips" role="group" aria-label="한 횟수 바로 기록">'+b+'</div><div class="repchips hint" style="display:block;padding-top:0">실제로 한 횟수를 누르면 바로 기록돼요</div>';
+  return '<div class="repchips" role="group" aria-label="한 횟수 바로 기록">'+b+'</div><div class="repchips hint" style="display:block;padding-top:0">실제로 한 횟수를 누르면 바로 기록돼요 · 옆으로 밀면 1~20회</div>';
  }
  var warmRows=rows.filter(function(x){return x.type==='warm'}),workRows=rows.filter(function(x){return x.type==='work'});
  if(warmRows.length)h+='<div class="card" style="gap:4px;padding:12px"><div class="row" style="padding:0 6px 6px"><span class="name" style="font-size:15px">웜업</span><span class="meta">본세트 무게 기준 자동 계산</span></div>'+warmRows.map(rowHtml).join('')+'</div>';
@@ -449,7 +450,7 @@ function vSets(e,k,order,pos){
 function vHistory(e){
  var ks=sortedDates().filter(function(k){return setsOn(k,e.id).length}).reverse(),pr=prIds(e.id);
  if(!ks.length)return '<div class="card"><div class="empty">아직 기록이 없어요.</div></div>';
- return ks.map(function(k){var ws=setsOn(k,e.id,true),ss=setsOn(k,e.id,false);return '<div class="card" style="gap:6px"><button data-a="goto" data-k="'+k+'" class="row" style="border:none;background:none;padding:0;min-height:36px;width:100%"><span class="name" style="font-size:15px">'+esc(pretty(k,{year:'numeric',month:'long',day:'numeric',weekday:'short'}))+'</span>'+I.chev+'</button>'+(ws.length?'<div class="meta">웜업 '+ws.map(function(s){return fmt(s.w)+'×'+s.r}).join(', ')+'</div>':'')+ss.map(function(s,i){return '<div class="row" style="min-height:28px;justify-content:flex-start;gap:12px"><span class="meta" style="width:16px;font-weight:700">'+(i+1)+'</span><span><b>'+fmt(s.w)+'</b>kg × <b>'+s.r+'</b>회</span>'+(pr[s.id]?I.trophy:'')+'</div>'}).join('')+'</div>'}).join('');
+ return ks.map(function(k){var ws=setsOn(k,e.id,true),ss=setsOn(k,e.id,false);return '<div class="card" style="gap:6px"><button data-a="goto" data-k="'+k+'" class="row" style="border:none;background:none;padding:0;min-height:36px;width:100%"><span class="name" style="font-size:15px">'+esc(pretty(k,{year:'numeric',month:'long',day:'numeric',weekday:'short'}))+'</span>'+I.chev+'</button>'+(ws.length?'<div class="meta">웜업 '+ws.map(function(s){return fmt(s.w)+'×'+s.r}).join(', ')+'</div>':'')+ss.map(function(s,i){return '<div class="row" style="min-height:28px;justify-content:flex-start;gap:12px"><span class="meta" style="width:16px;font-weight:700">'+(i+1)+'</span><span><b>'+fmt(s.w)+'</b>kg × <b>'+s.r+'</b>회</span>'+(pr[s.id]?I.trophy:'')+'</div>'}).join('')+'<button class="ghost" data-a="hist-del" data-k="'+k+'" style="align-self:flex-end;color:var(--red);border-color:#F0C9B8" aria-label="'+esc(pretty(k))+' '+esc(e.name)+' 기록 삭제">이 날 기록 삭제</button></div>'}).join('');
 }
 var GM={e1rm:['추정 1RM','kg'],maxw:['최고 무게','kg'],maxr:['최대 횟수','회'],vol:['볼륨','kg']};
 function vGraph(e){
@@ -648,6 +649,7 @@ function render(){
  var tab={today:'today',ex:'today',exedit:'today',cal:'cal',plan:'plan',cat:'plan',wk:'plan',prog:'plan',me:'me',guide:'me'}[view]||'today';
  Array.prototype.forEach.call(document.querySelectorAll('nav.tabs a'),function(a){var on=a.getAttribute('data-tab')===tab;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
  syncWake();
+ Array.prototype.forEach.call(document.querySelectorAll('.repchips[role=group]'),function(c){var p=c.querySelector('.plan');if(p)c.scrollLeft=p.offsetLeft-c.offsetLeft-(c.clientWidth-p.offsetWidth)/2});
 }
 function modal(html){document.getElementById('modal').innerHTML=html?'<div class="modal" data-a="modal-bg"><div class="sheet" role="dialog" aria-modal="true">'+html+'</div></div>':''}
 function confirmSheet(title,body,okLabel,act,id){modal('<h2>'+title+'</h2><div class="meta" style="line-height:1.6">'+body+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="danger" data-a="'+act+'" data-id="'+esc(id||'')+'">'+okLabel+'</button></div>')}
@@ -819,6 +821,8 @@ document.addEventListener('click',function(ev){
   case 'bm':bodyMetric=t.getAttribute('data-v');render();break;
   case 'ptab':planTab=t.getAttribute('data-v');catQuery='';render();break;
   case 'row-tick':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
+  case 'hist-del':if(e){var hk=t.getAttribute('data-k');confirmSheet(esc(pretty(hk))+' 기록 삭제',esc(e.name)+'의 이날 기록(웜업 포함 '+setsOn(hk,e.id).length+'세트)을 지울까요? 지운 기록은 되돌릴 수 없고, 다음 무게 처방도 남은 기록으로 다시 계산돼요.','삭제','hist-del-ok',hk)}break;
+  case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
   case 'row-reps':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'),+t.getAttribute('data-r'));break;
   case 'row-edit':if(e)editSheet(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
   case 'es':var inp=document.getElementById(t.getAttribute('data-f')==='w'?'ew':'er'),ex2=exById(rowCtx&&rowCtx.exId);if(inp&&ex2){var n=+t.getAttribute('data-n');inp.value=t.getAttribute('data-f')==='w'?fmt(Math.max(0,(parseFloat(inp.value)||0)+n*ex2.increment)):Math.max(0,(parseInt(inp.value,10)||0)+n)}break;
