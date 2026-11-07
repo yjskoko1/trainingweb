@@ -1824,7 +1824,7 @@ document.addEventListener('click',function(ev){
   case 'wk-up':case 'wk-down':case 'wk-rm':var ww=wkById(param);if(ww){var live=wkEx(ww).map(function(x){return x.id}),ni=+t.getAttribute('data-n');if(a==='wk-rm')live.splice(ni,1);else{var j=a==='wk-up'?ni-1:ni+1;if(j>=0&&j<live.length){var tmp=live[ni];live[ni]=live[j];live[j]=tmp}}ww.exIds=live;save();render()}break;
   case 'wk-del':var wd=wkById(id||param);if(wd)confirmSheet(esc(wd.name)+' 삭제','워크아웃만 지워지고 종목과 기록은 그대로예요.','삭제','wk-del-ok',wd.id);break;
   case 'wk-del-ok':var wdo=wkById(id),wpr=wdo?wdo.prog:'';db.workouts=db.workouts.filter(function(x){return x.id!==id});save();modal('');go(wpr?'#prog-'+wpr:'#plan');break;
-  case 'rec-add':var c1=catById(param),it=(CATALOG[c1.name]||[]).filter(function(x){return x[0]===t.getAttribute('data-n')})[0];if(it){var ne=mkAny(it,c1.id);db.exercises.push(ne);save();toast(it[0]+' 추가했어요. 최대 무게를 넣으면 목표 무게를 계산해요.');exBack='#cat-'+c1.id;exEm='h';editBuf=null;go('#exedit-'+ne.id)}break;
+  case 'rec-add':var c1=catById(param),it=(CATALOG[c1.name]||[]).filter(function(x){return x[0]===t.getAttribute('data-n')})[0];if(it){db.exercises.push(mkAny(it,c1.id));save();toast(it[0]+' 추가했어요.')}break;
   case 'cat-new':catEdit={id:null,name:'',color:COLORS[db.cats.length%COLORS.length]};catSheet();break;
   case 'cat-edit':var ce=catById(id);catEdit={id:ce.id,name:ce.name,color:ce.color};catSheet();break;
   case 'cat-color':catEdit.color=t.getAttribute('data-v');Array.prototype.forEach.call(document.querySelectorAll('.swatches button'),function(b){var on=b.getAttribute('data-v')===catEdit.color;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))});break;
