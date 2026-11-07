@@ -240,7 +240,7 @@ function defaults(){
  var cats=DEFAULT_CATS.map(function(n,i){return{id:'c'+i+rid(),name:n,color:COLORS[i]}});
  var picks={'카디오':['실내 사이클','로잉머신','러닝머신'],'가슴':['벤치프레스','인클라인 덤벨 프레스','케이블 플라이'],'등':['데드리프트','랫풀다운','시티드 케이블 로우'],'어깨':['오버헤드 프레스','사이드 레터럴 레이즈'],'하체':['스쿼트','레그 프레스','레그 컬'],'이두':['바벨 컬','해머 컬'],'삼두':['트라이셉 푸시다운','오버헤드 트라이셉 익스텐션'],'복근':['행잉 레그 레이즈','케이블 크런치']};
  var ex=[];cats.forEach(function(c){(CATALOG[c.name]||[]).forEach(function(it){if(picks[c.name].indexOf(it[0])>=0)ex.push(mkAny(it,c.id))})});
- var d={v:3,cardioAdded:true,cats:cats,exercises:ex,workouts:[],days:{},body:[],settings:{bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25]},lastBackup:''};
+ var d={v:3,cardioAdded:true,cats:cats,exercises:ex,workouts:[],days:{},body:[],settings:{bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},lastBackup:''};
  var p={id:'p'+rid(),name:'2분할'};d.programs=[p];d.activeProg=p.id;
  d.workouts=[mkWk(d,'A · 가슴 등 삼두',['가슴','등','삼두'],p.id),mkWk(d,'B · 하체 어깨 이두',['하체','어깨','이두'],p.id)];
  return d;
@@ -275,18 +275,27 @@ function progress(e,before){
   var good=at.filter(function(s){return s.r>=p.max}).length,okMin=at.filter(function(s){return s.r>=p.min}).length;
   var when=short(k);
   st.last=k;st.lastSets=at;
-  if(good>=p.sets){st.t=fix(w+inc);st.fail=0;st.res='up';st.why='지난번('+when+') '+fmt(w)+'kg으로 '+planText(p)+'를 모두 성공해서 올렸어요.'}
+  if(good>=p.sets){st.t=isDumbbell(e)&&dbList().length?snapDb(w,'up'):fix(w+inc);st.fail=0;st.res='up';st.why='지난번('+when+') '+fmt(w)+'kg으로 '+planText(p)+'를 모두 성공해서 '+(isDumbbell(e)&&dbList().length?'다음 덤벨('+fmt(st.t)+'kg)로 ':'')+'올렸어요.'}
   else if(e.method==='double'&&okMin>=p.sets){st.t=w;st.fail=0;st.res='keep';st.why='지난번('+when+') 범위 안에서 성공했어요. 같은 무게로 횟수를 늘려 보세요.'}
   else{st.fail++;
-   if(st.fail>=e.failLimit){st.t=roundTo(w*(1-e.deloadPct/100),inc);st.fail=0;st.res='down';st.why=fmt(w)+'kg에서 '+e.failLimit+'번 연속 목표를 못 채워서 '+e.deloadPct+'% 내렸어요. 여기서 다시 올라가요.'}
+   if(st.fail>=e.failLimit){st.t=isDumbbell(e)&&dbList().length?snapDb(w*(1-e.deloadPct/100),'down'):roundTo(w*(1-e.deloadPct/100),inc);st.fail=0;st.res='down';st.why=fmt(w)+'kg에서 '+e.failLimit+'번 연속 목표를 못 채워서 '+e.deloadPct+'% 내렸어요. 여기서 다시 올라가요.'}
    else{st.t=w;st.res='keep';st.why='지난번('+when+') 목표에 조금 못 미쳤어요. 같은 무게로 한 번 더 ('+st.fail+'/'+e.failLimit+')'}
   }
  });
- if(st.last){var gap=daysBetween(st.last,before);if(gap>14&&st.t>0){st.t=roundTo(st.t*0.9,e.increment);st.res='down';st.why=gap+'일 만의 운동이라 10% 낮춰서 시작해요.'}}
+ if(st.last){var gap=daysBetween(st.last,before);if(gap>14&&st.t>0){st.t=isDumbbell(e)&&dbList().length?snapDb(st.t*0.9,'down'):roundTo(st.t*0.9,e.increment);st.res='down';st.why=gap+'일 만의 운동이라 10% 낮춰서 시작해요.'}}
  return st;
 }
 function cardioTxt(s){var p=[];if(s.min)p.push(fmt(s.min)+'분');if(s.km)p.push(fmt(s.km)+'km');if(s.lvl)p.push('레벨 '+fmt(s.lvl));if(s.kcal)p.push(fmt(s.kcal)+'kcal');return p.join(' · ')||'기록'}
 function setTxt(s){return s.min!=null||s.km!=null?cardioTxt(s):fmt(s.w)+'×'+s.r}
+var ALLDBS=[1,2,2.5,3,4,5,6,7,7.5,8,9,10,11,12,12.5,13,14,15,16,17,17.5,18,19,20,22,22.5,24,25,26,27.5,28,30,32,32.5,34,35,36,37.5,38,40,42,42.5,44,45,46,47.5,48,50,55,60];
+function isDumbbell(e){return !!e&&!isCardio(e)&&(e.dumbbell!=null?!!e.dumbbell:/덤벨/.test(e.name||''))}
+function dbList(){return (db.settings.dbs||[]).slice().sort(function(a,b){return a-b})}
+/* 헬스장에 있는 덤벨 무게로 맞추기: up=다음 무게, down=같거나 가벼운 것, below=더 가벼운 것, near=가장 가까운 것 */
+function snapDb(w,dir){var l=dbList();if(!l.length)return w;var i;
+ if(dir==='up'){for(i=0;i<l.length;i++)if(l[i]>w+1e-9)return l[i];return l[l.length-1]}
+ if(dir==='below'){for(i=l.length-1;i>=0;i--)if(l[i]<w-1e-9)return l[i];return l[0]}
+ if(dir==='down'){for(i=l.length-1;i>=0;i--)if(l[i]<=w+1e-9)return l[i];return l[0]}
+ var best=l[0];l.forEach(function(x){if(Math.abs(x-w)<Math.abs(best-w))best=x});return best}
 function isBarbell(e){return e.barbell!=null?!!e.barbell:e.warm==='full'}
 var ALLPLATES=[50,25,20,15,10,5,2.5,2,1.25,1,0.5,0.25];
 function plateTxt(w){
@@ -302,7 +311,7 @@ function plateTxt(w){
 function warmups(e,W){
  if(e.warm==='none'||W<=0)return[];
  var inc=e.increment||2.5,bar=db.settings.bar||20,out=[];
- if(e.warm==='light'){var lw=roundTo(W*0.5,inc);return lw>0&&lw<W?[{w:lw,r:10}]:[]}
+ if(e.warm==='light'){var lw=isDumbbell(e)&&dbList().length?snapDb(W*0.5,'near'):roundTo(W*0.5,inc);return lw>0&&lw<W?[{w:lw,r:10}]:[]}
  var steps=[[0,10],[0.5,5],[0.65,3],[0.8,2]];
  steps.forEach(function(s){var w=s[0]===0?bar:Math.max(bar,roundTo(W*s[0],inc));if(w<W&&!out.some(function(o){return o.w===w}))out.push({w:w,r:s[1]})});
  return out;
@@ -434,7 +443,7 @@ function vEx(){
 function vSets(e,k,order,pos){
  var r=rx(e,k),st=r.st,wl=setsOn(k,e.id,true),kl=setsOn(k,e.id,false),pr=prIds(e.id);
  var cls=st.res==='down'&&!r.custom?' down':'';
- var badge=r.custom?'<span class="badge b-keep">직접 바꿈</span>':st.res==='up'?'<span class="badge b-up">▲ '+fmt(e.increment)+'kg 증량</span>':st.res==='down'?'<span class="badge b-down">▼ 무게 내림</span>':st.res==='new'?'<span class="badge b-new">첫 기록</span>':'<span class="badge b-keep">유지</span>';
+ var badge=r.custom?'<span class="badge b-keep">직접 바꿈</span>':st.res==='up'?'<span class="badge b-up">▲ '+fmt(r.delta>0?r.delta:e.increment)+'kg 증량</span>':st.res==='down'?'<span class="badge b-down">▼ 무게 내림</span>':st.res==='new'?'<span class="badge b-new">첫 기록</span>':'<span class="badge b-keep">유지</span>';
  var h='<div class="rx'+cls+'"><div class="row"><span style="font-size:13px;opacity:.85">'+(k===todayKey()?'오늘':esc(short(k)))+' 본세트</span>'+badge+'</div>'+
   '<div class="big">'+(r.W>0?fmt(r.W)+'kg':'맨몸')+' <small>× '+(r.p.min===r.p.max?r.p.max:r.work.map(function(w){return w.r}).join('/'))+'회 × '+r.p.sets+'세트</small></div>'+
   (isBarbell(e)&&r.W>0?'<div class="why" style="font-weight:700;opacity:1">'+plateTxt(r.W)+'</div>':'')+
@@ -553,6 +562,7 @@ function vExEdit(){
  h+=numField('증량 단위','increment','any','kg')+'</div>';
  h+='<div class="sectitle">웜업</div><div class="seg">'+[['full','4세트'],['light','1세트'],['none','없음']].map(function(m){return '<button data-a="warmset" data-v="'+m[0]+'" class="'+(b.warm===m[0]?'on':'')+'" aria-pressed="'+(b.warm===m[0])+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="note">4세트: 빈 봉 ×10 → 50% ×5 → 65% ×3 → 80% ×2 (바벨 운동용). 1세트: 50% ×10 (덤벨·머신용).</div>';
+ h+='<div class="sectitle">덤벨 종목</div><div class="seg two">'+[['1','예 · 있는 덤벨로 맞춤'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isDumbbell(b);return '<button data-a="dbset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">바벨 종목</div><div class="seg two">'+[['1','예 · 원판 표시'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isBarbell(b);return '<button data-a="barbell" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">무게를 내리는 조건</div><div class="list">'+numField('연속 실패 허용','failLimit','1','회')+numField('내리는 비율','deloadPct','1','%')+'</div>';
  h+='<div class="sectitle">휴식 타이머</div><div class="list">'+numField('본세트 휴식 (0 = 기본 '+db.settings.rest+'초'+(db.settings.restOn?'':', 지금 꺼짐')+')','rest','5','초')+'</div>';
@@ -645,6 +655,7 @@ function vGuide(){
   ['b-up','올림','지난번 본세트를 <b>모든 세트 목표 횟수만큼</b> 성공하면 다음 운동에서 증량 단위만큼 올려요. (예: 벤치 60kg 5×5 성공 → 62.5kg)'],
   ['b-keep','유지','조금 모자랐으면 같은 무게로 한 번 더 해요. 횟수 범위 종목(예: 3×8~12)은 같은 무게에서 지난번보다 세트마다 1회씩 더 하도록 처방하고, 모든 세트가 최대 횟수에 닿으면 올려요.'],
   ['b-down','내림','같은 무게로 <b>3번 연속</b> 목표를 못 채우면 10% 내려요. (예: 스쿼트 80kg 3번 실패 → 72.5kg) 내린 무게에서 다시 올라가면 대부분 이전 무게를 넘어서요.'],
+  ['b-up','덤벨 종목','올리거나 내릴 때 증량 단위 대신 <b>설정 → 헬스장에 있는 덤벨</b> 무게로 맞춰요. (예: 14kg 성공 → 다음 덤벨 16kg)'],
   ['b-down','오래 쉼','마지막 운동 후 <b>14일이 넘게</b> 지나면 10% 내려서 다시 시작해요.']
  ]);
  h+='<div class="note">판정은 그날 가장 무거운 무게로 한 본세트를 기준으로 해요. 웜업 세트는 판정에 들어가지 않아요. 연속 실패 횟수, 내리는 비율, 증량 단위는 종목 설정에서 바꿀 수 있어요.</div>';
@@ -688,7 +699,8 @@ function vMe(){
  var since=db.lastBackup?daysBetween(db.lastBackup.slice(0,10),todayKey()):null;
  h+='<div class="sectitle" style="padding-top:12px">백업</div><div class="card"><div class="meta" style="line-height:1.6">기록은 이 휴대폰에만 저장돼요. 폰을 바꾸거나 브라우저 데이터를 지우면 사라지니, 가끔 백업 파일을 저장해 두세요.<br><b style="color:var(--ink)">마지막 백업: '+(db.lastBackup?(since===0?'오늘':since+'일 전'):'없음')+'</b></div><button class="primary" data-a="backup">백업 파일 저장</button><button class="secondary" data-a="import">백업 파일에서 복원</button><button class="secondary" data-a="paste">글자로 붙여넣어 복원</button></div>';
  h+='<div class="sectitle" style="padding-top:12px">바벨 · 원판</div><div class="list"><div class="field"><label for="s-bar">빈 봉 무게</label><div style="display:flex;align-items:center;gap:6px"><input id="s-bar" type="number" min="0" step="0.5" value="'+db.settings.bar+'" data-s="bar"><span class="meta">kg</span></div></div></div>'+
-  '<div class="list" style="margin-top:8px"><button class="li" data-a="plates-open"><div><div class="t" style="font-weight:500">헬스장에 있는 원판</div><div class="meta">'+((db.settings.plates||[]).slice().sort(function(a,b){return b-a}).map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note">바벨 종목을 할 때 무게 아래에 "EACH SIDE 25kg"처럼 한쪽 무게와 끼울 원판이 표시돼요.</div>';
+  '<div class="list" style="margin-top:8px"><button class="li" data-a="plates-open"><div><div class="t" style="font-weight:500">헬스장에 있는 원판</div><div class="meta">'+((db.settings.plates||[]).slice().sort(function(a,b){return b-a}).map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note" style="margin-bottom:6px">바벨 종목을 할 때 무게 아래에 "EACH SIDE 25kg"처럼 한쪽 무게와 끼울 원판이 표시돼요.</div>';
+ h+='<div class="sectitle" style="padding-top:12px">덤벨</div><div class="list"><button class="li" data-a="dbs-open"><div style="min-width:0"><div class="t" style="font-weight:500">헬스장에 있는 덤벨</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(dbList().map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note">덤벨 종목은 무게를 올리거나 내릴 때 여기 있는 덤벨 무게로 맞춰요. 예: 14kg 다음은 16kg</div>';
  var ro=!!db.settings.restOn;
  h+='<div class="list"><div class="field"><label for="s-rest-on">휴식 타이머</label><button id="s-rest-on" role="switch" aria-checked="'+ro+'" data-a="rest-toggle" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(ro?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(ro?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff;transition:left .15s"></span><span class="sr">'+(ro?'켜짐':'꺼짐')+'</span></button></div>'+
   (ro?'<div class="field"><label for="s-rest">본세트 휴식</label><div style="display:flex;align-items:center;gap:6px"><input id="s-rest" type="number" min="10" step="5" value="'+db.settings.rest+'" data-s="rest"><span class="meta">초</span></div></div><div class="field"><label for="s-restw">웜업 휴식</label><div style="display:flex;align-items:center;gap:6px"><input id="s-restw" type="number" min="0" step="5" value="'+db.settings.restWarm+'" data-s="restWarm"><span class="meta">초</span></div></div>':'')+'</div>';
@@ -866,7 +878,7 @@ function saveEdit(){
  var num=function(k,def,min){var v=parseFloat(b[k]);return isNaN(v)||v<min?def:v};
  var name=String(b.name||'').trim().slice(0,40);if(!name){toast('이름을 입력해 주세요.','err');return}
  if(isCardio(o)){o.name=name;o.cat=b.cat;editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});go('#ex-'+o.id);return}
- o.name=name;o.cat=b.cat;o.method=b.method;o.warm=b.warm;if(b.barbell!=null)o.barbell=!!b.barbell;
+ o.name=name;o.cat=b.cat;o.method=b.method;o.warm=b.warm;if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;
  o.sets=Math.round(num('sets',3,1));o.repsMax=Math.round(num('repsMax',5,1));o.repsMin=Math.round(num('repsMin',5,1));
  if(o.method==='linear')o.repsMin=o.repsMax;if(o.repsMin>o.repsMax){var t=o.repsMin;o.repsMin=o.repsMax;o.repsMax=t}
  o.increment=fix(num('increment',2.5,0.25));o.failLimit=Math.round(num('failLimit',3,1));o.deloadPct=Math.min(50,num('deloadPct',10,0));o.rest=Math.round(num('rest',0,0));
@@ -903,7 +915,7 @@ function ensureProgs(o){
 }
 /* v3 백업 또는 이전 아티팩트 버전(v2) 백업을 받아들임 */
 function normalize(o){
- if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.settings=Object.assign({bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25]},o.settings||{});ensureProgs(o);ensureCardio(o);return o}
+ if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.settings=Object.assign({bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},o.settings||{});ensureProgs(o);ensureCardio(o);return o}
  if(o&&o.app==='hc'&&o.cfg&&Array.isArray(o.cfg.exercises)){
   var c=o.cfg,d={v:3,cats:(c.categories||[]).map(function(x){return{id:x.id,name:x.name,color:x.color}}),exercises:[],workouts:(c.routines||[]).map(function(r){return{id:r.id,name:r.name,exIds:r.exIds||[]}}),days:{},body:(o.body&&o.body.entries)||[],settings:{bar:20,rest:(c.settings&&c.settings.rest)||90,restWarm:60,restOn:false},lastBackup:''};
   c.exercises.forEach(function(e){var lin=e.method!=='double';d.exercises.push({id:e.id,name:e.name,cat:e.cat,method:lin?'linear':'double',sets:e.method==='gzclp'?5:(e.sets||3),repsMin:e.method==='gzclp'?3:(e.repsMin||8),repsMax:e.method==='gzclp'?3:(e.repsMax||12),increment:e.increment||2.5,startWeight:+e.startWeight||0,anchor:e.anchor||'',warm:(+e.startWeight||0)>0?(lin?'full':'light'):'none',failLimit:e.failLimit||3,deloadPct:e.deloadPct==null?10:e.deloadPct,rest:e.rest||0,deleted:!!e.deleted})});
@@ -941,7 +953,7 @@ document.addEventListener('click',function(ev){
   case 'c-del':var dcd=db.days[curDate];if(dcd){dcd.sets=dcd.sets.filter(function(x){return x.id!==id});cleanDay(curDate);save();render()}break;
   case 'row-reps':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'),+t.getAttribute('data-r'));break;
   case 'row-edit':if(e)editSheet(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
-  case 'es':var inp=document.getElementById(t.getAttribute('data-f')==='w'?'ew':'er'),ex2=exById(rowCtx&&rowCtx.exId);if(inp&&ex2){var n=+t.getAttribute('data-n');inp.value=t.getAttribute('data-f')==='w'?fmt(Math.max(0,(parseFloat(inp.value)||0)+n*ex2.increment)):Math.max(0,(parseInt(inp.value,10)||0)+n)}break;
+  case 'es':var inp=document.getElementById(t.getAttribute('data-f')==='w'?'ew':'er'),ex2=exById(rowCtx&&rowCtx.exId);if(inp&&ex2){var n=+t.getAttribute('data-n');if(t.getAttribute('data-f')==='w'){var cv=parseFloat(inp.value)||0;inp.value=fmt(isDumbbell(ex2)&&dbList().length?snapDb(cv,n>0?'up':'below'):Math.max(0,cv+n*ex2.increment))}else inp.value=Math.max(0,(parseInt(inp.value,10)||0)+n)}break;
   case 'es-save':saveEditSheet();break;
   case 'set-add':if(e){extra[e.id+curDate]=(extra[e.id+curDate]||0)+1;render()}break;
   case 'w-change':if(e){var r0=rx(e,curDate);rowCtx={exId:e.id,type:'work',i:setsOn(curDate,e.id,false).length,w:r0.W,r:(r0.work[0]||{r:r0.p.max}).r,all:true};renderEditSheet(e)}break;
@@ -976,6 +988,7 @@ document.addEventListener('click',function(ev){
   case 'cat-color':catEdit.color=t.getAttribute('data-v');Array.prototype.forEach.call(document.querySelectorAll('.swatches button'),function(b){var on=b.getAttribute('data-v')===catEdit.color;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))});break;
   case 'cat-del':var used=liveEx().filter(function(x){return x.cat===catEdit.id}).length;modal('');if(used){toast('종목이 '+used+'개 있어서 지울 수 없어요. 종목을 옮기거나 지운 뒤 다시 해 주세요.','err');break}db.cats=db.cats.filter(function(x){return x.id!==catEdit.id});save();go('#plan');break;
   case 'method':readEdit();editBuf.method=t.getAttribute('data-v');render();break;
+  case 'dbset':readEdit();editBuf.dumbbell=t.getAttribute('data-v')==='1';render();break;
   case 'barbell':readEdit();editBuf.barbell=t.getAttribute('data-v')==='1';render();break;
   case 'warmset':readEdit();editBuf.warm=t.getAttribute('data-v');render();break;
   case 'ex-save':saveEdit();break;
@@ -988,6 +1001,8 @@ document.addEventListener('click',function(ev){
   case 'paste-ok':restoreFrom(document.getElementById('rs').value);break;
   case 'plates-open':plateSel={};(db.settings.plates||[]).forEach(function(p){plateSel[p]=true});modal('<h2>헬스장에 있는 원판</h2><div class="meta">있는 원판을 체크하세요. 한쪽에 끼울 원판을 계산할 때 써요.</div><div style="max-height:52vh;overflow-y:auto;border-top:1px solid var(--line)">'+ALLPLATES.map(function(p){var on=!!plateSel[p];return '<button class="pick'+(on?' on':'')+'" data-a="plate-t" data-v="'+p+'" aria-pressed="'+on+'"><span style="font-size:16px;font-weight:700">'+fmt(p)+' kg</span><span class="box" aria-hidden="true">'+(on?I.checkS:'')+'</span></button>'}).join('')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="plates-save">완료</button></div>');break;
   case 'plate-t':var pv=t.getAttribute('data-v'),pon=!plateSel[pv];plateSel[pv]=pon;t.classList.toggle('on',pon);t.setAttribute('aria-pressed',String(pon));t.querySelector('.box').innerHTML=pon?I.checkS:'';break;
+  case 'dbs-open':plateSel={};dbList().forEach(function(p){plateSel[p]=true});modal('<h2>헬스장에 있는 덤벨</h2><div class="meta">있는 덤벨 무게(한 개 기준)를 체크하세요.</div><div style="max-height:52vh;overflow-y:auto;border-top:1px solid var(--line)">'+ALLDBS.map(function(p){var on=!!plateSel[p];return '<button class="pick'+(on?' on':'')+'" data-a="plate-t" data-v="'+p+'" aria-pressed="'+on+'"><span style="font-size:16px;font-weight:700">'+fmt(p)+' kg</span><span class="box" aria-hidden="true">'+(on?I.checkS:'')+'</span></button>'}).join('')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="dbs-save">완료</button></div>');break;
+  case 'dbs-save':db.settings.dbs=ALLDBS.filter(function(p){return plateSel[p]});save();modal('');render();break;
   case 'plates-save':db.settings.plates=ALLPLATES.filter(function(p){return plateSel[p]});save();modal('');render();break;
   case 'rest-toggle':db.settings.restOn=!db.settings.restOn;if(!db.settings.restOn)stopRest();save();render();break;
   case 'notif':try{if('Notification' in window)Notification.requestPermission().then(function(){render()})}catch(err){}break;

@@ -1,6 +1,6 @@
 // 트레이닝웹 서비스 워커: 오프라인에서도 앱이 열리게 해요.
 // 앱을 고칠 때마다 VERSION 숫자를 올리면 휴대폰에 새 버전이 받아져요.
-const VERSION = 'v18';
+const VERSION = 'v19';
 const CACHE = 'gymnote-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
