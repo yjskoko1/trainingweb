@@ -578,10 +578,16 @@ var REC={
 function recSheet(e){
  var c=exCls(e),r=REC[c];
  function blk(t,v){return '<div class="card" style="background:#F4F5F2;gap:6px"><div class="name" style="font-size:16px">'+t+'</div><div class="row" style="justify-content:space-around;text-align:center"><div><div class="meta">세트</div><b>'+v[0]+'</b></div><div><div class="meta">횟수</div><b>'+v[1]+'</b></div><div><div class="meta">휴식</div><b>'+v[2]+'</b></div></div><div class="meta" style="text-align:center">RIR 1~3 (1~3회 더 할 수 있을 때 멈추기)</div></div>'}
- modal('<h2>'+esc(e.name)+' 추천</h2><div class="meta">운동 구분: <b>'+CLS[c]+'</b> · 종목 설정에서 바꿀 수 있어요.</div>'+blk('근비대',r.h)+blk('근력',r.s)+'<div class="note" style="padding:0;line-height:1.6">'+r.note+'</div><button class="primary" data-a="modal-close">확인</button>');
+ modal('<h2>'+esc(e.name)+' 추천</h2><div class="meta">'+(c==='iso'?'고립 운동':'복합 운동')+' 기준 추천이에요.</div>'+blk('근비대',r.h)+blk('근력',r.s)+'<div class="note" style="padding:0;line-height:1.6">'+r.note+'</div><button class="primary" data-a="modal-close">확인</button>');
 }
 function numField(label,k,step,suf){return '<div class="field"><label for="f-'+k+'">'+label+'</label><div style="display:flex;align-items:center;gap:6px"><input id="f-'+k+'" type="number" inputmode="decimal" step="'+step+'" min="0" data-f="'+k+'" value="'+esc(editBuf[k])+'">'+(suf?'<span class="meta">'+suf+'</span>':'')+'</div></div>'}
 var exBack=null,exEm=null;
+/* nRM → 1RM (Epley) → 목적별 시작 무게: 최소 횟수 + 2회 여유(RIR 2)로 할 수 있는 무게 */
+function rmCalc(b){var w=parseFloat(b.rmW),r=parseInt(b.rmR,10);if(!(w>0)||!(r>=1&&r<=15))return null;var one=r===1?w:w*(1+r/30);
+ var inc=parseFloat(b.increment)||2.5,fl=function(x){if(isDumbbell(b)&&dbList().length)return snapDb(x,'down');return Math.max(0,fix(Math.floor(x/inc+1e-9)*inc))};
+ var at=function(m){var n=(parseInt(b.M[m].repsMin,10)||8)+2;return fl(one/(1+n/30))};
+ return{one:fix(Math.round(one*10)/10),h:at('h'),s:at('s'),hn:(parseInt(b.M.h.repsMin,10)||8)+2,sn:(parseInt(b.M.s.repsMin,10)||3)+2}}
+function rmOutTxt(b){var c=rmCalc(b);return c?'추정 1RM <b>'+fmt(c.one)+'kg</b> → 근비대 <b>'+fmt(c.h)+'kg</b> ('+c.hn+'회 가능한 무게) · 근력 <b>'+fmt(c.s)+'kg</b> ('+c.sn+'회 가능한 무게)':'무게와 횟수를 넣으면 계산해요.'}
 function vExEdit(){
  var o=exById(param);if(!o)return vPlan();
  if(!editBuf||editBuf.id!==o.id){editBuf=JSON.parse(JSON.stringify(o));editBuf.em=exEm!=null?exEm:(editBuf.em||'');exEm=null;editBuf.M={};if(!isCardio(o)){editBuf.barbell=isBarbell(o);editBuf.dumbbell=isDumbbell(o);editBuf.cls=exCls(o);editBuf.warmN=warmN(o)}
@@ -591,6 +597,13 @@ function vExEdit(){
  var h=hdr('종목 설정',esc(o.name)+(exBack&&exBack.indexOf('#wk-')===0?' · 워크아웃에서':''),backBtn(back))+'<main>';
  if(isCardio(o))return h+'<div class="list"><div class="field"><label for="f-name">이름</label><input id="f-name" type="text" maxlength="40" data-f="name" value="'+esc(b.name)+'"></div><div class="field"><label for="f-cat">부위</label><select id="f-cat" data-f="cat">'+db.cats.map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===b.cat?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div></div><div class="note">카디오 종목은 시간·거리·레벨을 기록해요. 무게 처방은 없어요.</div><div class="btnrow"><a class="secondary" href="#ex-'+esc(o.id)+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';
  h+='<div class="list"><div class="field"><label for="f-name">이름</label><input id="f-name" type="text" maxlength="40" data-f="name" value="'+esc(b.name)+'"></div><div class="field"><label for="f-cat">부위</label><select id="f-cat" data-f="cat">'+db.cats.map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===b.cat?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div></div>';
+ var wn0=b.warmN!=null?+b.warmN:warmN(b);
+ h+='<div class="sectitle">내 기록으로 목표 무게 계산</div><div class="card" style="gap:10px"><div class="meta" style="line-height:1.6">최근에 <b>최대로 해 본 무게와 횟수</b>(1~15회)를 넣으면 근비대·근력 시작 무게를 계산해요.</div><div style="display:flex;align-items:center;gap:8px"><input data-f="rmW" type="number" inputmode="decimal" min="0" step="any" placeholder="무게" value="'+esc(b.rmW||'')+'" aria-label="최대로 해 본 무게" style="flex:1;min-width:0;height:48px;border:1px solid #DADDE2;border-radius:12px;text-align:center;font-size:18px;font-weight:700;background:#fff"><span class="meta">kg ×</span><select data-f="rmR" aria-label="횟수" style="flex:1;min-width:0;height:48px;border:1px solid #DADDE2;border-radius:12px;font-size:18px;font-weight:700;text-align:center;background:#fff">'+Array.apply(null,Array(15)).map(function(_,i){var r=i+1;return '<option value="'+r+'"'+(+(b.rmR||5)===r?' selected':'')+'>'+r+'회</option>'}).join('')+'</select></div><div id="rm-out" class="meta" style="line-height:1.6">'+rmOutTxt(b)+'</div><button class="primary" data-a="rm-apply">이 무게로 적용</button></div>';
+ h+='<div class="sectitle">이렇게 운동해요</div><div class="list">'+['h','s'].map(function(m){var M2=b.M[m];return '<div class="li" style="cursor:default;flex-direction:column;align-items:flex-start;gap:2px"><div class="t"><span style="color:'+(m==='s'?'#B4441C':'#1F55D6')+'">'+MODE[m]+'</span> 워크아웃에서</div><div style="font-size:14px">웜업 '+(wn0?wn0+'세트':'없음')+' → 본세트 <b>'+M2.sets+'×'+(M2.method==='linear'||+M2.repsMin===+M2.repsMax?M2.repsMax:M2.repsMin+'~'+M2.repsMax)+'</b> · <b>'+(+M2._t>0?fmt(M2._t)+'kg':'무게 미정')+'</b></div></div>'}).join('')+'</div>';
+ h+='<div class="note">세트의 횟수를 모두 최대까지 채우면 다음에 무게가 올라가고, '+(b.failLimit||3)+'번 연속 못 채우면 '+(b.deloadPct||10)+'% 내려가요.</div>';
+ h+='<button class="secondary" data-a="adv-toggle">'+(b.adv?'자세히 설정 접기':'자세히 설정 (세트·횟수·웜업·증량 단위 등)')+'</button>';
+ if(!b.adv){h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea>';
+  h+='<div class="btnrow"><a class="secondary" href="'+back+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';return h}
  var em=b.em||'',M=b.M[em];
  h+='<div class="sectitle" style="justify-content:space-between"><span>목적별 세트·횟수·무게</span><button class="ghost" data-a="rec-open" style="min-height:34px">추천 보기</button></div><div class="tabs3" role="tablist">'+[['','일반'],['h','근비대'],['s','근력']].map(function(t){return '<button role="tab" aria-selected="'+(em===t[0])+'" class="'+(em===t[0]?'on':'')+'" data-a="emode" data-v="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div>';
  h+='<div class="note">워크아웃을 근비대·근력으로 정해 두면, 그 워크아웃에서는 이 탭의 설정과 무게를 따로 써요. 같은 종목이라도 근력 80kg, 근비대 60kg처럼 각각 올라가요.</div>';
@@ -607,7 +620,6 @@ function vExEdit(){
  h+='<div class="sectitle">덤벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isDumbbell(b);return '<button data-a="dbset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">바벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isBarbell(b);return '<button data-a="barbell" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">무게를 내리는 조건</div><div class="list">'+numField('연속 실패 허용','failLimit','1','회')+numField('내리는 비율','deloadPct','1','%')+'</div>';
- h+='<div class="sectitle">운동 구분 (추천에 써요)</div><div class="seg" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+[['core','핵심'],['comp','복합'],['iso','고립'],['bw','맨몸']].map(function(m){var on=exCls(b)===m[0];return '<button data-a="clsset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'" style="font-size:13px">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea><div class="note">종목 화면의 <b>자세</b> 버튼을 누르면 기본 설명과 함께 보여요.</div>';
  h+='<div class="btnrow"><a class="secondary" href="'+back+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';
  return h;
@@ -660,7 +672,7 @@ function vCat(){
  h+='<form class="addrow" data-form="ex-add"><label for="ea" class="sr">새 종목 이름</label><input id="ea" type="text" maxlength="40" placeholder="목록에 없는 종목 이름 입력" autocomplete="off"><button type="submit">만들기</button></form>';
  h+=list.length?'<div class="list">'+list.map(exRow).join('')+'</div>':'<div class="card"><div class="empty">아직 종목이 없어요.</div></div>';
  var names=list.map(function(e){return e.name}),rec=(CATALOG[c.name]||[]).filter(function(it){return names.indexOf(it[0])<0});
- if(rec.length)h+='<div class="sectitle">추천 종목</div><div class="list">'+rec.map(function(it){return '<div class="li"><div><div class="t" style="font-weight:500">'+esc(it[0])+'</div><div class="meta">'+(it[1]==='C'?'시간 · 거리 기록':it[1]==='L'?'5×5 · 웜업 4세트':it[1]==='D'?'3×8~12 · 웜업 1세트':'3×12~15 · 웜업 없음')+'</div></div><button class="plus" data-a="rec-add" data-n="'+esc(it[0])+'" aria-label="'+esc(it[0])+' 추가">+</button></div>'}).join('')+'</div>';
+ if(rec.length)h+='<div class="sectitle">추천 종목</div><div class="list">'+rec.map(function(it){return '<div class="li"><div><div class="t" style="font-weight:500">'+esc(it[0])+'</div><div class="meta">'+(it[1]==='C'?'시간 · 거리 기록':it[1]==='H'?'근비대 3×8~15 · 근력 3×8~12':'근비대 4×8~15 · 근력 3×3~6')+'</div></div><button class="plus" data-a="rec-add" data-n="'+esc(it[0])+'" aria-label="'+esc(it[0])+' 추가">+</button></div>'}).join('')+'</div>';
  return h+'</main>';
 }
 function vWk(){
@@ -1654,7 +1666,7 @@ function saveNewEx(){
  var where='';
  if(n.ctx==='day'){var d=day(curDate,true);if(d.plan.indexOf(e.id)<0)d.plan.push(e.id);where=(curDate===todayKey()?'오늘':'이날')+' 운동에'}
  else if(n.ctx==='wk'){var wk=wkById(param);if(wk&&wk.exIds.indexOf(e.id)<0)wk.exIds.push(e.id);where='워크아웃에'}
- newEx=null;save();modal('');
+ var ctx0=n.ctx;newEx=null;save();modal('');if(!ctx0&&!dup&&!isCardio(e)&&view==='cat'){exBack='#cat-'+param;exEm='h';editBuf=null;go('#exedit-'+e.id)}
  toast(dup?'"'+name+'" 종목이 이미 있어서 그걸 썼어요.':'"'+name+'" 종목을 만들었어요'+(where?' · '+where+' 넣었어요.':'.'));
 }
 function catSheet(){
@@ -1666,7 +1678,7 @@ function saveEdit(){
  readEdit();var b=editBuf,o=exById(b.id);if(!o)return;
  var num=function(k,def,min){var v=parseFloat(b[k]);return isNaN(v)||v<min?def:v};
  var name=String(b.name||'').trim().slice(0,40);if(!name){toast('이름을 입력해 주세요.','err');return}
- o.memo=String(b.memo||'').slice(0,500);
+ o.memo=String(b.memo||'').slice(0,500);if(parseFloat(b.rmW)>0){o.rmW=parseFloat(b.rmW);o.rmR=parseInt(b.rmR,10)||5}
  if(isCardio(o)){o.name=name;o.cat=b.cat;editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});var eb=exBack;exBack=null;go(eb||'#ex-'+o.id);return}
  o.name=name;o.cat=b.cat;if(b.warmN!=null){o.warmN=+b.warmN;o.warm=o.warmN>=4?'full':o.warmN>=1?'light':'none'}else o.warm=b.warm;if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;if(b.cls)o.cls=b.cls;
  o.increment=fix(num('increment',2.5,0.25));o.failLimit=Math.round(num('failLimit',3,1));o.deloadPct=Math.min(50,num('deloadPct',10,0));
@@ -1745,6 +1757,8 @@ document.addEventListener('click',function(ev){
   case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
   case 'day-pop':daySheet(t.getAttribute('data-k'));break;
   case 'run-day':runDaySheet(t.getAttribute('data-k'));break;
+  case 'rm-apply':if(editBuf){readEdit();var rc=rmCalc(editBuf);if(!rc){toast('무게와 횟수를 넣어 주세요.','err');break}editBuf.M.h._t=rc.h;editBuf.M.s._t=rc.s;editBuf.M[''] && (editBuf.M['']._t=rc.h);toast('근비대 '+fmt(rc.h)+'kg · 근력 '+fmt(rc.s)+'kg로 맞췄어요. 저장을 눌러 주세요.');render()}break;
+  case 'adv-toggle':if(editBuf){readEdit();editBuf.adv=!editBuf.adv;render()}break;
   case 'cat-exset':exBack=view==='cat'?'#cat-'+param:'#plan';exEm='h';editBuf=null;go('#exedit-'+id);break;
   case 'wk-exset':exBack='#wk-'+param;exEm=(wkById(param)||{}).mode||'h';editBuf=null;go('#exedit-'+id);break;
   case 'calpop':calPop.kind=t.getAttribute('data-v');calPop.month=calMonth;renderCalPop();break;
@@ -1810,7 +1824,7 @@ document.addEventListener('click',function(ev){
   case 'wk-up':case 'wk-down':case 'wk-rm':var ww=wkById(param);if(ww){var live=wkEx(ww).map(function(x){return x.id}),ni=+t.getAttribute('data-n');if(a==='wk-rm')live.splice(ni,1);else{var j=a==='wk-up'?ni-1:ni+1;if(j>=0&&j<live.length){var tmp=live[ni];live[ni]=live[j];live[j]=tmp}}ww.exIds=live;save();render()}break;
   case 'wk-del':var wd=wkById(id||param);if(wd)confirmSheet(esc(wd.name)+' 삭제','워크아웃만 지워지고 종목과 기록은 그대로예요.','삭제','wk-del-ok',wd.id);break;
   case 'wk-del-ok':var wdo=wkById(id),wpr=wdo?wdo.prog:'';db.workouts=db.workouts.filter(function(x){return x.id!==id});save();modal('');go(wpr?'#prog-'+wpr:'#plan');break;
-  case 'rec-add':var c1=catById(param),it=(CATALOG[c1.name]||[]).filter(function(x){return x[0]===t.getAttribute('data-n')})[0];if(it){db.exercises.push(mkAny(it,c1.id));save();toast(it[0]+' 추가했어요.')}break;
+  case 'rec-add':var c1=catById(param),it=(CATALOG[c1.name]||[]).filter(function(x){return x[0]===t.getAttribute('data-n')})[0];if(it){var ne=mkAny(it,c1.id);db.exercises.push(ne);save();toast(it[0]+' 추가했어요. 최대 무게를 넣으면 목표 무게를 계산해요.');exBack='#cat-'+c1.id;exEm='h';editBuf=null;go('#exedit-'+ne.id)}break;
   case 'cat-new':catEdit={id:null,name:'',color:COLORS[db.cats.length%COLORS.length]};catSheet();break;
   case 'cat-edit':var ce=catById(id);catEdit={id:ce.id,name:ce.name,color:ce.color};catSheet();break;
   case 'cat-color':catEdit.color=t.getAttribute('data-v');Array.prototype.forEach.call(document.querySelectorAll('.swatches button'),function(b){var on=b.getAttribute('data-v')===catEdit.color;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))});break;
@@ -1858,7 +1872,7 @@ document.addEventListener('input',function(ev){
  if(el.getAttribute('data-rl')&&rl){readRunLog();var pk=parseFloat(rl.km)||0,ps=rlSec(),pe=document.getElementById('rl-pace');if(pe)pe.textContent=pk&&ps?fmtPace(ps/pk)+' /km':'–';return}
  if(el.getAttribute('data-s')==='bar'){var v=parseFloat(el.value);if(v>=0){db.settings.bar=v;save()}return}
  if(el.getAttribute('data-s')==='rest'||el.getAttribute('data-s')==='restWarm'){var v2=Math.round(parseFloat(el.value));if(v2>=0){db.settings[el.getAttribute('data-s')]=v2;save()}return}
- if(el.getAttribute('data-f')&&editBuf&&el.tagName!=='BUTTON')editBuf[el.getAttribute('data-f')]=el.value;
+ if(el.getAttribute('data-f')&&editBuf&&el.tagName!=='BUTTON'){editBuf[el.getAttribute('data-f')]=el.value;if(/^rm[WR]$/.test(el.getAttribute('data-f'))){var ro=document.getElementById('rm-out');if(ro)ro.innerHTML=rmOutTxt(editBuf)}}
  if(el.getAttribute('data-mf')&&editBuf&&editBuf.M)editBuf.M[editBuf.em||''][el.getAttribute('data-mf')]=el.value;
 });
 document.getElementById('importFile').addEventListener('change',function(ev){var f=ev.target.files&&ev.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){confirmRestore(String(rd.result))};rd.readAsText(f);ev.target.value=''});
@@ -1873,7 +1887,7 @@ document.addEventListener('submit',function(ev){
  if(f==='ex-add'){var v=String(document.getElementById('ea').value||'').trim().slice(0,40);var c=catById(param);
   if(v&&liveEx().some(function(x){return x.cat===c.id&&x.name===v})){toast('이미 있는 종목이에요.','err');return}
   var it=v&&(CATALOG[c.name]||[]).filter(function(x){return x[0]===v})[0];
-  if(it){db.exercises.push(mkAny(it,c.id));save();toast(v+' 추가했어요.');return}
+  if(it){var ne2=mkAny(it,c.id);db.exercises.push(ne2);save();toast(v+' 추가했어요. 최대 무게를 넣으면 목표 무게를 계산해요.');exBack='#cat-'+c.id;exEm='h';editBuf=null;go('#exedit-'+ne2.id);return}
   openNewEx('',c.id,v);return}
  if(f==='cat-form'){var nm=String(document.getElementById('cn').value||'').trim().slice(0,20);if(!nm)return;
   if(catEdit.id){var cc=catById(catEdit.id);cc.name=nm;cc.color=catEdit.color}else db.cats.push({id:'c'+rid(),name:nm,color:catEdit.color});
