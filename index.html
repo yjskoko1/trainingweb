@@ -340,7 +340,9 @@ function dayOrder(k){
  var d=db.days[k],order=[];if(!d)return order;
  d.plan.forEach(function(id){var x=exById(id);if(x&&!x.deleted&&order.indexOf(id)<0)order.push(id)});
  d.sets.slice().sort(byTs).forEach(function(s){if(order.indexOf(s.exId)<0)order.push(s.exId)});
- return order;
+ /* 같은 부위끼리 모아서 보여줌 (처음 나온 부위 순서) */
+ var co=[],cat=function(id){var x=exById(id);return x?x.cat:''};order.forEach(function(id){if(co.indexOf(cat(id))<0)co.push(cat(id))});
+ return order.map(function(id,i){return{id:id,i:i}}).sort(function(a,b){return co.indexOf(cat(a.id))-co.indexOf(cat(b.id))||a.i-b.i}).map(function(x){return x.id});
 }
 
 /* =============== rest timer =============== */
@@ -782,15 +784,28 @@ document.addEventListener('pointermove',function(ev){if(!sw)return;var dx=ev.cli
 function swEnd(){if(!sw)return;var s=sw;sw=null;s.el.classList.add('anim');var w=s.el.offsetWidth||300;if(s.on&&s.dx<-Math.min(110,w*0.3)){s.el.style.transform='translateX(-'+w+'px)';var id=s.el.getAttribute('data-swipe');setTimeout(function(){askDayDel(id)},180)}else s.el.style.transform=''}
 document.addEventListener('pointerup',swEnd);document.addEventListener('pointercancel',swEnd);
 function startWk(id,force){
- var w=wkById(id);if(!w)return;var k=curDate,cur=dayOrder(k);
- var all=wkEx(w),dup=all.filter(function(e){return cur.indexOf(e.id)>=0}),add=all.filter(function(e){return cur.indexOf(e.id)<0});
+ var w=wkById(id);if(!w)return;var k=curDate,d0=db.days[k],cur=dayOrder(k),all=wkEx(w);
+ var prevW=d0&&d0.workout?wkById(d0.workout):null;
+ /* 다른 워크아웃으로 바꾸기: 기록이 없는 종목은 빼고 새 워크아웃 종목으로 교체 */
+ if(prevW&&prevW.id!==w.id){
+  var logged=cur.filter(function(x){return setsOn(k,x).length});
+  if(!force){
+   modal('<h2>워크아웃을 바꿀까요?</h2><div class="meta" style="line-height:1.6">오늘 <b>'+esc(prevW.name)+'</b>를 <b>'+esc(w.name)+'</b>로 바꿔요.'+(logged.length?' 이미 기록한 종목 '+logged.length+'개는 남겨 둬요.':' 아직 기록한 종목이 없어서 목록이 통째로 바뀌어요.')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="wk-start-force" data-id="'+esc(w.id)+'">바꾸기</button></div>');
+   return;
+  }
+  var d1=day(k,true);d1.plan=all.map(function(e){return e.id});logged.forEach(function(x){if(d1.plan.indexOf(x)<0)d1.plan.push(x)});
+  d1.workout=w.id;cleanDay(k);save();modal('');toasts.push({m:'오늘 워크아웃을 '+w.name+'(으)로 바꿨어요.',k:'ok'});go('#today');return;
+ }
+ var dup=all.filter(function(e){return cur.indexOf(e.id)>=0}),add=all.filter(function(e){return cur.indexOf(e.id)<0});
  if(dup.length&&!force){
   var names='<div style="background:#F4F5F2;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.7">'+dup.map(function(e){return esc(e.name)}).join('<br>')+'</div>';
   if(!add.length)modal('<h2>이미 모두 들어 있어요</h2><div class="meta" style="line-height:1.6">'+esc(w.name)+'의 종목 '+all.length+'개가 모두 오늘 목록에 있어요.</div>'+names+'<button class="primary" data-a="modal-close">확인</button>');
-  else modal('<h2>중복 종목이 '+dup.length+'개 있어요</h2><div class="meta" style="line-height:1.6">아래 종목은 이미 오늘 목록에 있어서 한 번만 들어가요. 나머지 <b>'+add.length+'개</b>를 추가할까요?</div>'+names+'<div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="wk-start-force" data-id="'+esc(w.id)+'">추가하기</button></div>');
+  else modal('<h2>중복 종목이 '+dup.length+'개 있어요</h2><div class="meta" style="line-height:1.6">아래 종목은 이미 오늘 목록에 있어서 한 번만 들어가요. 빠진 <b>'+add.length+'개</b>를 추가할까요?</div>'+names+'<div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="wk-start-force" data-id="'+esc(w.id)+'">추가하기</button></div>');
   return;
  }
- var d=day(k,true);add.forEach(function(e){d.plan.push(e.id)});
+ /* 워크아웃 순서대로 정렬하고, 워크아웃에 없는 종목은 뒤에 붙임 */
+ var d=day(k,true),extra=cur.filter(function(x){return !all.some(function(e){return e.id===x})});
+ d.plan=all.map(function(e){return e.id}).concat(extra);
  d.workout=w.id;save();modal('');toasts.push({m:w.name+' · '+add.length+'개 종목을 불러왔어요.'+(dup.length?' (중복 '+dup.length+'개 제외)':''),k:'ok'});go('#today');
 }
 function openPicker(mode){
@@ -940,7 +955,7 @@ document.addEventListener('click',function(ev){
   case 'day-done-ok':modal('');finishDay();break;
   case 'day-undone':var du=db.days[curDate];if(du){delete du.done;save();render()}break;
   case 'wkl-up':case 'wkl-down':var wi=+t.getAttribute('data-n'),wj=a==='wkl-up'?wi-1:wi+1;if(wj>=0&&wj<db.workouts.length){var wt=db.workouts[wi];db.workouts[wi]=db.workouts[wj];db.workouts[wj]=wt;save();render()}break;
-  case 'wk-sheet':var nx=nextWk(curDate);modal('<h2>워크아웃 불러오기</h2><div class="meta">이미 들어간 종목은 그대로 두고 없는 종목만 더해요.</div>'+db.programs.map(function(p){var l=progWks(p.id);if(!l.length)return '';var nxp=nextWk(curDate,p.id);return '<div class="sectitle">'+esc(p.name)+(p.id===db.activeProg?' <span class="tag" style="margin-left:6px">사용 중</span>':'')+'</div>'+l.map(function(w){return wkBtn(w,nxp)}).join('')}).join('')+(db.workouts.length?'':'<div class="empty">워크아웃이 없어요.</div>')+'<button class="secondary" data-a="modal-close">닫기</button>');break;
+  case 'wk-sheet':var nx=nextWk(curDate);modal('<h2>워크아웃 불러오기</h2><div class="meta">다른 워크아웃을 고르면 오늘 워크아웃이 바뀌어요. 같은 워크아웃을 고르면 빠진 종목만 다시 넣어요.</div>'+db.programs.map(function(p){var l=progWks(p.id);if(!l.length)return '';var nxp=nextWk(curDate,p.id);return '<div class="sectitle">'+esc(p.name)+(p.id===db.activeProg?' <span class="tag" style="margin-left:6px">사용 중</span>':'')+'</div>'+l.map(function(w){return wkBtn(w,nxp)}).join('')}).join('')+(db.workouts.length?'':'<div class="empty">워크아웃이 없어요.</div>')+'<button class="secondary" data-a="modal-close">닫기</button>');break;
   case 'add-ex':openPicker('day');break;
   case 'wk-pick':openPicker('wk');break;
   case 'pick-t':if(picker)setPick(t,!picker.sel[id]);break;
