@@ -748,7 +748,7 @@ function vGuide(){
  h+=sec('루틴과 워크아웃',[['','루틴','2분할·3분할 같은 운동 방식이에요. 여러 개 만들어 두고 하나를 골라 사용해요.'],['','워크아웃','루틴 안의 하루치 운동(A, B, C…)이에요. 순서대로 돌아가며 "다음 차례"가 되고, 오늘 탭에서 <b>운동 완료</b>를 눌러야 다음 차례로 넘어가요.']]);
  h+=sec('근비대·근력',[['','무게 따로 관리','워크아웃 목적을 근비대·근력으로 정하면, 같은 종목이라도 목적별로 기록과 무게를 따로 계산해요. (예: 벤치프레스 근력 80kg, 근비대 60kg)'],['','설정','종목 설정의 일반·근비대·근력 탭에서 목적별 세트·횟수·휴식·목표 무게를 정해요. <b>추천 보기</b>를 누르면 운동 구분(핵심·복합·고립·맨몸)에 맞는 추천이 나와요.'],['','RIR','근비대·근력 모두 RIR 1~3이 기본이에요. 1~3회 더 할 수 있을 때 세트를 마쳐요.']]);
  h+=sec('휴식',[['','휴식 타이머','설정 탭에서 켜고 끌 수 있어요(처음엔 꺼져 있어요). 켜면 세트를 체크할 때 자동으로 시작하고, 시간은 설정과 종목 설정에서 바꿀 수 있어요.']]);
- h+=sec('부위별 주간 세트',[['','계산 방법','최근 7일 동안 부위별 본세트 수를 세요. 다른 부위를 함께 쓰는 운동은 그 부위에 0.5세트로 더해요(예: 벤치프레스 1세트 → 가슴 1, 삼두·어깨 0.5). 근비대는 부위당 주 10~20세트를 권장 범위로 보여줘요.']]);
+ h+=sec('부위별 주간 세트',[['','계산 방법','최근 7일 동안 부위별 본세트 수를 세요. 각 종목은 그 종목의 부위에만 1세트로 세요(예: 벤치프레스 → 가슴). 근비대는 부위당 주 10~20세트를 권장 범위로 보여줘요.']]);
  h+='<div class="list"><a class="li" href="#refs-gym"><div><div class="t">연구 근거 · 참고문헌</div><div class="meta">헬스 처방의 근거 논문</div></div>'+I.chev+'</a></div>';
  return h+'</main>';
 }
@@ -1185,14 +1185,13 @@ function formSheet(e){
  h+='<a class="secondary" href="'+yt+'" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;text-decoration:none">유튜브에서 자세 영상 찾기</a><div class="note" style="padding:0">처음 하는 운동이나 무거운 무게는 트레이너에게 자세를 한 번 확인받는 게 가장 안전해요.</div><button class="primary" data-a="modal-close">닫기</button>';
  modal(h);
 }
-/* 부위별 주간 세트: 직접 1세트, 간접 0.5세트 */
+/* 부위별 주간 세트: 종목의 부위에만 1세트 */
 function weekSets(k){
  var from=addDays(k,-6),res={},det={};
  db.cats.forEach(function(c){if(c.name!=='카디오'){res[c.name]=0;det[c.name]={}}});
  Object.keys(db.days).forEach(function(dk){if(dk<from||dk>k)return;db.days[dk].sets.forEach(function(s){
   if(s.warm)return;var e=exById(s.exId);if(!e||isCardio(e))return;var cn=catById(e.cat).name;if(res[cn]==null)return;
   res[cn]+=1;det[cn][e.name]=(det[cn][e.name]||0)+1;
-  (SECONDARY[e.name]||[]).forEach(function(sc){if(res[sc]==null||sc===cn)return;res[sc]+=0.5;det[sc][e.name+' (간접)']=(det[sc][e.name+' (간접)']||0)+0.5});
  })});
  return{sets:res,det:det,from:from};
 }
@@ -1202,7 +1201,7 @@ function weekSetsCard(k){
  var col=function(v){return v>20?'#B4441C':v>=10?'#1F7A44':v>=5?'#C98A1A':'#9AA0A8'};
  return '<div class="card" style="gap:8px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:15px">부위별 주간 세트</div><div class="meta">최근 7일</div></div>'+
   names.map(function(n){var v=Math.round(w.sets[n]*10)/10;return '<button data-a="ws-pop" data-v="'+esc(n)+'" style="all:unset;cursor:pointer;display:grid;grid-template-columns:44px 1fr 38px;align-items:center;gap:8px"><span style="font-size:13px">'+esc(n)+'</span><span style="position:relative;height:12px;background:#ECEEEA;border-radius:6px;overflow:hidden"><span style="position:absolute;left:'+(10/mx*100)+'%;width:'+(10/mx*100)+'%;top:0;bottom:0;background:rgba(31,122,68,.13)"></span><span style="position:absolute;left:0;top:0;bottom:0;width:'+Math.min(100,v/mx*100)+'%;background:'+col(v)+';border-radius:6px"></span></span><b style="font-size:13px;text-align:right">'+v+'</b></button>'}).join('')+
-  '<div class="meta" style="font-size:12px;line-height:1.5">옅은 초록 칸이 근비대 권장 범위(10~20세트)예요. 다른 부위를 함께 쓰는 운동은 0.5세트로 세요(예: 벤치프레스 → 삼두·어깨 0.5). 웜업은 빼요. 부위를 누르면 종목별로 보여요.</div></div>';
+  '<div class="meta" style="font-size:12px;line-height:1.5">옅은 초록 칸이 근비대 권장 범위(10~20세트)예요. 종목의 부위에만 1세트로 세고, 웜업은 빼요. 부위를 누르면 종목별로 보여요.</div></div>';
 }
 function weekSetsPop(n){
  var w=weekSets(todayKey()),d=w.det[n]||{},v=Math.round((w.sets[n]||0)*10)/10;
@@ -1214,7 +1213,7 @@ function weekSetsPop(n){
 var REFS=[
  {sec:'헬스',items:[
   {use:'부위별 주간 세트 · 근비대 권장 10세트 이상',ref:'Schoenfeld BJ, Ogborn D, Krieger JW (2017). Dose-response relationship between weekly resistance training volume and increases in muscle mass: A systematic review and meta-analysis. Journal of Sports Sciences, 35(11), 1073-1082.',doi:'10.1080/02640414.2016.1210197',sum:'주간 세트가 많을수록 근육이 더 커지는 용량-반응 관계가 있었어요. 부위당 주 10세트 이상에서 효과가 가장 컸어요.'},
-  {use:'간접 세트 0.5세트 계산 · 근력은 적은 볼륨에서도 충분',ref:'Pelland JC, Remmert JF, Robinson ZP, Hinson SR, Zourdos MC (2026). The resistance training dose response: meta-regressions exploring the effects of weekly volume and frequency on muscle hypertrophy and strength gains. Sports Medicine, 56(2), 481-505.',doi:'10.1007/s40279-025-02344-w',sum:'67개 연구 메타회귀예요. 보조로 쓰이는 부위의 세트를 0.5세트로 셀 때 결과를 가장 잘 예측했어요. 근비대는 볼륨이 늘수록 계속 좋아지고, 근력은 적은 볼륨에서 빨리 한계에 닿았어요.'},
+  {use:'주간 세트 · 근력은 적은 볼륨에서도 충분',ref:'Pelland JC, Remmert JF, Robinson ZP, Hinson SR, Zourdos MC (2026). The resistance training dose response: meta-regressions exploring the effects of weekly volume and frequency on muscle hypertrophy and strength gains. Sports Medicine, 56(2), 481-505.',doi:'10.1007/s40279-025-02344-w',sum:'67개 연구 메타회귀예요. 보조로 쓰이는 부위의 세트를 0.5세트로 셀 때 결과를 가장 잘 예측했어요. 근비대는 볼륨이 늘수록 계속 좋아지고, 근력은 적은 볼륨에서 빨리 한계에 닿았어요.'},
   {use:'RIR 1~3 (실패 몇 회 전에 멈추기)',ref:'Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC (2024). Exploring the dose-response relationship between estimated resistance training proximity to failure, strength gain, and muscle hypertrophy: a series of meta-regressions. Sports Medicine, 54(9), 2209-2231.',doi:'10.1007/s40279-024-02069-2',sum:'근력은 실패와의 거리와 크게 상관없었고, 근비대는 실패에 가까울수록 조금 더 좋았어요.'},
   {use:'RIR 1~3 (실패까지 갈 필요는 없음)',ref:'Refalo MC, Helms ER, Trexler ET, Hamilton DL, Fyfe JJ (2023). Influence of resistance training proximity-to-failure on skeletal muscle hypertrophy: a systematic review with meta-analysis. Sports Medicine, 53(3), 649-665.',doi:'10.1007/s40279-022-01784-y',sum:'실패 직전에 멈춰도 실패까지 간 것과 근비대 차이가 크지 않았어요.'},
   {use:'근력 3~6회, 근비대 6~20회 · 반복 범위',ref:'Schoenfeld BJ, Grgic J, Van Every DW, Plotkin DL (2021). Loading recommendations for muscle strength, hypertrophy, and local endurance: a re-examination of the repetition continuum. Sports, 9(2), 32.',doi:'10.3390/sports9020032',sum:'근력은 무겁게 적게(1~5회) 할 때 가장 잘 늘었고, 근비대는 넓은 반복 범위에서 비슷하게 일어났어요.'},
