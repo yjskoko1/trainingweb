@@ -1350,7 +1350,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.03';
+var WEB_VER='v1.04';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
@@ -1453,8 +1453,15 @@ var SSTAGE={1:['익숙해지기','25~50m씩 끊어서, 숨이 고를 때까지 �
 var swBuf=null,sl=null,swGraph='m';
 function sset(){return db.swim.setup}
 function swimsSorted(){return db.swim.swims.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts})}
-function swTxt(t){return String(t).replace(/(\d+(?:~\d+)?)×(\d+)/g,'$2m씩 $1번').replace(/(드릴|수영|자유형|배영|평영|접영) (\d+)(?!m)/g,'$1 $2m').replace(/(^|\+ |\()(\d{2,3}(?:~\d{2,3})?) /g,'$1$2m ').replace(/(\d+)씩/g,function(a,n){return n+'m씩'}).replace(/mm씩/g,'m씩')}
-function lapTxt(m){var p=(sset()&&+sset().pool)||25,n=m/p;if(n<1||n!==Math.round(n))return '';return n%2===0?(n/2)+'왕복':n===1?'편도':n+'번 (편도)'}
+function swPool(){return (sset()&&+sset().pool)||25}
+function swL(d){var p=swPool(),n=d/p;if(d>0&&n===Math.round(n)){if(n===1)return '편도';if(n%2===0)return (n/2)+'왕복';return '편도 '+n+'번'}return d+'m'}
+function swR(a,b){var p=swPool();if(a%(2*p)===0&&b%(2*p)===0)return a/(2*p)+'~'+b/(2*p)+'왕복';return a+'~'+b+'m'}
+function swTxt(t){var p=swPool();t=String(t);
+ if(p===25)t=t.replace(/\((드릴|접영) 25 \+ (수영|자유형) 25\)/g,function(a,x,y){return '(갈 때 '+x+', 올 때 '+y+')'}).replace(/25씩\)/g,'편도씩)');
+ var sj=function(d,n){var L=swL(d);return (L==='편도'?'편도 ':L+'씩 ')+n+'번'};t=t.replace(/(\d+)~(\d+)×(\d+)/g,function(a,x,y,d){return sj(+d,x+'~'+y)}).replace(/(\d+)×(\d+)/g,function(a,n,d){return sj(+d,n)});
+ t=t.replace(/(드릴|수영|자유형|배영|평영|접영) (\d+)(?![\dm])/g,function(a,x,d){return x+' '+swL(+d)});
+ t=t.replace(/(^|\+ )(\d{2,3})~(\d{2,3}) /g,function(a,pre,x,y){return pre+swR(+x,+y)+' '}).replace(/(^|\+ )(\d{2,3}) /g,function(a,pre,d){return pre+swL(+d)+' '});
+ return t.replace(/(\d+)씩/g,'$1m씩')}
 function mss(t){t=String(t||'').trim();var m=t.match(/^(\d+):(\d{1,2})$/);if(m)return +m[1]*60+(+m[2]);var n=parseFloat(t);return n>0?Math.round(n*60):0}
 function cssOf(b){var a=mss(b.t400),c=mss(b.t200);if(a>c&&c>0)return Math.round((a-c)/2);return mss(b.css)}
 function swimWeekM(k){var from=addDays(k,-6);return db.swim.swims.filter(function(s){return s.date>=from&&s.date<=k}).reduce(function(a,s){return a+(+s.m||0)},0)}
@@ -1544,7 +1551,6 @@ function vSwim(){
   h+='<div class="rx" style="background:#12452A"><div class="row"><span style="font-size:13px;opacity:.85">오늘</span><span class="badge" style="background:#C0DD97;color:#173404">'+(x.type==='lesson'?'강습':'쉬는 날')+'</span></div><div class="big">'+(x.type==='lesson'?'수영 강습':'휴식')+'</div><div class="why">'+esc(x.why)+'</div></div>';
  }else{
   h+='<div class="rx" style="background:#12452A"><div class="row"><span style="font-size:13px;opacity:.85">오늘 추천</span><span class="badge" style="background:#C0DD97;color:#173404">'+esc(x.title)+'</span></div><div class="big">'+x.m.toLocaleString()+'m</div><div style="font-size:13px;opacity:.85">'+(st<3||!sset().css?'페이스 대신 숨으로 강도를 맞춰요 · '+(sset().pool||25)+'m 풀':'CSS '+fmtPace(sset().css)+'/100m 기준 · '+(sset().pool||25)+'m 풀')+'</div><div class="why">'+esc(x.why)+'</div>'+x.notes.map(function(n){return '<div class="why">· '+esc(n)+'</div>'}).join('')+'</div>';
-  var pl=(sset().pool||25);h+='<div class="note" style="padding:0 4px">'+pl+'m 수영장: '+(pl*2)+'m = 1왕복 · '+(pl*4)+'m = 2왕복 · "50m씩 4번"은 50m 가고 쉬기를 4번</div>';
   h+='<div class="list">'+x.blocks.map(function(b){return '<div class="li" style="cursor:default"><div style="min-width:0"><div class="meta" style="font-size:12px;'+(b.main?'color:#1D7A44;font-weight:700':'')+'">'+b.lab+'</div><div class="t" style="font-weight:'+(b.main?800:500)+';white-space:normal">'+esc(swTxt(b.txt))+'</div></div><div class="meta" style="flex-shrink:0">'+b.m+'m</div></div>'}).join('')+'</div>';
  }
  if(today.length)h+='<div class="toast ok">오늘 '+today.map(function(w){return SKIND[w.kind]+' '+(+w.m||0)+'m'}).join(', ')+' 기록했어요.</div>';
