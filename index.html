@@ -837,7 +837,7 @@ function vMe(){
  if(meTab==='run'){
  var rs0=rset(),act=db.run.shoes.filter(function(x){return !x.retired});
  h+='<div class="sectitle">러닝 목표</div><div class="list"><a class="li" href="#runset"><div style="min-width:0"><div class="t">'+(rs0.goal?esc(RGOAL[rs0.goal].name)+(rs0.raceDate?' · '+esc(pretty(rs0.raceDate,{year:'numeric',month:'long',day:'numeric'})):''):'목표 설정하기')+'</div><div class="meta">'+(rs0.goal?[rs0.age?'나이 '+rs0.age:'',hrMax()?'최대 심박 '+hrMax()+(rs0.hrMax?'':'(추정)'):'',rs0.recKm&&rs0.recSec?'최근 기록 '+r1(rs0.recKm)+'km '+fmtDur(rs0.recSec):''].filter(Boolean).join(' · '):'나이·최대 심박·최근 기록·목표를 넣으면 처방해 드려요')+'</div></div>'+I.chev+'</a></div>';
- h+='<div class="sectitle">신발</div><div class="list"><a class="li" href="#runset"><div style="min-width:0"><div class="t">신발 '+act.length+'켤레</div><div class="meta">'+(act.length?esc(act.map(function(x){return x.name+' '+shoeKm(x)+'km'}).join(', ')):'등록한 신발이 없어요')+'</div></div>'+I.chev+'</a></div>';
+ h+='<div class="sectitle">신발</div>'+shoeChart()+'<div class="list"'+(db.run.shoes.length?' style="margin-top:8px"':'')+'><a class="li" href="#runset"><div style="min-width:0"><div class="t">신발 '+act.length+'켤레</div><div class="meta">'+(act.length?esc(act.map(function(x){return x.name+' '+shoeKm(x)+'km'}).join(', ')):'등록한 신발이 없어요')+'</div></div>'+I.chev+'</a></div>';
  h+='<div class="list" style="margin-top:8px"><a class="li" href="#runguide"><div><div class="t">러닝 처방 근거 안내</div><div class="meta">10% 규칙, 80% 쉬운 강도, 예상 기록, 테이퍼</div></div>'+I.chev+'</a><a class="li" href="#refs-run"><div><div class="t">연구 근거 · 참고문헌</div><div class="meta">러닝 처방의 근거 논문</div></div>'+I.chev+'</a></div>';
  h+='<div class="note">러닝 '+db.run.runs.length+'회 · 총 '+r1(db.run.runs.reduce(function(x,r){return x+(+r.km||0)},0))+'km 기록</div>';
  }
@@ -1004,6 +1004,20 @@ function vRun(){
 function runRow(r){var shoe=shoeById(r.shoe);return '<button class="li" data-a="run-edit" data-id="'+esc(r.id)+'"><div style="min-width:0"><div class="t">'+esc(short(r.date))+(shiftOf(r.date)?' '+shiftOf(r.date):'')+' · '+RTYPE[r.type]+'</div><div class="meta">'+(r.place==='tm'?'트레드밀':'야외')+(shoe?' · '+esc(shoe.name):'')+(r.memo?' · '+esc(r.memo.slice(0,20)):'')+'</div></div><div style="text-align:right;white-space:nowrap"><div style="font-weight:900">'+r1(r.km)+'km</div><div class="meta">'+(r.sec&&r.km?fmtPace(r.sec/r.km)+'/km':'')+(r.hr?' · '+r.hr+'bpm':'')+'</div></div></button>'}
 function runRecent(){var rs=db.run.runs.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:b.ts-a.ts}).slice(0,5);if(!rs.length)return '';return '<div class="sectitle">최근 러닝</div><div class="list">'+rs.map(runRow).join('')+'</div>'}
 function shoeById(id){for(var i=0;i<db.run.shoes.length;i++)if(db.run.shoes[i].id===id)return db.run.shoes[i];return null}
+function defShoe(){var act=db.run.shoes.filter(function(s){return !s.retired});var d=shoeById(db.run.defShoe);if(d&&!d.retired)return d;var last=db.run.runs.filter(function(r){var x=shoeById(r.shoe);return x&&!x.retired}).sort(function(a,b){return a.date<b.date?1:-1})[0];return last?shoeById(last.shoe):(act[0]||null)}
+function shoeCol(km){return km>=800?'#D9534F':km>=500?'#E8A33D':'#2E9E6B'}
+function shoeChart(){var L=db.run.shoes.slice().sort(function(a,b){return (a.retired?1:0)-(b.retired?1:0)||shoeKm(b)-shoeKm(a)});if(!L.length)return '';var mx=Math.max(900,Math.max.apply(null,L.map(shoeKm))*1.05),ds=defShoe();
+ return '<div class="card" style="padding:14px"><div style="display:flex;flex-direction:column;gap:12px">'+L.map(function(s){var k=shoeKm(s),w=Math.min(100,k/mx*100);return '<button data-a="shoe-pop" data-id="'+esc(s.id)+'" style="all:unset;display:block;cursor:pointer'+(s.retired?';opacity:.45':'')+'"><div style="display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:5px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">'+esc(s.name)+(ds&&ds.id===s.id?' <span style="font-size:11px;color:var(--blue);font-weight:600">기본</span>':'')+(s.retired?' <span style="font-size:11px;color:var(--sub)">은퇴</span>':'')+'</span><b style="flex:none">'+k+'km</b></div><div style="position:relative;height:12px;border-radius:6px;background:#EEF0F3"><div style="position:absolute;left:0;top:0;bottom:0;width:'+w+'%;border-radius:6px;background:'+shoeCol(k)+'"></div><i style="position:absolute;top:-3px;bottom:-3px;left:'+(500/mx*100)+'%;width:1px;background:#9AA0A8"></i><i style="position:absolute;top:-3px;bottom:-3px;left:'+(800/mx*100)+'%;width:1px;background:#9AA0A8"></i></div></button>'}).join('')+'</div><div class="meta" style="margin-top:10px;font-size:12px">세로선은 500km·800km. 보통 500~800km에서 쿠션이 줄어 교체를 생각해요. 막대를 누르면 거리가 쌓인 그래프가 보여요.</div></div>'}
+function shoePop(id){var s=shoeById(id);if(!s)return;var rr=db.run.runs.filter(function(r){return r.shoe===id&&+r.km>0}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts}),acc=+s.startKm||0,pts=[{d:s.created||(rr[0]&&rr[0].date)||todayKey(),v:acc}];rr.forEach(function(r){acc+=+r.km;pts.push({d:r.date,v:r1(acc)})});
+ var W=320,H=170,pl=36,pb=22,pt=10,pr=10,mx=Math.max(100,acc*1.1),n=pts.length,x=function(i){return pl+(n>1?i/(n-1):0.5)*(W-pl-pr)},y=function(v){return pt+(1-v/mx)*(H-pt-pb)};
+ var g='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" role="img" aria-label="'+esc(s.name)+' 누적 거리 그래프">';
+ [0,0.5,1].forEach(function(f){var v=Math.round(mx*f);g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#EEF0F3"/><text x="'+(pl-4)+'" y="'+(y(v)+4)+'" font-size="10" text-anchor="end" fill="#8A9099">'+v+'</text>'});
+ [500,800].forEach(function(v){if(v<mx)g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+shoeCol(v)+'" stroke-dasharray="4 3"/><text x="'+(W-pr)+'" y="'+(y(v)-3)+'" font-size="10" text-anchor="end" fill="'+shoeCol(v)+'">'+v+'km</text>'});
+ g+='<polyline fill="none" stroke="'+shoeCol(acc)+'" stroke-width="2.5" stroke-linejoin="round" points="'+pts.map(function(p,i){return x(i)+','+y(p.v)}).join(' ')+'"/>';
+ if(n<=40)pts.forEach(function(p,i){g+='<circle cx="'+x(i)+'" cy="'+y(p.v)+'" r="3" fill="'+shoeCol(p.v)+'"/>'});
+ g+='<text x="'+pl+'" y="'+(H-6)+'" font-size="10" fill="#8A9099">'+esc(short(pts[0].d))+'</text><text x="'+(W-pr)+'" y="'+(H-6)+'" font-size="10" text-anchor="end" fill="#8A9099">'+esc(short(pts[n-1].d))+'</text></svg>';
+ var ds=defShoe(),isD=ds&&ds.id===id;
+ modal('<h2>'+esc(s.name)+'</h2><div class="meta">누적 <b style="color:var(--ink)">'+r1(acc)+'km</b> · 등록할 때 '+r1(+s.startKm||0)+'km + 앱 기록 '+rr.length+'회</div>'+g+(s.retired?'':'<button class="secondary" data-a="shoe-def" data-id="'+esc(id)+'"'+(isD?' disabled':'')+'>'+(isD?'지금 기본 신발이에요':'기본 신발로 정하기')+'</button>')+'<div class="note">가민에서 불러온 러닝은 기본 신발로 들어가요. 다른 신발로 뛴 날은 캘린더에서 그날 러닝을 눌러 바꿔 주세요.</div><button class="secondary" data-a="modal-close">닫기</button>')}
 function shoeKm(sh){return r1((+sh.startKm||0)+db.run.runs.filter(function(r){return r.shoe===sh.id}).reduce(function(a,r){return a+(+r.km||0)},0))}
 
 /* 기록 입력 창 */
@@ -1057,7 +1071,7 @@ function vRunSet(){
   '<div class="note" style="padding:0">대회 기록이 없으면 최근에 전력으로 뛴 거리와 시간을 넣어 주세요.</div></div>';
  h+='<div class="list">'+f('최근 4주 최장 거리 (km)','longest',b.longest,numA)+'</div><div class="note">첫 롱런 거리를 정할 때 써요. 기록이 쌓이면 앱이 최근 30일 기록에서 직접 계산해요.</div>';
  h+='<button class="primary" data-a="rs-save">이 목표로 저장</button><div class="note">목표를 바꾸면 다음 러닝부터 계획만 새로 짜요. 지난 기록과 신발 거리는 그대로 남아요.</div>';
- h+='<div class="sectitle" style="padding-top:12px">신발</div>';
+ h+='<div class="sectitle" style="padding-top:12px">신발</div>'+shoeChart()+(db.run.shoes.length?'<div style="height:8px"></div>':'');
  h+=db.run.shoes.length?'<div class="list">'+db.run.shoes.map(function(s){return '<div class="li"><div style="min-width:0"><div class="t">'+esc(s.name)+(s.retired?' <span class="badge b-keep" style="padding:2px 8px">은퇴</span>':'')+'</div><div class="meta">누적 '+shoeKm(s)+'km</div></div><div style="display:flex;gap:6px"><button class="ghost" data-a="shoe-retire" data-id="'+esc(s.id)+'">'+(s.retired?'복귀':'은퇴')+'</button><button class="ghost" data-a="shoe-del" data-id="'+esc(s.id)+'" style="color:var(--red);border-color:#F0C9B8">삭제</button></div></div>'}).join('')+'</div>':'<div class="note">등록한 신발이 없어요.</div>';
  h+='<form class="addrow" data-form="shoe-add"><label for="sh-n" class="sr">신발 이름</label><input id="sh-n" type="text" maxlength="30" placeholder="신발 이름 (예: 페가수스 41)"><label for="sh-k" class="sr">이미 뛴 거리</label><input id="sh-k" type="number" inputmode="decimal" min="0" placeholder="뛴 km" style="flex:0 0 90px"><button type="submit">추가</button></form>';
  h+='<div class="note">근무 패턴(당번 기준 날짜)은 설정 탭에서 바꿀 수 있어요. 처방은 일반적인 연구 결과를 바탕으로 해요. 통증이 있거나 몸이 안 좋은 날은 처방보다 몸 상태를 먼저 따라 주세요.</div></main>';
@@ -1286,7 +1300,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v62';
+var WEB_VER='v63';
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',function(e){if(!on)return;var c=on;on=null;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
@@ -1343,7 +1357,7 @@ async function hcImport(show){
     var km=Math.round(dist/10)/100;if(!(km>0)){skip.noDist++;continue}
     if(hcDupRun(k,km)){skip.dup++;db.hc.seen[id]=1;continue}
     var hr=await hcHR(w.startDate,w.endDate),x=runRx(k),ty=x&&RTYPE[x.type]&&x.type!=='rest'&&x.type!=='race'?x.type:'easy';
-    db.run.runs.push({id:'r'+rid(),date:k,type:ty,place:t==='runningTreadmill'?'tm':'out',km:km,sec:sec,hr:hr.avg,hrMax:hr.max,shoe:'',memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
+    db.run.runs.push({id:'r'+rid(),date:k,type:ty,place:t==='runningTreadmill'?'tm':'out',km:km,sec:sec,hr:hr.avg,hrMax:hr.max,shoe:(function(){var d=defShoe();return d&&(!d.created||k>=d.created)?d.id:''})(),memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
     added.push('러닝 '+short(k)+' '+km+'km');
    }else if(/^swimming/.test(t)){
     var m=Math.round(dist);if(!(m>0)){skip.noDist++;continue}
@@ -1840,7 +1854,7 @@ function ensureProgs(o){
 }
 /* v3 백업 또는 이전 아티팩트 버전(v2) 백업을 받아들임 */
 function normalize(o){
- if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.run=o.run||{setup:null,runs:[],shoes:[]};o.run.runs=o.run.runs||[];o.run.shoes=o.run.shoes||[];o.swim=o.swim||{setup:null,swims:[],cssHist:[]};o.hc=o.hc||{on:false,last:null,seen:{}};o.hc.seen=o.hc.seen||{};o.workouts.forEach(function(w){if(!w.mode){w.mode='h';Object.keys(o.days).forEach(function(k){var x=o.days[k];if(x&&x.workout===w.id)(x.sets||[]).forEach(function(st){if(!st.mode)st.mode='h'})})}});o.swim.swims=o.swim.swims||[];o.swim.cssHist=o.swim.cssHist||[];o.settings=Object.assign({shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},o.settings||{});ensureProgs(o);ensureCardio(o);return o}
+ if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.run=o.run||{setup:null,runs:[],shoes:[]};o.run.runs=o.run.runs||[];o.run.shoes=o.run.shoes||[];o.run.shoes.forEach(function(x){if(!x.created)x.created=todayKey()});o.swim=o.swim||{setup:null,swims:[],cssHist:[]};o.hc=o.hc||{on:false,last:null,seen:{}};o.hc.seen=o.hc.seen||{};o.workouts.forEach(function(w){if(!w.mode){w.mode='h';Object.keys(o.days).forEach(function(k){var x=o.days[k];if(x&&x.workout===w.id)(x.sets||[]).forEach(function(st){if(!st.mode)st.mode='h'})})}});o.swim.swims=o.swim.swims||[];o.swim.cssHist=o.swim.cssHist||[];o.settings=Object.assign({shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},o.settings||{});ensureProgs(o);ensureCardio(o);return o}
  if(o&&o.app==='hc'&&o.cfg&&Array.isArray(o.cfg.exercises)){
   var c=o.cfg,d={v:3,cats:(c.categories||[]).map(function(x){return{id:x.id,name:x.name,color:x.color}}),exercises:[],workouts:(c.routines||[]).map(function(r){return{id:r.id,name:r.name,exIds:r.exIds||[]}}),days:{},body:(o.body&&o.body.entries)||[],settings:{bar:20,rest:(c.settings&&c.settings.rest)||90,restWarm:60,restOn:false},lastBackup:''};
   c.exercises.forEach(function(e){var lin=e.method!=='double';d.exercises.push({id:e.id,name:e.name,cat:e.cat,method:lin?'linear':'double',sets:e.method==='gzclp'?5:(e.sets||3),repsMin:e.method==='gzclp'?3:(e.repsMin||8),repsMax:e.method==='gzclp'?3:(e.repsMax||12),increment:e.increment||2.5,startWeight:+e.startWeight||0,anchor:e.anchor||'',warm:(+e.startWeight||0)>0?(lin?'full':'light'):'none',failLimit:e.failLimit||3,deloadPct:e.deloadPct==null?10:e.deloadPct,rest:e.rest||0,deleted:!!e.deleted})});
@@ -1910,6 +1924,8 @@ document.addEventListener('click',function(ev){
   case 'rg':runGraph=t.getAttribute('data-v');render();break;
   case 'run-cond':db.run.cond=db.run.cond||{};db.run.cond[todayKey()]=t.getAttribute('data-v');save();render();break;
   case 'pd':predDist=t.getAttribute('data-v');render();break;
+  case 'shoe-pop':shoePop(id);break;
+  case 'shoe-def':if(rsBuf)readRunSet();db.run.defShoe=id;save();shoePop(id);render();break;
   case 'shoe-retire':var shr=shoeById(id);if(shr){if(rsBuf)readRunSet();shr.retired=!shr.retired;save();render()}break;
   case 'shoe-del':var shd=shoeById(id);if(shd)confirmSheet(esc(shd.name)+' 삭제','신발 목록에서 지워요. 이 신발로 뛴 기록은 남지만 신발 표시는 빠져요.','삭제','shoe-del-ok',shd.id);break;
   case 'shoe-del-ok':db.run.shoes=db.run.shoes.filter(function(s){return s.id!==id});db.run.runs.forEach(function(r){if(r.shoe===id)r.shoe=''});save();modal('');render();break;
@@ -2011,7 +2027,7 @@ document.addEventListener('submit',function(ev){
  var f=ev.target.getAttribute('data-form');if(!f)return;ev.preventDefault();
  if(f==='search')return;
  if(f==='newex'){saveNewEx();return}
- if(f==='shoe-add'||f==='shoe-add2'){var two=f==='shoe-add2',nm=String((document.getElementById(two?'sh2-n':'sh-n')||{}).value||'').trim().slice(0,30),sk=parseFloat((document.getElementById(two?'sh2-k':'sh-k')||{}).value)||0;if(!nm)return;var ns={id:'s'+rid(),name:nm,startKm:Math.max(0,sk),retired:false};db.run.shoes.push(ns);save();if(two&&rl){rl.shoe=ns.id;renderRunLog()}else{if(rsBuf)readRunSet();render()}return}
+ if(f==='shoe-add'||f==='shoe-add2'){var two=f==='shoe-add2',nm=String((document.getElementById(two?'sh2-n':'sh-n')||{}).value||'').trim().slice(0,30),sk=parseFloat((document.getElementById(two?'sh2-k':'sh-k')||{}).value)||0;if(!nm)return;var ns={id:'s'+rid(),name:nm,startKm:Math.max(0,sk),retired:false,created:todayKey()};db.run.shoes.push(ns);save();if(two&&rl){rl.shoe=ns.id;renderRunLog()}else{if(rsBuf)readRunSet();render()}return}
  if(f==='ex-add'){var v=String(document.getElementById('ea').value||'').trim().slice(0,40);var c=catById(param);
   if(v&&liveEx().some(function(x){return x.cat===c.id&&x.name===v})){toast('이미 있는 종목이에요.','err');return}
   var it=v&&(CATALOG[c.name]||[]).filter(function(x){return x[0]===v})[0];
