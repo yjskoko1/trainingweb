@@ -1300,7 +1300,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v63';
+var WEB_VER='v64';
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',function(e){if(!on)return;var c=on;on=null;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
@@ -1609,7 +1609,7 @@ function vHome(){
  var from=addDays(k,-6),gymN=0,act={};
  Object.keys(db.days).forEach(function(d){if(d>=from&&d<=k&&db.days[d].sets.length){gymN++;act[d]=1}});
  db.run.runs.forEach(function(r){if(r.date>=from&&r.date<=k)act[r.date]=1});db.swim.swims.forEach(function(w){if(w.date>=from&&w.date<=k)act[w.date]=1});
- h+='<div class="card" style="gap:10px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:15px">최근 7일</div><div class="meta">'+esc(short(from))+' ~ '+esc(short(k))+'</div></div><div class="row" style="justify-content:space-around;text-align:center"><div><div class="meta">헬스</div><div style="font-size:20px;font-weight:900">'+gymN+'<small class="meta">회</small></div></div><div><div class="meta">러닝</div><div style="font-size:20px;font-weight:900">'+weekKm(k)+'<small class="meta">km</small></div></div><div><div class="meta">수영</div><div style="font-size:20px;font-weight:900">'+swimWeekM(k).toLocaleString()+'<small class="meta">m</small></div></div><div><div class="meta">운동한 날</div><div style="font-size:20px;font-weight:900">'+Object.keys(act).length+'<small class="meta">일</small></div></div></div></div>';
+ h+='<div class="card" style="gap:10px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:15px">최근 7일</div><div class="meta">'+esc(short(from))+' ~ '+esc(short(k))+'</div></div><div class="row" style="justify-content:space-around;text-align:center">'+[['gym','헬스',gymN,'회'],['run','러닝',weekKm(k),'km'],['swim','수영',swimWeekM(k).toLocaleString(),'m'],['all','운동한 날',Object.keys(act).length,'일']].map(function(q){return '<button data-a="wk-pop" data-v="'+q[0]+'" style="all:unset;cursor:pointer;padding:4px 6px;border-radius:10px;text-align:center" aria-label="최근 7일 '+q[1]+' 기록 보기"><div class="meta">'+q[1]+'</div><div style="font-size:20px;font-weight:900">'+q[2]+'<small class="meta">'+q[3]+'</small></div></button>'}).join('')+'</div><div class="meta" style="font-size:12px;text-align:center">숫자를 누르면 기록이 보여요</div></div>';
  if(!sh)h+='<div class="note">설정에서 근무 패턴(당번 기준 날짜)을 켜면 오늘 근무에 맞춰 운동을 추천해요.</div>';
  return h+'</main>';
 }
@@ -1689,6 +1689,14 @@ function runDaySheet(k){
   '<div class="meta" style="font-size:14px;color:var(--ink)">'+[r.sec?'시간 <b>'+fmtDur(r.sec)+'</b>':'',r.sec&&r.km?'페이스 <b>'+fmtPace(r.sec/r.km)+'/km</b>':'',r.hr?'심박 <b>'+r.hr+'</b>'+(r.hrMax?' (최대 '+r.hrMax+')':''):''].filter(Boolean).join(' · ')+'</div>'+
   (shoe?'<div class="meta">신발 '+esc(shoe.name)+'</div>':'')+(r.memo?'<div class="meta" style="white-space:pre-wrap">'+esc(r.memo)+'</div>':'')+'<div class="meta" style="font-size:12px">눌러서 고치거나 지울 수 있어요</div></button>'}).join('')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">닫기</button></div>');
 }
+function weekPop(kind){var k=todayKey(),from=addDays(k,-6),rows=[];
+ for(var d=k;d>=from;d=addDays(d,-1)){var dd=db.days[d],g=dd&&dd.sets.length?dd:null,rr=db.run.runs.filter(function(r){return r.date===d}),sw=db.swim.swims.filter(function(w){return w.date===d}),parts=[];
+  if(g&&(kind==='gym'||kind==='all')){var w=g.workout?wkById(g.workout):null,ne=Object.keys(g.sets.reduce(function(a,x){a[x.exId]=1;return a},{})).length,ns=g.sets.filter(function(x){return !x.warm}).length;parts.push({c:'#1F55D6',t:'헬스'+(w?' · '+w.name:''),m:ne+'종목 · 본세트 '+ns+'세트'})}
+  if(rr.length&&(kind==='run'||kind==='all'))rr.forEach(function(r){parts.push({c:RTCOLOR[r.type]||'#B4441C',t:'러닝 · '+RTYPE[r.type],m:r1(+r.km||0)+'km'+(r.sec?' · '+fmtDur(r.sec):'')})});
+  if(sw.length&&(kind==='swim'||kind==='all'))sw.forEach(function(x){parts.push({c:SCOLOR[x.kind]||'#1F7A44',t:'수영 · '+(SKIND[x.kind]||''),m:(x.m?(+x.m).toLocaleString()+'m':'')})});
+  if(parts.length)rows.push('<button class="li" data-a="day-pop" data-k="'+d+'" style="width:100%;text-align:left;align-items:flex-start"><div style="min-width:0;flex:1"><div class="t">'+esc(pretty(d,{month:'long',day:'numeric',weekday:'short'}))+'</div>'+parts.map(function(p){return '<div class="meta" style="margin-top:3px"><span class="dot" style="background:'+p.c+'"></span>'+esc(p.t)+(p.m?' · '+esc(p.m):'')+'</div>'}).join('')+'</div>'+I.chev+'</button>')}
+ var ttl={gym:'헬스',run:'러닝',swim:'수영',all:'운동한 날'}[kind];
+ modal('<h2>최근 7일 · '+ttl+'</h2><div class="meta">'+esc(short(from))+' ~ '+esc(short(k))+(rows.length?' · 날짜를 누르면 그날 기록이 열려요':'')+'</div><div class="list" style="max-height:60vh;overflow-y:auto">'+(rows.join('')||'<div class="li" style="cursor:default"><span class="meta">최근 7일 기록이 없어요</span></div>')+'</div><button class="secondary" data-a="modal-close">닫기</button>')}
 function daySheet(k){
  popDay=k;var d=db.days[k]||{sets:[],workout:'',plan:[]},runsK=db.run.runs.filter(function(r){return r.date===k});
  var swK=db.swim.swims.filter(function(w){return w.date===k});
@@ -1884,6 +1892,7 @@ document.addEventListener('click',function(ev){
   case 'row-tick':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
   case 'hist-del':if(e){var hk=t.getAttribute('data-k');confirmSheet(esc(pretty(hk))+' 기록 삭제',esc(e.name)+'의 이날 기록(웜업 포함 '+setsOn(hk,e.id).length+'세트)을 지울까요? 지운 기록은 되돌릴 수 없고, 다음 무게 처방도 남은 기록으로 다시 계산돼요.','삭제','hist-del-ok',hk)}break;
   case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
+  case 'wk-pop':weekPop(t.getAttribute('data-v'));break;
   case 'day-pop':daySheet(t.getAttribute('data-k'));break;
   case 'run-day':runDaySheet(t.getAttribute('data-k'));break;
   case 'hc-connect':hcConnect();break;
