@@ -895,7 +895,8 @@ function r1(n){return Math.round(n*10)/10}
 function rHalf(n){return Math.round(n*2)/2}
 function fmtPace(sec){if(!sec||!isFinite(sec))return '–';sec=Math.round(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
 function fmtDur(sec){sec=Math.round(+sec||0);var h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(s).padStart(2,'0')}
-function hrMax(){var s=rset();return +s.hrMax||(s.age?Math.round(208-0.7*s.age):0)} /* Tanaka 2001 추정식 */
+function hrMax(){var s=rset();return +s.hrMax||(+s.lthr?Math.round(s.lthr/0.92):0)||(s.age?Math.round(208-0.7*s.age):0)}
+function lthr(){return +rset().lthr||0} /* Tanaka 2001 추정식 */
 function riegel(d1,t1,d2){return t1*Math.pow(d2/d1,1.06)} /* Riegel 1981 */
 function recRec(){var s=rset();return s.recKm>0&&s.recSec>0?{km:+s.recKm,sec:+s.recSec}:null}
 function runsSorted(){return db.run.runs.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts})}
@@ -944,9 +945,9 @@ function countTypes(k,types){var s=rset().since||'';return runsBefore(k).filter(
 /* 실제로 어떻게 달렸는지로 러닝 종류 판단: 심박·페이스가 높으면 강한 러닝, 최근 최장의 90% 이상이면 롱런 */
 var QTX={tempo:1,interval:1,fartlek:1};
 function runEff(r){var c=effC[r.id];if(c)return c;var t0=r.type||'free',t=t0,why='';
- if(t0!=='race'&&+r.km>0){var hm=hrMax(),pr=predictions(r.date),pc=+r.sec>0?r.sec/r.km:0,hrp=hm&&+r.hr>0?r.hr/hm:0;
-  var hard=hrp>=0.85||(pc>0&&pr.ph&&pc<=pr.ph+8);
-  if(hard&&!QTX[t0]){t=(hrp>=0.9||(pc>0&&pr.p5&&pc<=pr.p5+10))?'interval':'tempo';why=hrp>=0.85?'평균 심박이 최대의 '+Math.round(hrp*100)+'%':'평균 페이스 '+fmtPace(pc)+'/km'}
+ if(t0!=='race'&&+r.km>0){var hm=hrMax(),lt=lthr(),pr=predictions(r.date),pc=+r.sec>0?r.sec/r.km:0,hrp=hm&&+r.hr>0?r.hr/hm:0,ltp=lt&&+r.hr>0?r.hr/lt:0;
+  var hrHard=lt?ltp>=0.94:hrp>=0.85,hrIv=lt?ltp>=0.99:hrp>=0.9,hard=hrHard||(pc>0&&pr.ph&&pc<=pr.ph+8);
+  if(hard&&!QTX[t0]){t=(hrIv||(pc>0&&pr.p5&&pc<=pr.p5+10))?'interval':'tempo';why=hrHard?(lt?'평균 심박 '+r.hr+'이 젖산역치('+lt+')의 '+Math.round(ltp*100)+'%':'평균 심박이 최대의 '+Math.round(hrp*100)+'%'):'평균 페이스 '+fmtPace(pc)+'/km'}
   else if(!hard&&!QTX[t0]){var L=longest30(r.date),g=RGOAL[rset().goal]||RGOAL.fit,thr=Math.max(L?L*0.9:g.rec[1]+2,g.rec[1]+1);
    if(+r.km>=thr){if(t0!=='long'){t='long';why=r1(r.km)+'km로 최근 최장 거리의 90% 이상'}}
    else if(t0==='long'){t='easy';why=r1(r.km)+'km로 롱런 거리(최근 최장의 90%)에 못 미쳐요'}}
@@ -967,7 +968,7 @@ function runRx(k){
  if(race&&dR===0){o.type='race';o.km=g.km||null;o.why='대회 날이에요. 처음 5km는 계획보다 살짝 느리게 시작하세요.';if(s.goal==='half'&&ph)o.pace=[ph-3,ph+3];else if(s.goal==='ten'&&pr.k10)o.pace=[pr.k10/10-3,pr.k10/10+3];else if(pr.mp)o.pace=[pr.mp-3,pr.mp+3];return o}
  if(sh==='당번'){o.type='rest';o.why='당번이라 쉬는 날이에요. 회복도 훈련이에요.';return o}
  var taper=race&&dR>0&&dR<=14?(dR<=7?0.5:0.7):1;
- var hr=function(a,b){return hm?[Math.round(hm*a),Math.round(hm*b)]:null};
+ var hr=function(a,b){return hm?[Math.round(hm*a),Math.round(hm*b)]:null},lt=lthr(),hrL=function(a,b,fa,fb){return lt?[Math.round(lt*a),Math.round(lt*b)]:hr(fa,fb)};
  if(sh==='비번'){
   var cd=(db.run.cond||{})[k]||'ok';o.cond=cd;
   if(cd==='good'){
@@ -994,10 +995,10 @@ function runRx(k){
    o.km=Math.max(g.rec[1],rHalf(km));o.pace=ph?[ph+60,ph+90]:null;o.hr=hr(0.65,0.78);o.why=why;o.detail='처음부터 끝까지 대화할 수 있는 속도로 일정하게.';
   }else if(o.type==='tempo'){
    var nt=countTypes(k,['tempo']),tmin=Math.min(40,20+5*nt),tk=pr.ph?r1(tmin*60/pr.ph):r1(tmin/5.5);
-   o.km=r1(4+tk);o.pace=pr.ph?[pr.ph-5,pr.ph+5]:null;o.hr=hr(0.85,0.9);o.detail='워밍업 2km → 템포 '+tmin+'분 → 쿨다운 2km';o.why='하프마라톤 페이스 근처에서 버티는 힘을 길러요. 템포 시간을 5분씩 늘려 최대 40분까지 가요.';
+   o.km=r1(4+tk);o.pace=pr.ph?[pr.ph-5,pr.ph+5]:null;o.hr=hrL(0.95,1.0,0.85,0.9);o.detail='워밍업 2km → 템포 '+tmin+'분 → 쿨다운 2km';o.why='하프마라톤 페이스 근처에서 버티는 힘을 길러요. 템포 시간을 5분씩 늘려 최대 40분까지 가요.';
   }else if(o.type==='interval'){
    var ni=countTypes(k,['interval']),reps=Math.min(6,4+Math.floor(ni/2));if(taper<1)reps=Math.max(3,Math.round(reps*taper));
-   o.km=r1(4+reps+0.4*(reps-1));o.pace=pr.p5?[pr.p5-5,pr.p5+5]:null;o.hr=hr(0.9,0.95);o.detail='워밍업 2km → 1km × '+reps+'회 (사이 2~3분 조깅) → 쿨다운 2km';o.why='5km 경기 페이스로 심폐 능력을 끌어올려요. 전체 훈련의 20% 이하로만 해요.';
+   o.km=r1(4+reps+0.4*(reps-1));o.pace=pr.p5?[pr.p5-5,pr.p5+5]:null;o.hr=hrL(1.0,1.04,0.9,0.95);o.detail='워밍업 2km → 1km × '+reps+'회 (사이 2~3분 조깅) → 쿨다운 2km';o.why='5km 경기 페이스로 심폐 능력을 끌어올려요. 전체 훈련의 20% 이하로만 해요.';
   }else{
    o.km=g.rec[1];o.pace=ph?[ph+75,ph+105]:null;o.hr=hr(0.65,0.78);o.detail='편하게 뛰다가 1분씩 빠르게 × 6~8회';o.why='체력 유지 단계에서는 즐겁게, 가끔 속도를 섞어요.';
   }
@@ -1130,13 +1131,13 @@ function saveRunLog(){
 
 /* 목표·설정 */
 function vRunSet(){
- if(!rsBuf){var s=rset();rsBuf={goal:s.goal||'full',raceDate:s.raceDate||'',goalTime:s.goalTime||'',age:s.age||'',hrMax:s.hrMax||'',recKm:s.recKm||'',rh:s.recSec?Math.floor(s.recSec/3600):'',rm:s.recSec?Math.floor(s.recSec%3600/60):'',rs:s.recSec?s.recSec%60:'',longest:s.longest||''}}
+ if(!rsBuf){var s=rset();rsBuf={goal:s.goal||'full',raceDate:s.raceDate||'',goalTime:s.goalTime||'',age:s.age||'',hrMax:s.hrMax||'',lthr:s.lthr||'',recKm:s.recKm||'',rh:s.recSec?Math.floor(s.recSec/3600):'',rm:s.recSec?Math.floor(s.recSec%3600/60):'',rs:s.recSec?s.recSec%60:'',longest:s.longest||''}}
  var b=rsBuf;
  var h=hdr('러닝 목표','목표는 언제든 바꿀 수 있어요',backBtn('#run','오늘의 러닝으로'))+'<main>';
  h+='<div class="sectitle">목표</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+Object.keys(RGOAL).map(function(g){var on=b.goal===g,G=RGOAL[g];return '<button data-a="rs-goal" data-v="'+g+'" aria-pressed="'+on+'" style="min-height:64px;border-radius:14px;border:'+(on?'2px solid var(--ink)':'1px solid #DADDE2')+';background:#fff;text-align:left;padding:10px 12px"><div style="font-size:15px;font-weight:700">'+G.name+'</div><div class="meta" style="font-size:12px">'+(G.km?G.km+'km · 롱런 최대 '+G.longMax+'km':'대회 없음 · 꾸준히')+'</div></button>'}).join('')+'</div>';
  function f(label,id,val,attr){return '<div class="field"><label for="rs-'+id+'">'+label+'</label><input id="rs-'+id+'" data-rs="'+id+'" value="'+esc(val)+'" '+attr+'></div>'}
  var numA='type="number" inputmode="decimal" min="0" style="height:42px;width:110px;border:1px solid #DADDE2;border-radius:10px;padding:0 10px;font-size:15px;text-align:right;background:#fff"';
- h+='<div class="list">'+(b.goal!=='fit'?f('대회 날짜 (선택)','raceDate',b.raceDate,'type="date" style="height:42px;border:1px solid #DADDE2;border-radius:10px;padding:0 8px;font-size:15px;background:#fff"'):'')+f('나이','age',b.age,numA)+f('최대 심박수 (모르면 비우기)','hrMax',b.hrMax,numA)+'</div>';
+ h+='<div class="list">'+(b.goal!=='fit'?f('대회 날짜 (선택)','raceDate',b.raceDate,'type="date" style="height:42px;border:1px solid #DADDE2;border-radius:10px;padding:0 8px;font-size:15px;background:#fff"'):'')+f('나이','age',b.age,numA)+f('최대 심박수 (모르면 비우기)','hrMax',b.hrMax,numA)+f('젖산역치 심박수 (가민, 선택)','lthr',b.lthr,numA)+'</div><div class="note">젖산역치 심박수를 넣으면 강도 판단과 심박 구간을 더 정확하게 맞춰요. 가민 → 성능 통계 → 젖산역치에서 볼 수 있어요.</div>';
  var est=b.age?Math.round(208-0.7*b.age):0;
  h+='<div class="note">'+(b.hrMax?'입력한 최대 심박수로 심박 구간을 계산해요.':est?'최대 심박수를 비우면 나이로 추정해요: 약 '+est+'bpm (208 − 0.7 × 나이, Tanaka 공식). 가민에 나오는 값이 있으면 그걸 넣는 게 더 정확해요.':'가민에 나오는 최대 심박수나 나이를 넣어 주세요.')+'</div>';
  h+='<div class="sectitle">최근 기록 (페이스 계산에 써요)</div><div class="card" style="gap:10px"><div class="chips" style="flex-wrap:wrap">'+[[5,'5km'],[10,'10km'],[21.0975,'하프'],[42.195,'풀코스']].map(function(d){var on=+b.recKm===d[0];return '<button class="chip'+(on?' on':'')+'" data-a="rs-recd" data-v="'+d[0]+'" aria-pressed="'+on+'">'+d[1]+'</button>'}).join('')+'</div>'+
@@ -1154,7 +1155,7 @@ function vRunSet(){
 function readRunSet(){Array.prototype.forEach.call(document.querySelectorAll('[data-rs]'),function(el){rsBuf[el.getAttribute('data-rs')]=el.value})}
 function saveRunSet(){
  readRunSet();var b=rsBuf,old=rset(),n=function(v){var x=parseFloat(v);return isNaN(x)||x<0?0:x};
- var s={goal:b.goal,raceDate:/^\d{4}-\d{2}-\d{2}$/.test(b.raceDate)&&b.goal!=='fit'?b.raceDate:'',age:n(b.age),hrMax:n(b.hrMax),recKm:n(b.recKm),recSec:Math.round(n(b.rh)*3600+n(b.rm)*60+n(b.rs)),longest:n(b.longest),since:old.goal===b.goal&&old.since?old.since:todayKey()};
+ var s={goal:b.goal,raceDate:/^\d{4}-\d{2}-\d{2}$/.test(b.raceDate)&&b.goal!=='fit'?b.raceDate:'',age:n(b.age),hrMax:n(b.hrMax),lthr:n(b.lthr),recKm:n(b.recKm),recSec:Math.round(n(b.rh)*3600+n(b.rm)*60+n(b.rs)),longest:n(b.longest),since:old.goal===b.goal&&old.since?old.since:todayKey()};
  db.run.setup=s;rsBuf=null;save();toasts.push({m:'러닝 목표를 저장했어요.',k:'ok'});go('#run');
 }
 
@@ -1374,7 +1375,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.07',APP_VER='';
+var WEB_VER='v1.08',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
