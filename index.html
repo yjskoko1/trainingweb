@@ -1832,7 +1832,9 @@ document.addEventListener('click',function(ev){
   case 'pick-t':if(picker)setPick(t,!picker.sel[id]);break;
   case 'pick-all':if(picker){var cc=t.getAttribute('data-c'),btns=document.querySelectorAll('.pick[data-c="'+cc+'"]'),allOn=Array.prototype.every.call(btns,function(b){return picker.sel[b.getAttribute('data-id')]});Array.prototype.forEach.call(btns,function(b){setPick(b,!allOn)})}break;
   case 'pick-save':if(picker)savePicker();break;
-  case 'ord-toggle':ordMode=ordMode===t.getAttribute('data-v')?null:t.getAttribute('data-v');render();break;
+  case 'ord-toggle':ordMode=ordMode===t.getAttribute('data-v')?null:t.getAttribute('data-v');ordHome=ordMode?location.hash:null;render();break;
+  case 'ord-stay':modal('');break;
+  case 'ord-end':ordMode=null;ordHome=null;modal('');var op=ordPending;ordPending=null;go(op||'#home');break;
   case 'mv':var mi=+t.getAttribute('data-n'),md=+t.getAttribute('data-d');moveItem(t.getAttribute('data-k'),mi,mi+md);break;
   case 'pick-cat':if(picker){picker.cat=t.getAttribute('data-c');renderPicker()}break;
   case 'pick-back':if(picker){picker.cat=null;renderPicker()}break;
@@ -1930,7 +1932,7 @@ function moveItem(kind,from,to){
  else if(kind==='wke'){var w=wkById(param);if(!w)return;var live=wkEx(w).map(function(x){return x.id});var b=live.splice(from,1)[0];live.splice(to,0,b);w.exIds=live}
  save();render();
 }
-var drag=null,ordMode=null;
+var drag=null,ordMode=null,ordHome=null,ordPending=null;
 function ordList(kind,items){return '<div class="note" style="padding:0 4px">줄을 꾹 잡고 위아래로 끌어 옮기세요. 다 옮기면 <b>순서 변경 끝</b>을 눌러요.</div><div class="list" data-sortable="'+kind+'">'+items.map(function(it,i){return '<div class="li drag-row" data-i="'+i+'" style="touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;min-height:56px"><div style="min-width:0;flex:1"><div class="t">'+esc(it[0])+'</div><div class="meta"><span class="dot" style="background:'+it[2]+'"></span>'+esc(it[1])+'</div></div><span aria-hidden="true" style="color:#9AA0A8;display:flex">'+I.grip+'</span></div>'}).join('')+'</div>'}
 document.addEventListener('pointerdown',function(ev){
  var h=ev.target.closest&&ev.target.closest('.drag,.drag-row');if(!h)return;
@@ -1974,6 +1976,7 @@ function go(hash){routed=hash;try{if(location.hash!==hash)location.hash=hash}cat
 var lastH=null,helpFrom=null;
 function route(hash){
  var full=hash||location.hash||'#home';routed=full;
+ var ordAsk=false;if(ordMode&&ordHome&&full!==ordHome){ordPending=full;full=ordHome;routed=ordHome;try{history.replaceState(null,'',ordHome)}catch(e){}ordAsk=true}
  var h=full.slice(1),m;
  var isHelp=function(x){return x==='guide'||x==='runguide'||/^refs-/.test(x)};if(isHelp(h)&&!isHelp(lastH||''))helpFrom='#'+(lastH||'me');lastH=h;
  if(!(view==='exedit'&&h.indexOf('exedit-')===0))editBuf=null;
@@ -1999,7 +2002,7 @@ function route(hash){
  else if(h==='runguide'){view='runguide'}
  else{view='home'}
  if(view!=='plan')catQuery='';
- picker=null;rowCtx=null;modal('');render();window.scrollTo(0,0);
+ picker=null;rowCtx=null;modal('');render();if(ordAsk){modal('<h2>순서 변경을 끝낼까요?</h2><div class="meta" style="line-height:1.6">지금까지 옮긴 순서는 이미 저장돼 있어요.</div><div class="btnrow"><button class="secondary" data-a="ord-stay">계속 변경하기</button><button class="primary" data-a="ord-end">끝내고 이동</button></div>');return}window.scrollTo(0,0);
 }
 window.addEventListener('hashchange',function(){if(location.hash!==routed)route(location.hash)});
 document.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('a[href^="#"]');if(!a)return;ev.preventDefault();var href=a.getAttribute('href');if(a.closest('nav.tabs')||href==='#today')curDate=href==='#today'&&!a.closest('nav.tabs')?curDate:todayKey();go(href)},true);
