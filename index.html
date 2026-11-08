@@ -814,7 +814,7 @@ function vMe(){
  h+='</div>';
  if(es.length)h+='<div class="list">'+es.slice().reverse().slice(0,20).map(function(e){return '<div class="li"><div><div class="t" style="font-weight:500">'+esc(pretty(e.date,{year:'numeric',month:'long',day:'numeric'}))+'</div><div class="meta">'+[e.w?fmt(e.w)+'kg':'',e.h?fmt(e.h)+'cm':''].filter(Boolean).join(' · ')+'</div></div><button class="ghost" data-a="body-del" data-k="'+e.date+'" aria-label="'+esc(e.date)+' 몸 기록 삭제">삭제</button></div>'}).join('')+'</div>';
  var since=db.lastBackup?daysBetween(db.lastBackup.slice(0,10),todayKey()):null;
- h+='<div class="sectitle" style="padding-top:12px">백업</div><div class="card"><div class="meta" style="line-height:1.6">기록은 이 휴대폰에만 저장돼요. 폰을 바꾸거나 브라우저 데이터를 지우면 사라지니, 가끔 백업 파일을 저장해 두세요.<br><b style="color:var(--ink)">마지막 백업: '+(db.lastBackup?(since===0?'오늘':since+'일 전'):'없음')+'</b></div><button class="primary" data-a="backup">백업 파일 저장</button><button class="secondary" data-a="import">백업 파일에서 복원</button><button class="secondary" data-a="paste">글자로 붙여넣어 복원</button></div>';
+ h+='<div class="sectitle" style="padding-top:12px">백업</div><div class="card"><div class="meta" style="line-height:1.6">기록은 이 휴대폰에만 저장돼요. 폰을 바꾸거나 브라우저 데이터를 지우면 사라지니, 가끔 백업 파일을 저장해 두세요.<br><b style="color:var(--ink)">마지막 백업: '+(db.lastBackup?(since===0?'오늘':since+'일 전'):'없음')+'</b>'+(fsP()?'<br>자동 백업: <b style="color:var(--ink)">'+(db.settings.autoBk===false?'꺼짐':'켜짐')+'</b> · 하루 처음 앱을 열 때 휴대폰 <b style="color:var(--ink)">문서/트레이닝웹</b> 폴더에 저장, 최근 '+BK_KEEP+'개 보관'+(db.autoBkErr?'<br><span style="color:var(--red)">최근 자동 백업 실패: '+esc(db.autoBkErr)+'</span>':''):'<br>앱(APK)에서는 매일 자동으로 백업돼요.')+'</div><button class="primary" data-a="backup">지금 백업</button>'+(fsP()?'<button class="secondary" data-a="bk-list">자동 백업에서 복원</button>':'')+'<button class="secondary" data-a="import">백업 파일에서 복원</button><button class="secondary" data-a="paste">글자로 붙여넣어 복원</button>'+(fsP()?'<button class="ghost" data-a="bk-auto" style="align-self:flex-start">자동 백업 '+(db.settings.autoBk===false?'켜기':'끄기')+'</button>':'')+'</div>';
  }
  if(meTab==='gym'){
  h+='<div class="list"><a class="li" href="#guide"><div><div class="t">헬스 규칙 안내</div><div class="meta">올림·유지·내림, 웜업, 1RM 계산 방법</div></div>'+I.chev+'</a><a class="li" href="#refs-gym"><div><div class="t">연구 근거 · 참고문헌</div><div class="meta">헬스 처방의 근거 논문</div></div>'+I.chev+'</a></div>';
@@ -1300,7 +1300,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v64';
+var WEB_VER='v65';
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',function(e){if(!on)return;var c=on;on=null;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
@@ -1833,7 +1833,24 @@ function saveEdit(){
  });
  editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});var eb=exBack;exBack=null;go(eb||'#ex-'+o.id);
 }
+/* ---- 자동 백업 (앱) ---- */
+var BK_DIR='트레이닝웹',BK_KEEP=14;
+function fsP(){return window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.Filesystem}
+async function bkWrite(name){var F=fsP();try{var pr=await F.checkPermissions();if(pr&&pr.publicStorage&&pr.publicStorage!=='granted')await F.requestPermissions()}catch(e){}
+ await F.writeFile({path:BK_DIR+'/'+name,data:JSON.stringify(db),directory:'DOCUMENTS',encoding:'utf8',recursive:true})}
+async function bkList(){var F=fsP();try{var r=await F.readdir({path:BK_DIR,directory:'DOCUMENTS'});return (r.files||[]).map(function(f){return typeof f==='string'?f:f.name}).filter(function(n){return /^백업-.*\.json$/.test(n)}).sort().reverse()}catch(e){return []}}
+async function autoBackup(force){if(!fsP()||!db)return;db.settings=db.settings||{};if(db.settings.autoBk===false&&!force)return;var tk=todayKey();if(!force&&db.autoBkLast===tk)return;
+ try{await bkWrite('백업-'+tk+'.json');db.autoBkLast=tk;db.lastBackup=new Date().toISOString();db.autoBkErr='';save();
+  var L=await bkList();for(var i=BK_KEEP;i<L.length;i++){try{await fsP().deleteFile({path:BK_DIR+'/'+L[i],directory:'DOCUMENTS'})}catch(e){}}
+  if(force)toast('백업했어요 · 문서/트레이닝웹 폴더');if(view==='me')render()
+ }catch(e){db.autoBkErr=String(e&&e.message||e).slice(0,120);save();if(force)toast('백업이 안 됐어요: '+db.autoBkErr)}}
+async function bkRestorePop(){var L=await bkList();
+ modal('<h2>자동 백업에서 복원</h2><div class="meta">문서/트레이닝웹 폴더 · 최근 '+BK_KEEP+'개까지 보관해요</div><div class="list" style="max-height:55vh;overflow-y:auto">'+(L.length?L.map(function(n){var d=n.replace('백업-','').replace('.json','');return '<button class="li" data-a="bk-pick" data-v="'+esc(n)+'" style="width:100%;text-align:left"><div class="t">'+esc(pretty(d,{year:'numeric',month:'long',day:'numeric',weekday:'short'}))+'</div>'+I.chev+'</button>'}).join(''):'<div class="li" style="cursor:default"><span class="meta">이 앱이 만든 백업 파일이 없어요. 앱을 다시 깔았다면 아래 "백업 파일에서 복원"으로 폴더의 파일을 직접 골라 주세요.</span></div>')+'</div><button class="secondary" data-a="modal-close">닫기</button>')}
+async function bkPick(n){try{var r=await fsP().readFile({path:BK_DIR+'/'+n,directory:'DOCUMENTS',encoding:'utf8'});confirmRestore(typeof r.data==='string'?r.data:'')}catch(e){modal('<h2>파일을 못 열었어요</h2><div class="meta" style="line-height:1.6">앱을 다시 깔면 예전 앱이 만든 파일은 바로 읽을 수 없어요. 설정 → 공통 → <b>백업 파일에서 복원</b>을 눌러 문서/트레이닝웹 폴더에서 파일을 골라 주세요.</div><button class="secondary" data-a="modal-close">닫기</button>')}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(function(){autoBackup(false)},800)});
+setTimeout(function(){autoBackup(false)},2500);
 function doBackup(){
+ if(fsP()){autoBackup(true);return}
  var data=JSON.stringify(db);
  try{
   var blob=new Blob([data],{type:'application/json'}),a=document.createElement('a');
@@ -1994,6 +2011,9 @@ document.addEventListener('click',function(ev){
   case 'ex-del-ok':var xd=exById(id);if(xd){xd.deleted=true;save()}modal('');editBuf=null;go(xd?'#cat-'+xd.cat:'#plan');break;
   case 'body-del':var bk=t.getAttribute('data-k');db.body=db.body.filter(function(x){return x.date!==bk});save();render();break;
   case 'backup':doBackup();break;
+  case 'bk-list':bkRestorePop();break;
+  case 'bk-pick':bkPick(t.getAttribute('data-v'));break;
+  case 'bk-auto':db.settings.autoBk=db.settings.autoBk===false?true:false;save();render();if(db.settings.autoBk)autoBackup(false);break;
   case 'import':document.getElementById('importFile').click();break;
   case 'paste':modal('<h2>글자로 복원</h2><div class="meta" style="line-height:1.6">백업 글자를 붙여넣으세요. 예전 아티팩트 버전에서 "백업 복사하기"로 복사한 글자도 돼요. <b>지금 기록은 백업 내용으로 바뀌어요.</b></div><label for="rs" class="sr">백업 내용</label><textarea id="rs"></textarea><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="danger" data-a="paste-ok">복원</button></div>');break;
   case 'paste-ok':restoreFrom(document.getElementById('rs').value);break;
