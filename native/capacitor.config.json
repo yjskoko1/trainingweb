@@ -1,0 +1,3 @@
+{"appId":"com.yjskoko1.trainingweb","appName":"트레이닝웹","webDir":"www",
+ "server":{"url":"https://yjskoko1.github.io/trainingweb/","cleartext":false,"androidScheme":"https"},
+ "android":{"allowMixedContent":false}}
