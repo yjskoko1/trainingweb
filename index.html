@@ -245,7 +245,7 @@ function defaults(){
  var cats=DEFAULT_CATS.map(function(n,i){return{id:'c'+i+rid(),name:n,color:COLORS[i]}});
  var picks={'카디오':['실내 사이클','로잉머신','러닝머신'],'가슴':['벤치프레스','인클라인 덤벨 프레스','케이블 플라이'],'등':['데드리프트','랫풀다운','시티드 케이블 로우'],'어깨':['오버헤드 프레스','사이드 레터럴 레이즈'],'하체':['스쿼트','레그 프레스','레그 컬'],'이두':['바벨 컬','해머 컬'],'삼두':['트라이셉 푸시다운','오버헤드 트라이셉 익스텐션'],'복근':['행잉 레그 레이즈','케이블 크런치']};
  var ex=[];cats.forEach(function(c){(CATALOG[c.name]||[]).forEach(function(it){if(picks[c.name].indexOf(it[0])>=0)ex.push(mkAny(it,c.id))})});
- var d={v:3,cardioAdded:true,run:{setup:null,runs:[],shoes:[]},swim:{setup:null,swims:[],cssHist:[]},cats:cats,exercises:ex,workouts:[],days:{},body:[],settings:{shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},lastBackup:''};
+ var d={v:3,cardioAdded:true,run:{setup:null,runs:[],shoes:[]},swim:{setup:null,swims:[],cssHist:[]},hc:{on:false,last:null,seen:{}},cats:cats,exercises:ex,workouts:[],days:{},body:[],settings:{shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},lastBackup:''};
  var p={id:'p'+rid(),name:'2분할'};d.programs=[p];d.activeProg=p.id;
  d.workouts=[mkWk(d,'A · 가슴 등 삼두',['가슴','등','삼두'],p.id),mkWk(d,'B · 하체 어깨 이두',['하체','어깨','이두'],p.id)];
  return d;
@@ -798,6 +798,7 @@ function vMe(){
  if(meTab==='common'){
  var so=!db.settings.shiftOff;
  h+='<div class="sectitle">근무 패턴</div><div class="list"><div class="field"><label for="s-shift">당번 → 비번 → 휴무 사용</label><button id="s-shift" role="switch" aria-checked="'+so+'" data-a="shift-toggle" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(so?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(so?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff"></span></button></div>'+(so?'<div class="field"><label for="s-anchor">당번일</label><input id="s-anchor" type="date" value="'+esc(db.settings.shiftAnchor||'')+'" data-s="shiftAnchor" style="height:42px;border:1px solid #DADDE2;border-radius:10px;padding:0 8px;font-size:15px;background:#fff"></div>':'')+'</div>'+(so&&db.settings.shiftAnchor?'<div class="note">오늘은 <b>'+shiftOf(todayKey())+'</b>이에요. 러닝 처방과 홈 화면에 써요.</div>':'');
+ h+=hcSettingsBlock();
  h+='<div class="sectitle" style="padding-top:12px">몸 기록</div>';
  if(memOnly)h+='<div class="toast err">이 브라우저에서는 저장이 되지 않아요. 기록이 사라질 수 있어요.</div>';
  if(lastW||lastH){var diff=lastW&&prev&&prev!==lastW?fix(lastW.w-prev.w):null,b=bmi(lastH,lastW&&lastW.w);
@@ -967,13 +968,13 @@ function vRun(){
  var h=hdr('오늘의 러닝',esc(pretty(k))+(sh?' · '+sh+' · '+SHIFT_NOTE[sh]:''),backBtn('#home','홈으로'),'<div style="display:flex;gap:6px"><a class="icon" href="#runcal" aria-label="러닝 캘린더">'+I.cal+'</a><a class="icon" href="#runset" aria-label="러닝 목표와 설정">'+I.gear+'</a></div>')+'<main>';
  if(!x.setup){
   h+='<div class="card"><div class="name">목표와 기록을 알려주세요</div><div class="meta" style="line-height:1.6">나이(또는 최대 심박수), 최근 기록, 최근 최장 거리, 목표(풀코스·하프·10km·체력 유지)를 넣으면 근무 패턴에 맞춰 날마다 러닝을 처방해 드려요.</div><a class="primary" href="#runset" style="display:flex;align-items:center;justify-content:center;text-decoration:none">목표 설정하기</a></div>';
-  h+='<div class="btnrow"><button class="secondary" data-a="run-log" data-v="out">야외 기록하기</button><button class="secondary" data-a="run-log" data-v="tm">트레드밀 기록하기</button></div>';
+  h+='<div class="btnrow"><button class="secondary" data-a="run-log" data-v="out">야외 기록하기</button><button class="secondary" data-a="run-log" data-v="tm">트레드밀 기록하기</button></div>'+(hcOn()?'<button class="ghost" data-a="hc-import" style="width:100%">가민 기록 불러오기</button>':'');
   return h+runRecent()+'</main>';
  }
  var wk=weekKm(k),es=easyShare(k);
  h+='<a class="card" href="#runset" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><div style="flex:1;min-width:0"><div class="meta">목표</div><div style="font-size:15px;font-weight:700">'+esc(x.goal.name)+(x.dRace!=null&&x.dRace>=0?' · D-'+x.dRace:'')+'</div></div><div style="text-align:right"><div class="meta">최근 7일</div><div style="font-size:15px;font-weight:900">'+wk+'km</div>'+(es!=null?'<div class="meta" style="font-size:11px">쉬운 강도 '+es+'%</div>':'')+'</div></a>';
  var today=db.run.runs.filter(function(r){return r.date===k});
- if(sh==='비번'&&x.cond){h+='<div class="sectitle">어젯밤 잠은 어땠나요?</div><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+[['good','잘 잤어요'],['ok','보통'],['bad','못 잤어요']].map(function(m){var on=x.cond===m[0];return '<button data-a="run-cond" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>'}
+ if(sh==='비번'&&x.cond){var slm=db.hc.sleep&&db.hc.sleep[k];h+='<div class="sectitle">어젯밤 잠은 어땠나요?'+(slm?' <span class="meta" style="font-weight:500">가민 수면 '+Math.floor(slm/60)+'시간 '+(slm%60)+'분'+(db.hc.condAuto===k?' → 자동 선택':'')+'</span>':'')+'</div><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+[['good','잘 잤어요'],['ok','보통'],['bad','못 잤어요']].map(function(m){var on=x.cond===m[0];return '<button data-a="run-cond" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>'}
  if(x.type==='rest'){
   h+='<div class="rx"><div class="row"><span style="font-size:13px;opacity:.85">오늘</span><span class="badge b-keep">쉬는 날</span></div><div class="big">휴식</div><div class="why">'+esc(x.why)+'</div></div>';
  }else{
@@ -986,7 +987,7 @@ function vRun(){
  }
  if(today.length)h+='<div class="toast ok">오늘 '+today.map(function(r){return RTYPE[r.type]+' '+r1(r.km)+'km'}).join(', ')+' 기록했어요.</div>';
  if(sh==='휴무'||sh==='비번'||!sh){var g=x.goal;if(sh==='휴무'){var n=countTypes(addDays(k,1),['long','tempo','interval','fartlek']);}h+='<div class="card" style="gap:8px"><div class="name" style="font-size:14px">근무별 계획</div><div class="meta" style="line-height:1.7">당번: 쉬기 · 비번: 컨디션에 따라 리커버리 '+g.rec[0]+'~'+g.rec[1]+'km (잘 잤으면 쉬운 달리기, 못 잤으면 짧게)<br>휴무: '+g.seq.map(function(t){return RTYPE[t]}).join(' → ')+' 순서로 반복</div></div>'}
- h+='<div class="btnrow"><button class="primary" data-a="run-log" data-v="out">야외 기록하기</button><button class="secondary" data-a="run-log" data-v="tm">트레드밀 기록하기</button></div>';
+ h+='<div class="btnrow"><button class="primary" data-a="run-log" data-v="out">야외 기록하기</button><button class="secondary" data-a="run-log" data-v="tm">트레드밀 기록하기</button></div>'+(hcOn()?'<button class="ghost" data-a="hc-import" style="width:100%">가민 기록 불러오기</button>':'');
  var p=x.pred;
  if(p.half||p.tanda){
   h+='<div class="card" style="gap:6px"><div class="name" style="font-size:14px">지금 예상 기록</div>'+
@@ -1283,6 +1284,75 @@ function vRefs(){
  return h+'</main>';
 }
 
+/* =============== 헬스 커넥트 (앱에서만) =============== */
+var HC_APK='https://yjskoko1.github.io/trainingweb/app/trainingweb.apk',hcBusy=false;
+function hcNative(){try{return !!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.Health)}catch(e){return false}}
+function hcP(){return Capacitor.Plugins.Health}
+function hcOn(){return hcNative()&&db.hc.on}
+function hcKey(iso){return key(new Date(iso))}
+async function hcHR(s,e){try{var r=await hcP().readSamples({dataType:'heartRate',startDate:s,endDate:e,limit:10000});var v=(r.samples||[]).map(function(x){return +x.value}).filter(function(x){return x>30&&x<240});if(!v.length)return{avg:0,max:0};return{avg:Math.round(v.reduce(function(a,b){return a+b},0)/v.length),max:Math.max.apply(null,v)}}catch(e){return{avg:0,max:0}}}
+async function hcConnect(){
+ if(!hcNative()){hcWebInfo();return}
+ try{
+  var a=await hcP().isAvailable();
+  if(!a.available){modal('<h2>헬스 커넥트가 필요해요</h2><div class="meta" style="line-height:1.6">안드로이드 14 이상은 기본으로 들어 있어요. 그보다 낮은 버전이면 플레이스토어에서 <b>Health Connect</b>를 설치해 주세요.'+(a.reason?'<br>('+esc(a.reason)+')':'')+'</div><button class="primary" data-a="modal-close">확인</button>');return}
+  var st=await hcP().requestAuthorization({read:['workouts','heartRate','distance','sleep'],requestHistoryAccess:true});
+  if((st.readAuthorized||[]).indexOf('workouts')<0){toast('운동 기록 읽기 권한을 허용해야 불러올 수 있어요.','err');return}
+  db.hc.on=true;save();await hcImport(true);
+ }catch(e){toast('헬스 커넥트 연결에 실패했어요: '+(e&&e.message||e),'err')}
+}
+function hcDupRun(k,km){return db.run.runs.some(function(r){return r.date===k&&Math.abs((+r.km||0)-km)<=Math.max(0.3,km*0.1)})}
+function hcDupSwim(k,m){return db.swim.swims.some(function(w){return w.date===k&&Math.abs((+w.m||0)-m)<=Math.max(50,m*0.1)})}
+async function hcSleep(){
+ try{var t=todayKey(),y=addDays(t,-1),s=new Date(y+'T18:00:00'),e=new Date(t+'T14:00:00');
+  var r=await hcP().readSamples({dataType:'sleep',startDate:s.toISOString(),endDate:e.toISOString(),limit:500});
+  var min=0;(r.samples||[]).forEach(function(x){if(x.sleepState==='awake'||x.sleepState==='inBed')return;min+=Math.max(0,(Date.parse(x.endDate)-Date.parse(x.startDate))/60000)});
+  min=Math.round(min);if(!min)return;
+  db.hc.sleep=db.hc.sleep||{};db.hc.sleep[t]=min;
+  db.run.cond=db.run.cond||{};
+  if(shiftOf(t)==='비번'&&!db.run.cond[t]){db.run.cond[t]=min>=420?'good':min>=300?'ok':'bad';db.hc.condAuto=t}
+ }catch(e){}
+}
+async function hcImport(show){
+ if(!hcOn()||hcBusy)return;hcBusy=true;
+ try{
+  var since=db.hc.last?new Date(Date.parse(db.hc.last)-3*864e5):new Date(Date.now()-60*864e5);
+  var res=await hcP().queryWorkouts({startDate:since.toISOString(),endDate:new Date().toISOString(),limit:500,ascending:true});
+  var added=[];
+  for(var i=0;i<(res.workouts||[]).length;i++){
+   var w=res.workouts[i],id=w.platformId||(w.startDate+'|'+w.workoutType);if(db.hc.seen[id])continue;
+   var t=String(w.workoutType||''),k=hcKey(w.startDate),dist=+w.totalDistance||0,sec=Math.round(+w.duration||0);
+   if(/^running/.test(t)){
+    var km=Math.round(dist/10)/100;if(!(km>0)){db.hc.seen[id]=1;continue}
+    if(hcDupRun(k,km)){db.hc.seen[id]=1;continue}
+    var hr=await hcHR(w.startDate,w.endDate),x=runRx(k),ty=x&&RTYPE[x.type]&&x.type!=='rest'&&x.type!=='race'?x.type:'easy';
+    db.run.runs.push({id:'r'+rid(),date:k,type:ty,place:t==='runningTreadmill'?'tm':'out',km:km,sec:sec,hr:hr.avg,hrMax:hr.max,shoe:'',memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
+    added.push('러닝 '+short(k)+' '+km+'km');
+   }else if(/^swimming/.test(t)){
+    var m=Math.round(dist);if(!(m>0)){db.hc.seen[id]=1;continue}
+    if(hcDupSwim(k,m)){db.hc.seen[id]=1;continue}
+    var ss=sset(),kind=ss&&(ss.lessonDays||[]).indexOf(parseKey(k).getDay())>=0?'lesson':'free';
+    db.swim.swims.push({id:'w'+rid(),date:k,kind:kind,m:m,sec:sec,cont:0,strokes:['free'],stage:ss?ss.stage||1:1,memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
+    added.push('수영 '+short(k)+' '+m+'m');
+   }else continue;
+   db.hc.seen[id]=1;
+  }
+  await hcSleep();
+  db.hc.last=new Date().toISOString();save();render();
+  if(added.length)modal('<h2>가민 기록 '+added.length+'개를 불러왔어요</h2><div class="list">'+added.map(function(a){return '<div class="li" style="cursor:default"><span class="t">'+esc(a)+'</span></div>'}).join('')+'</div><div class="note" style="padding:0;line-height:1.6">러닝 종류는 그날 추천을 기준으로 넣었어요. 다르면 기록을 눌러 고쳐 주세요. 수영은 강습 요일이면 강습으로 넣었어요.</div><button class="primary" data-a="modal-close">확인</button>');
+  else if(show)toast('새로 불러올 가민 기록이 없어요.');
+ }catch(e){if(show)toast('불러오기에 실패했어요: '+(e&&e.message||e),'err')}
+ hcBusy=false;
+}
+function hcAuto(){if(hcOn()&&(!db.hc.last||Date.now()-Date.parse(db.hc.last)>15*60000))hcImport(false)}
+function hcWebInfo(){modal('<h2>가민 기록 자동 불러오기</h2><div class="meta" style="line-height:1.7">브라우저에서는 헬스 커넥트에 접근할 수 없어요. 트레이닝웹 앱(APK)을 설치하면 가민 시계로 뛴 러닝과 수영 기록, 수면 시간을 자동으로 불러와요.</div><ol style="margin:0;padding-left:20px;line-height:1.8;font-size:14px"><li>지금 앱의 설정 → 공통에서 <b>백업 파일 저장</b></li><li>아래 버튼으로 APK를 받아 설치 (처음 한 번 "출처를 알 수 없는 앱 설치" 허용)</li><li>새 앱의 설정 → 공통에서 <b>백업 불러오기</b></li><li>설정 → 공통 → <b>가민 연결하기</b></li></ol><a class="primary" href="'+HC_APK+'" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;text-decoration:none">앱(APK) 받기</a><button class="secondary" data-a="modal-close">닫기</button>')}
+function hcSettingsBlock(){
+ var h='<div class="sectitle" style="padding-top:12px">가민 연결 (헬스 커넥트)</div>';
+ if(!hcNative())return h+'<div class="list"><button class="li" data-a="hc-info" style="width:100%;text-align:left"><div><div class="t">앱 설치하고 가민 연결하기</div><div class="meta">러닝·수영 기록과 수면 시간을 자동으로 불러와요</div></div>'+I.chev+'</button></div>';
+ if(!db.hc.on)return h+'<div class="card" style="gap:8px"><div class="meta" style="line-height:1.6">가민 커넥트 앱 → 설정 → 연결된 앱에서 <b>헬스 커넥트</b>를 켠 다음 연결해 주세요.</div><button class="primary" data-a="hc-connect">가민 연결하기</button></div>';
+ return h+'<div class="list"><div class="li" style="cursor:default"><div><div class="t">연결됨</div><div class="meta">마지막 불러오기 '+(db.hc.last?esc(new Date(db.hc.last).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})):'-')+' · 앱을 열 때 자동으로 불러와요</div></div></div><button class="li" data-a="hc-import" style="width:100%;text-align:left"><div class="t">지금 불러오기</div>'+I.chev+'</button><button class="li" data-a="hc-perm" style="width:100%;text-align:left"><div class="t">헬스 커넥트 권한 설정</div>'+I.chev+'</button><button class="li" data-a="hc-off" style="width:100%;text-align:left"><div class="t" style="color:var(--red)">자동 불러오기 끄기</div></button></div>';
+}
+
 /* =============== 수영 =============== */
 var STROKE={free:'자유형',back:'배영',breast:'평영',fly:'접영'},GEAR={pull:'풀부이',paddle:'패들',kick:'킥판',fins:'오리발'};
 var SKIND={free:'자유 수영',lesson:'강습'},SCOLOR={free:'#1D9E75',lesson:'#3B6D11'};
@@ -1377,7 +1447,7 @@ function vSwim(){
  }
  if(today.length)h+='<div class="toast ok">오늘 '+today.map(function(w){return SKIND[w.kind]+' '+(+w.m||0)+'m'}).join(', ')+' 기록했어요.</div>';
  h+='<div class="card" style="gap:8px"><div class="name" style="font-size:14px">주간 계획</div><div class="meta" style="line-height:1.7">강습 요일: 강습 · 비번: 자유 수영<br>휴무·당번: 쉬기 (휴무는 러닝과 하체 운동에 집중)</div></div>';
- return h+btns+swimRecent()+'</main>';
+ return h+btns+(hcOn()?'<button class="ghost" data-a="hc-import" style="width:100%">가민 기록 불러오기</button>':'')+swimRecent()+'</main>';
 }
 function swimRecent(){var l=swimsSorted().reverse().slice(0,5);if(!l.length)return '';return '<div class="sectitle">최근 수영</div><div class="list">'+l.map(swimRow).join('')+'</div><a class="secondary" href="#swimhist" style="display:flex;align-items:center;justify-content:center;text-decoration:none">전체 기록 · 그래프</a>'}
 function vSwimSet(){
@@ -1742,7 +1812,7 @@ function ensureProgs(o){
 }
 /* v3 백업 또는 이전 아티팩트 버전(v2) 백업을 받아들임 */
 function normalize(o){
- if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.run=o.run||{setup:null,runs:[],shoes:[]};o.run.runs=o.run.runs||[];o.run.shoes=o.run.shoes||[];o.swim=o.swim||{setup:null,swims:[],cssHist:[]};o.workouts.forEach(function(w){if(!w.mode){w.mode='h';Object.keys(o.days).forEach(function(k){var x=o.days[k];if(x&&x.workout===w.id)(x.sets||[]).forEach(function(st){if(!st.mode)st.mode='h'})})}});o.swim.swims=o.swim.swims||[];o.swim.cssHist=o.swim.cssHist||[];o.settings=Object.assign({shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},o.settings||{});ensureProgs(o);ensureCardio(o);return o}
+ if(o&&o.v===3&&Array.isArray(o.exercises)&&Array.isArray(o.cats)){o.workouts=o.workouts||[];o.days=o.days||{};o.body=o.body||[];o.run=o.run||{setup:null,runs:[],shoes:[]};o.run.runs=o.run.runs||[];o.run.shoes=o.run.shoes||[];o.swim=o.swim||{setup:null,swims:[],cssHist:[]};o.hc=o.hc||{on:false,last:null,seen:{}};o.hc.seen=o.hc.seen||{};o.workouts.forEach(function(w){if(!w.mode){w.mode='h';Object.keys(o.days).forEach(function(k){var x=o.days[k];if(x&&x.workout===w.id)(x.sets||[]).forEach(function(st){if(!st.mode)st.mode='h'})})}});o.swim.swims=o.swim.swims||[];o.swim.cssHist=o.swim.cssHist||[];o.settings=Object.assign({shiftAnchor:'2026-11-07',bar:20,rest:90,restWarm:60,restOn:false,plates:[25,20,15,10,5,2.5,1.25],dbs:[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]},o.settings||{});ensureProgs(o);ensureCardio(o);return o}
  if(o&&o.app==='hc'&&o.cfg&&Array.isArray(o.cfg.exercises)){
   var c=o.cfg,d={v:3,cats:(c.categories||[]).map(function(x){return{id:x.id,name:x.name,color:x.color}}),exercises:[],workouts:(c.routines||[]).map(function(r){return{id:r.id,name:r.name,exIds:r.exIds||[]}}),days:{},body:(o.body&&o.body.entries)||[],settings:{bar:20,rest:(c.settings&&c.settings.rest)||90,restWarm:60,restOn:false},lastBackup:''};
   c.exercises.forEach(function(e){var lin=e.method!=='double';d.exercises.push({id:e.id,name:e.name,cat:e.cat,method:lin?'linear':'double',sets:e.method==='gzclp'?5:(e.sets||3),repsMin:e.method==='gzclp'?3:(e.repsMin||8),repsMax:e.method==='gzclp'?3:(e.repsMax||12),increment:e.increment||2.5,startWeight:+e.startWeight||0,anchor:e.anchor||'',warm:(+e.startWeight||0)>0?(lin?'full':'light'):'none',failLimit:e.failLimit||3,deloadPct:e.deloadPct==null?10:e.deloadPct,rest:e.rest||0,deleted:!!e.deleted})});
@@ -1774,6 +1844,11 @@ document.addEventListener('click',function(ev){
   case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
   case 'day-pop':daySheet(t.getAttribute('data-k'));break;
   case 'run-day':runDaySheet(t.getAttribute('data-k'));break;
+  case 'hc-connect':hcConnect();break;
+  case 'hc-import':hcImport(true);break;
+  case 'hc-info':hcWebInfo();break;
+  case 'hc-perm':try{hcP().openHealthConnectSettings()}catch(e){}break;
+  case 'hc-off':db.hc.on=false;save();toast('자동 불러오기를 껐어요.');render();break;
   case 'rm-apply':if(editBuf){readEdit();var rc=rmCalc(editBuf);if(!rc){toast('무게와 횟수를 넣어 주세요.','err');break}editBuf.M.h._t=rc.h;editBuf.M.s._t=rc.s;editBuf.M[''] && (editBuf.M['']._t=rc.h);toast('근비대 '+fmt(rc.h)+'kg · 근력 '+fmt(rc.s)+'kg로 맞췄어요. 저장을 눌러 주세요.');render()}break;
   case 'adv-toggle':if(editBuf){readEdit();editBuf.adv=!editBuf.adv;render()}break;
   case 'cat-exset':exBack=view==='cat'?'#cat-'+param:'#plan';exEm='h';editBuf=null;go('#exedit-'+id);break;
@@ -2005,6 +2080,7 @@ function route(hash){
  picker=null;rowCtx=null;modal('');render();if(ordAsk){modal('<h2>순서 변경을 끝낼까요?</h2><div class="meta" style="line-height:1.6">지금까지 옮긴 순서는 이미 저장돼 있어요.</div><div class="btnrow"><button class="secondary" data-a="ord-stay">계속 변경하기</button><button class="primary" data-a="ord-end">끝내기</button></div>');return}window.scrollTo(0,0);
 }
 window.addEventListener('hashchange',function(){if(location.hash!==routed)route(location.hash)});
+document.addEventListener('visibilitychange',function(){if(!document.hidden)hcAuto()});setTimeout(hcAuto,1500);
 document.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('a[href^="#"]');if(!a)return;ev.preventDefault();var href=a.getAttribute('href');if(a.closest('nav.tabs')||href==='#today')curDate=href==='#today'&&!a.closest('nav.tabs')?curDate:todayKey();go(href)},true);
 
 /* =============== boot =============== */
