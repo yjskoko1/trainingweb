@@ -780,6 +780,7 @@ function vRunGuide(){
  var h=hdr('러닝 처방 근거','러닝 처방은 이렇게 정해져요',backBtn(helpFrom||'#me'))+'<main>';
  function sec(title,items){return '<div class="sectitle">'+title+'</div><div class="list">'+items.map(function(it){return '<div class="li" style="align-items:flex-start;flex-direction:column;gap:4px"><div class="row" style="justify-content:flex-start;gap:8px">'+(it[0]?'<span class="badge '+it[0]+'">'+it[1]+'</span>':'<span class="t">'+it[1]+'</span>')+'</div><div style="font-size:14px;line-height:1.6;color:#33373C">'+it[2]+'</div></div>'}).join('')+'</div>'}
  h+=sec('러닝',[['','근무 패턴','당번은 쉬고, 비번은 잠 컨디션에 따라 쉬운 달리기·리커버리·짧은 리커버리 중 하나, 휴무는 목표별 순서(풀코스: 롱런 → 템포런 → 롱런 → 인터벌)로 강도 있게 뛰어요.'],
+  ['','다리 피로','하체 본세트·러닝 시간·수영 시간으로 다리 부하 점수를 내고, 최근 3일이 평소의 1.3배 이상이면 강한 러닝과 롱런을 쉬운 러닝으로 바꿔요. 홈의 "오늘 할 것"에서 점수를 눌러 계산 내용을 볼 수 있어요.'],
   ['','하체 운동한 날','하체를 3세트 이상 한 날은 쉬운 러닝으로 바꾸고 거리를 25% 줄여요. 다음 날은 템포·인터벌을 다음 휴무로 미루고, 롱런은 거리를 유지한 채 심박 상한(최대 심박의 75%)을 걸어요. 하체 운동 피로는 24~48시간 러닝 능력을 떨어뜨리고 같은 속도에서 심박을 올려요(Doma 2017). 하체는 휴무에 러닝을 먼저 하고 몇 시간 뒤에 하면, 다음 날 당번에 쉬고 비번 러닝까지 약 48시간이 생겨 가장 잘 맞아요.'],['','10% 규칙','한 번 뛰는 거리는 최근 30일 최장 거리의 10%를 넘지 않게 처방해요. 이보다 길게 뛰면 과사용 부상 위험이 높아졌다는 연구(Frandsen 외, 2025)를 따랐어요.'],['','80% 쉬운 강도','전체 거리의 약 80%를 쉬운 강도로 채워요. 마라톤 러너 15만여 명을 분석한 연구에서 가장 빠른 그룹의 80% 이상이 이런 배분을 썼고(Muniz-Pumares 외, 2025), 세계적인 장거리 선수들도 80% 이상을 낮은 강도로 뛰어요(Haugen 외, 2022). 최근 4주 쉬운 강도 비율을 러닝 화면에 보여줘요.'],['','예상 기록·페이스','5km~하프 기록은 최근 기록으로 예측해요(Riegel 공식). 이 공식은 아마추어 러너의 풀코스를 10분 이상 빠르게 예측하는 경우가 많아서(Vickers & Vertosick 2016), 훈련 페이스는 하프 예측 페이스를 기준으로 정해요. 풀코스는 기록이 쌓이면 최근 8주 주당 거리와 평균 페이스로 예측해요(Tanda 2011).'],['','테이퍼','대회 2주 전부터 거리를 30~50% 줄이고, 강도와 뛰는 날 수는 유지해요. 21일 이내로 훈련량을 41~60% 줄이고 강도·빈도를 유지하는 방식이 효과적이었다는 메타분석을 따랐어요(Wang 외, 2023; Bosquet 외, 2007).'],['','심박','최대 심박수를 모르면 208 − 0.7 × 나이로 추정해요(Tanaka 공식, 2001). 추정값은 사람마다 오차가 커서, 가민에 나오는 값이나 실제로 잰 값이 더 정확해요.']]);
  h+='<div class="note">처방은 일반적인 연구 결과를 바탕으로 해요. 통증이 있거나 몸이 안 좋은 날은 처방보다 몸 상태를 먼저 따라 주세요.</div>';
  return h+'</main>';
@@ -877,6 +878,17 @@ function longest30(k){var from=addDays(k,-30),mx=0;db.run.runs.forEach(function(
 /* 하체 운동 뒤 남은 피로: 같은 날이면 'same', 전날이면 'next' (Doma 2017 Sports Med, Doma 2017 APNM) */
 function legSets(k){var d=db.days[k];if(!d)return 0;return d.sets.filter(function(s){if(s.warm)return false;var e=exById(s.exId);return e&&catById(e.cat).name==='하체'}).length}
 function legFatigue(k){return legSets(k)>=3?'same':legSets(addDays(k,-1))>=3?'next':null}
+/* 다리 부하 점수: 하체 본세트 1점, 러닝 10분 1점(템포·인터벌·파틀렉·대회 2배), 수영 10분 0.2점.
+   최근 3일 합 ÷ 평소(직전 28일 하루 평균 × 3). 세션 부하(Foster 2001)·TRIMP(Banister 1991)·급성:만성 부하 비(Gabbett 2016) 개념 */
+var QLOAD={tempo:2,interval:2,fartlek:2,race:2};
+function legLoadDay(d,noRun){var p=legSets(d);if(!noRun)db.run.runs.forEach(function(r){if(r.date===d){var mn=(+r.sec||(+r.km||0)*360)/60;p+=mn/10*(QLOAD[r.type]||1)}});
+ db.swim.swims.forEach(function(w){if(w.date===d){var mn=(+w.sec||(+w.m||0)*2.4)/60;p+=mn/10*0.2}});return p}
+function legFat(k){var rec=0,b=0,first=null;for(var i=1;i<=3;i++)rec+=legLoadDay(addDays(k,-i));rec+=legSets(k);
+ for(var j=4;j<=31;j++)b+=legLoadDay(addDays(k,-j));
+ var all=Object.keys(db.days).filter(function(d){return db.days[d].sets.length}).concat(db.run.runs.map(function(r){return r.date}),db.swim.swims.map(function(w){return w.date})).sort();first=all[0];
+ if(!first||daysBetween(first,k)<14||b<3)return{r:null,rec:r1(rec),base:null};
+ var base=b/28*3,r=Math.round(rec/base*10)/10;return{r:r,rec:r1(rec),base:r1(base),lv:r>=1.3?'high':r<0.8?'low':'ok'}}
+var FATLV={high:'높음',ok:'보통',low:'여유'};
 function breakDays(k){var past=db.run.runs.filter(function(r){return r.date<k&&r.km>0});if(!past.length)return 0;var last=past.reduce(function(a,r){return r.date>a?r.date:a},'');var g=daysBetween(last,k);return g>30?g:0}
 function weekKm(k){var from=addDays(k,-6);return r1(db.run.runs.filter(function(r){return r.date>=from&&r.date<=k}).reduce(function(a,r){return a+(+r.km||0)},0))}
 function easyShare(k){var from=addDays(k,-27),rs=db.run.runs.filter(function(r){return r.date>=from&&r.date<=k});var t=rs.reduce(function(a,r){return a+(+r.km||0)},0);if(!t)return null;var e=rs.filter(function(r){return EASYT[r.type]}).reduce(function(a,r){return a+(+r.km||0)},0);return Math.round(e/t*100)}
@@ -954,6 +966,11 @@ function runRx(k){
    else o.notes.push('어제 하체 운동을 했어요. 다리가 무거우면 더 천천히 뛰어도 돼요.');
    o.hrCap=hc;
   }
+ }
+ var fz=legFat(k);o.fat=fz;
+ if(fz.lv==='high'&&o.type!=='race'&&o.type!=='rest'&&(QT[o.type]||o.type==='long'||!o.leg)){
+  if(QT[o.type]||o.type==='long'){o.notes=o.notes.filter(function(x){return x.indexOf('어제 하체')<0});o.moved=o.type;o.type='easy';o.km=rHalf(g.rec[1]*0.8);o.pace=ph?[ph+80,ph+110]:null;o.hr=hr(0.6,0.75);o.detail='처음부터 끝까지 편하게. 다리가 무거우면 걷기를 섞어도 돼요.';o.why='최근 3일 다리 부하가 평소의 '+fz.r+'배예요. '+RTYPE[o.moved]+'은 피로가 풀린 뒤로 미루고 오늘은 쉽게 뛰어요.'}
+  else{o.km=rHalf(Math.max(3,o.km*0.8));o.notes.push('최근 3일 다리 부하가 평소의 '+fz.r+'배라 거리를 20% 줄였어요.')}
  }
  if(taper<1&&o.type!=='interval'){o.km=r1(o.km*taper);o.notes.push('대회 D-'+dR+': 테이퍼 기간이라 거리를 '+Math.round((1-taper)*100)+'% 줄였어요. 강도와 뛰는 날 수는 그대로 유지해요.')}
  else if(taper<1)o.notes.push('대회 D-'+dR+': 테이퍼 기간이라 반복 횟수를 줄였어요. 강도와 뛰는 날 수는 그대로 유지해요.');
@@ -1300,7 +1317,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v65';
+var WEB_VER='v66';
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',function(e){if(!on)return;var c=on;on=null;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
@@ -1591,6 +1608,44 @@ function swimAct(a,t,id){
 }
 
 /* =============== 홈 =============== */
+function gymRx(k){var sh=shiftOf(k),gd=db.days[k],o={shift:sh};
+ if(gd&&gd.sets.length){var w=gd.workout?wkById(gd.workout):null;o.st=gd.done?'done':'doing';o.txt=(w?w.name:'헬스')+(gd.done?' 완료':' 진행 중');return o}
+ var nx=nextWk(k);if(!nx){o.st='none';o.txt='워크아웃을 만들면 추천해요';return o}
+ if(sh==='당번'){o.st='rest';o.txt='쉬기';o.why='당번이라 쉬는 날이에요.';return o}
+ var legN=wkEx(nx).filter(function(e){return catById(e.cat).name==='하체'}).length,fz=legFat(k);o.st='go';o.wk=nx;o.txt=nx.name+(legN?' · 하체 '+legN+'종목':'');
+ if(fz.lv==='high'&&legN){o.why='다리 피로가 높아요('+fz.r+'배). 하체 종목은 본세트를 1세트씩 줄이고 무게는 유지하세요.'}
+ else o.why='다음 차례 루틴이에요.'+(sh==='비번'&&legN?' 하체는 휴무 강도 러닝 전날보다 비번에 하는 게 좋아요.':'');
+ return o}
+function dayPlan(k){var sh=shiftOf(k),rows=[],rx=runRx(k),sx=swimRx(k),gx=gymRx(k),fz=legFat(k);
+ var runDone=db.run.runs.filter(function(r){return r.date===k}),swDone=db.swim.swims.filter(function(w){return w.date===k});
+ rows.push({sp:'gym',name:'헬스',href:'#today',col:'#1F55D6',st:gx.st,txt:gx.txt,why:gx.why});
+ if(runDone.length)rows.push({sp:'run',name:'러닝',href:'#run',col:'#B4441C',st:'done',txt:runDone.map(function(r){return RTYPE[r.type]+' '+r1(r.km)+'km'}).join(' + ')+' 완료'});
+ else if(!rx.setup)rows.push({sp:'run',name:'러닝',href:'#run',col:'#B4441C',st:'none',txt:'목표를 정하면 추천해요'});
+ else rows.push({sp:'run',name:'러닝',href:'#run',col:'#B4441C',st:rx.type==='rest'?'rest':'go',txt:rx.type==='rest'?'쉬기':RTYPE[rx.type]+(rx.km?' '+r1(rx.km)+'km':''),why:rx.why});
+ if(swDone.length)rows.push({sp:'swim',name:'수영',href:'#swim',col:'#1F7A44',st:'done',txt:swDone.map(function(w){return (+w.m||0).toLocaleString()+'m'}).join(' + ')+' 완료'});
+ else if(!sx.setup)rows.push({sp:'swim',name:'수영',href:'#swim',col:'#1F7A44',st:'none',txt:'설정하면 추천해요'});
+ else rows.push({sp:'swim',name:'수영',href:'#swim',col:'#1F7A44',st:sx.type==='rest'?'rest':'go',txt:sx.type==='lesson'?'강습':sx.type==='rest'?'쉬기':sx.title+' '+(sx.m||0).toLocaleString()+'m',why:sx.why});
+ /* 한 가지만 한다면 */
+ var go=rows.filter(function(r){return r.st==='go'}),pick=null,pw='';
+ var g=function(sp){return go.filter(function(r){return r.sp===sp})[0]};
+ if(g('swim')&&sx.type==='lesson'){pick=g('swim');pw='강습은 정해진 시간이라 먼저 챙겨요.'}
+ else if(sh==='휴무'&&g('run')&&rx.type&&(QT0[rx.type]||rx.type==='long')){pick=g('run');pw='휴무는 강도 러닝을 하는 날이라 러닝이 먼저예요.'}
+ else if(g('gym')){pick=g('gym');pw='근력은 꾸준히 이어가야 무게가 올라가요. 러닝 회복·쉬운 날은 빠져도 손해가 적어요.'}
+ else if(g('run')){pick=g('run');pw='오늘 남은 추천 중 러닝이 가장 중요해요.'}
+ else if(g('swim')){pick=g('swim');pw=''}
+ return{sh:sh,rows:rows,pick:pick,pw:pw,fat:fz,cond:(db.run.cond||{})[k]}}
+var QT0={tempo:1,interval:1,fartlek:1};
+function planCard(k){var P=dayPlan(k),ST={done:['완료','#2E9E6B'],doing:['진행 중','#1F55D6'],go:['추천','#16181A'],rest:['쉬기','#9AA0A8'],none:['설정','#9AA0A8']};
+ var h='<div class="card" style="gap:10px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:16px">오늘 할 것</div><button data-a="fat-pop" style="all:unset;cursor:pointer;font-size:12px;color:var(--sub)">다리 피로 '+(P.fat.r!=null?'<b style="color:'+(P.fat.lv==='high'?'#D9534F':P.fat.lv==='low'?'#2E9E6B':'var(--ink)')+'">'+FATLV[P.fat.lv]+' '+P.fat.r+'</b>':'<b>계산 중</b>')+' ⓘ</button></div>';
+ if(P.sh==='비번'&&P.cond)h+='<div class="meta" style="font-size:12px;margin-top:-6px">잠 컨디션 '+({good:'좋음',ok:'보통',bad:'나쁨'}[P.cond]||'')+' 반영</div>';
+ h+='<div style="display:flex;flex-direction:column;gap:2px">'+P.rows.map(function(r){var st=ST[r.st];return '<a href="'+r.href+'" style="text-decoration:none;color:inherit;display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #F0F1F3'+(r.st==='rest'||r.st==='none'?';opacity:.6':'')+'"><span style="flex:none;width:8px;height:8px;border-radius:50%;margin-top:7px;background:'+(r.st==='done'?'#2E9E6B':r.col)+'"></span><div style="flex:1;min-width:0"><div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap"><b style="font-size:15px">'+r.name+'</b><span style="font-size:15px">'+esc(r.txt)+'</span><span style="margin-left:auto;font-size:11px;font-weight:700;color:'+st[1]+'">'+(r.st==='done'?'✓ ':'')+st[0]+'</span></div>'+(r.why&&r.st!=='done'?'<div class="meta" style="font-size:12px;line-height:1.5;margin-top:2px">'+esc(r.why)+'</div>':'')+'</div></a>'}).join('')+'</div>';
+ if(P.pick)h+='<div style="background:#F4F6F9;border-radius:12px;padding:10px 12px"><div style="font-size:14px"><b>한 가지만 한다면 → '+P.pick.name+'</b></div>'+(P.pw?'<div class="meta" style="font-size:12px;margin-top:2px">'+esc(P.pw)+'</div>':'')+'</div>';
+ else if(P.rows.every(function(r){return r.st!=='go'}))h+='<div class="meta" style="font-size:13px">'+(P.rows.some(function(r){return r.st==='done'})?'오늘 할 운동을 마쳤어요. 잘했어요!':'오늘은 쉬는 날이에요. 회복도 훈련이에요.')+'</div>';
+ h+='<button class="ghost" data-a="plan-other" style="align-self:flex-start;font-size:13px">오늘은 다르게 할게</button></div>';return h}
+function fatPop(){var k=todayKey(),f=legFat(k),days=[];for(var i=3;i>=1;i--){var d=addDays(k,-i);days.push([short(d),r1(legLoadDay(d))])}days.push(['오늘 헬스',legSets(k)]);
+ modal('<h2>다리 피로</h2>'+(f.r!=null?'<div style="font-size:28px;font-weight:900;color:'+(f.lv==='high'?'#D9534F':f.lv==='low'?'#2E9E6B':'var(--ink)')+'">'+f.r+'배 · '+FATLV[f.lv]+'</div><div class="meta">최근 3일 '+f.rec+'점 ÷ 평소 3일 '+f.base+'점</div>':'<div class="meta" style="line-height:1.6">기록이 2주 이상 쌓이면 계산해요. 지금은 하체 운동 다음 날 규칙만 적용돼요.</div>')+
+ '<div class="list">'+days.map(function(x){return '<div class="li" style="cursor:default"><span class="t">'+esc(x[0])+'</span><b>'+x[1]+'점</b></div>'}).join('')+'</div>'+
+ '<div class="note" style="padding:0;line-height:1.7"><b>점수 계산</b><br>하체 본세트 1세트 = 1점 · 러닝 10분 = 1점(템포·인터벌·파틀렉 2배) · 수영 10분 = 0.2점<br><b>판단</b><br>1.3배 이상 높음 → 강한 러닝은 쉬운 러닝으로, 하체는 1세트씩 줄이기 · 0.8~1.3 보통 → 처방대로 · 0.8 미만 여유<br>비번 날 잠 컨디션이 나쁘면 러닝 강도를 한 단계 더 낮춰요.<br><b>근거</b><br>세션 부하(Foster 2001), 심박 기반 TRIMP(Banister 1991), 최근 부하와 평소 부하의 비율(Gabbett 2016), 근력·지구력 간섭 효과(Wilson 2012). 추정치라 몸 상태가 다르면 몸을 먼저 따르세요.</div><button class="secondary" data-a="modal-close">닫기</button>')}
 function vHome(){
  var k=todayKey(),sh=shiftOf(k);
  var h='<header><div class="ttl"><div class="eyebrow">'+esc(pretty(k,{month:'long',day:'numeric',weekday:'long'}))+'</div><h1>'+(sh?'오늘은 '+sh:'트레이닝웹')+(sh?' <span class="badge" style="background:var(--ink);color:#fff;font-size:12px;vertical-align:middle">'+SHIFT_NOTE[sh]+'</span>':'')+'</h1></div></header><main>';
@@ -1601,6 +1656,7 @@ function vHome(){
  var gymTxt=gymDone?'오늘 '+(gw?esc(gw.name):'운동')+(gd.done?' 완료':' 진행 중'):(nx?'다음 차례<br><b style="color:var(--ink)">'+esc(nx.name)+'</b>':'워크아웃 만들기');
  var runTxt=runToday.length?'오늘 '+runToday.map(function(r){return r1(r.km)+'km'}).join(' + ')+' 완료':(!rx2.setup?'목표를 설정하세요':rx2.type==='rest'?'오늘은 쉬는 날':'오늘 추천<br><b style="color:var(--ink)">'+RTYPE[rx2.type]+(rx2.km?' '+r1(rx2.km)+'km':'')+'</b>');
  function tile(href,name,color,bg,icon,txt,done,disabled){return (disabled?'<div':'<a href="'+href+'"')+' style="text-decoration:none;color:inherit;background:#fff;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:150px;'+(disabled?'opacity:.55':'')+'"><div class="row"><div style="width:44px;height:44px;border-radius:14px;background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+'">'+icon+'</div>'+(done?'<span class="badge b-new">완료</span>':'')+'</div><div style="font-size:18px;font-weight:900">'+name+'</div><div class="meta" style="font-size:12px;line-height:1.45">'+txt+'</div>'+(disabled?'</div>':'</a>')}
+ if(sh)h+=planCard(k);
  h+='<div class="sectitle">오늘 할 운동을 고르세요</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+
   tile('#today','헬스','#1F55D6','#E5EEFB','<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>',gymTxt,gd&&gd.done)+
   tile('#run','러닝','#B4441C','#FCE9DF','<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14" cy="4" r="2"/><path d="M9 20l3-6 3 3v4M6 12l3-3 4 1 3 3 3 1"/></svg>',runTxt,runToday.length)+
@@ -1909,6 +1965,8 @@ document.addEventListener('click',function(ev){
   case 'row-tick':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
   case 'hist-del':if(e){var hk=t.getAttribute('data-k');confirmSheet(esc(pretty(hk))+' 기록 삭제',esc(e.name)+'의 이날 기록(웜업 포함 '+setsOn(hk,e.id).length+'세트)을 지울까요? 지운 기록은 되돌릴 수 없고, 다음 무게 처방도 남은 기록으로 다시 계산돼요.','삭제','hist-del-ok',hk)}break;
   case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
+  case 'fat-pop':fatPop();break;
+  case 'plan-other':modal('<h2>오늘은 다르게 할게</h2><div class="meta" style="line-height:1.6">괜찮아요. 하고 싶은 운동을 그대로 기록하세요. 내일 추천은 오늘 실제로 한 기록을 보고 다시 계산해요. 빠진 운동은 쌓아두지 않아요.</div><div class="list"><a class="li" href="#today" data-a="modal-close"><span class="t">헬스</span>'+I.chev+'</a><a class="li" href="#run" data-a="modal-close"><span class="t">러닝</span>'+I.chev+'</a><a class="li" href="#swim" data-a="modal-close"><span class="t">수영</span>'+I.chev+'</a></div><button class="secondary" data-a="modal-close">닫기</button>');break;
   case 'wk-pop':weekPop(t.getAttribute('data-v'));break;
   case 'day-pop':daySheet(t.getAttribute('data-k'));break;
   case 'run-day':runDaySheet(t.getAttribute('data-k'));break;
