@@ -2002,7 +2002,7 @@ function route(hash){
  else if(h==='runguide'){view='runguide'}
  else{view='home'}
  if(view!=='plan')catQuery='';
- picker=null;rowCtx=null;modal('');render();if(ordAsk){modal('<h2>순서 변경을 끝낼까요?</h2><div class="meta" style="line-height:1.6">지금까지 옮긴 순서는 이미 저장돼 있어요.</div><div class="btnrow"><button class="secondary" data-a="ord-stay">계속 변경하기</button><button class="primary" data-a="ord-end">끝내고 이동</button></div>');return}window.scrollTo(0,0);
+ picker=null;rowCtx=null;modal('');render();if(ordAsk){modal('<h2>순서 변경을 끝낼까요?</h2><div class="meta" style="line-height:1.6">지금까지 옮긴 순서는 이미 저장돼 있어요.</div><div class="btnrow"><button class="secondary" data-a="ord-stay">계속 변경하기</button><button class="primary" data-a="ord-end">끝내기</button></div>');return}window.scrollTo(0,0);
 }
 window.addEventListener('hashchange',function(){if(location.hash!==routed)route(location.hash)});
 document.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('a[href^="#"]');if(!a)return;ev.preventDefault();var href=a.getAttribute('href');if(a.closest('nav.tabs')||href==='#today')curDate=href==='#today'&&!a.closest('nav.tabs')?curDate:todayKey();go(href)},true);
