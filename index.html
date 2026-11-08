@@ -1317,7 +1317,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v67';
+var WEB_VER='v68';
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',function(e){if(!on)return;var c=on;on=null;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
@@ -1637,7 +1637,7 @@ function dayPlan(k){var sh=shiftOf(k),rows=[],rx=runRx(k),sx=swimRx(k),gx=gymRx(
 var QT0={tempo:1,interval:1,fartlek:1};
 function planCard(k){var P=dayPlan(k),ST={done:['완료','#2E9E6B'],doing:['진행 중','#1F55D6'],go:['추천','#16181A'],rest:['쉬기','#9AA0A8'],none:['설정','#9AA0A8']};
  var h='<div class="card" style="gap:10px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:16px">오늘 할 것</div><button data-a="fat-pop" style="all:unset;cursor:pointer;font-size:12px;color:var(--sub)">다리 피로 '+(P.fat.r!=null?'<b style="color:'+(P.fat.lv==='high'?'#D9534F':P.fat.lv==='low'?'#2E9E6B':'var(--ink)')+'">'+FATLV[P.fat.lv]+' '+P.fat.r+'</b>':'<b>계산 중</b>')+' ⓘ</button></div>';
- if(P.sh==='비번'&&P.cond)h+='<div class="meta" style="font-size:12px;margin-top:-6px">잠 컨디션 '+({good:'좋음',ok:'보통',bad:'나쁨'}[P.cond]||'')+' 반영</div>';
+ if(P.sh==='비번'&&P.cond){var slm=db.hc&&db.hc.sleep&&db.hc.sleep[k],au=db.hc&&db.hc.condAuto===k;h+='<div class="meta" style="font-size:12px;margin-top:-6px">잠 컨디션 '+({good:'좋음',ok:'보통',bad:'나쁨'}[P.cond]||'')+' 반영 · '+(au&&slm?'가민 수면 '+Math.floor(slm/60)+'시간 '+(slm%60)+'분으로 자동 선택 (7시간 이상 좋음, 5~7시간 보통, 5시간 미만 나쁨)':'직접 고른 값')+' · 러닝 화면에서 바꿀 수 있어요</div>'}
  h+='<div style="display:flex;flex-direction:column;gap:2px">'+P.rows.map(function(r){var st=ST[r.st];return '<a href="'+r.href+'" style="text-decoration:none;color:inherit;display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #F0F1F3'+(r.st==='rest'||r.st==='none'?';opacity:.6':'')+'"><span style="flex:none;width:8px;height:8px;border-radius:50%;margin-top:7px;background:'+(r.st==='done'?'#2E9E6B':r.col)+'"></span><div style="flex:1;min-width:0"><div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap"><b style="font-size:15px">'+r.name+'</b><span style="font-size:15px">'+esc(r.txt)+'</span><span style="margin-left:auto;font-size:11px;font-weight:700;color:'+st[1]+'">'+(r.st==='done'?'✓ ':'')+st[0]+'</span></div>'+(r.why&&r.st!=='done'?'<div class="meta" style="font-size:12px;line-height:1.5;margin-top:2px">'+esc(r.why)+'</div>':'')+'</div></a>'}).join('')+'</div>';
  if(P.pick)h+='<div style="background:#F4F6F9;border-radius:12px;padding:10px 12px"><div style="font-size:14px"><b>한 가지만 한다면 → '+P.pick.name+'</b></div>'+(P.pw?'<div class="meta" style="font-size:12px;margin-top:2px">'+esc(P.pw)+'</div>':'')+'</div>';
  else if(P.rows.every(function(r){return r.st!=='go'}))h+='<div class="meta" style="font-size:13px">'+(P.rows.some(function(r){return r.st==='done'})?'오늘 할 운동을 마쳤어요. 잘했어요!':'오늘은 쉬는 날이에요. 회복도 훈련이에요.')+'</div>';
