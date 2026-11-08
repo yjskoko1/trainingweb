@@ -1024,7 +1024,6 @@ function vRun(){
  var wk=weekKm(k),es=easyShare(k);
  h+='<a class="card" href="#runset" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><div style="flex:1;min-width:0"><div class="meta">목표</div><div style="font-size:15px;font-weight:700">'+esc(x.goal.name)+(x.dRace!=null&&x.dRace>=0?' · D-'+x.dRace:'')+'</div></div><div style="text-align:right"><div class="meta">최근 7일</div><div style="font-size:15px;font-weight:900">'+wk+'km</div>'+(es!=null?'<div class="meta" style="font-size:11px">쉬운 강도 '+es+'%</div>':'')+'</div></a>';
  var today=db.run.runs.filter(function(r){return r.date===k});
- if(sh==='비번'&&x.cond){var slm=db.hc.sleep&&db.hc.sleep[k];h+='<div class="sectitle">어젯밤 잠은 어땠나요?'+(slm?' <span class="meta" style="font-weight:500">가민 수면 '+Math.floor(slm/60)+'시간 '+(slm%60)+'분'+(db.hc.condAuto===k?' → 자동 선택':'')+'</span>':'')+'</div><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+[['good','잘 잤어요'],['ok','보통'],['bad','못 잤어요']].map(function(m){var on=x.cond===m[0];return '<button data-a="run-cond" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>'}
  if(x.type==='rest'){
   h+='<div class="rx"><div class="row"><span style="font-size:13px;opacity:.85">오늘</span><span class="badge b-keep">쉬는 날</span></div><div class="big">휴식</div><div class="why">'+esc(x.why)+'</div></div>';
  }else{
@@ -1349,7 +1348,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.00';
+var WEB_VER='v1.01';
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',function(e){if(!on)return;var c=on;on=null;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
