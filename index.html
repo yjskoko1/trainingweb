@@ -1285,6 +1285,8 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
+var HC_READS=['workouts','heartRate','distance','calories','totalCalories','sleep'];
+async function hcDist(s,e){try{var r=await hcP().readSamples({dataType:'distance',startDate:s,endDate:e,limit:10000});return (r.samples||[]).reduce(function(a,x){return a+(+x.value||0)},0)}catch(e){return 0}}
 var HC_APK='https://yjskoko1.github.io/trainingweb/app/trainingweb.apk',hcBusy=false;
 function hcNative(){try{return !!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.Plugins&&Capacitor.Plugins.Health)}catch(e){return false}}
 function hcP(){return Capacitor.Plugins.Health}
@@ -1296,7 +1298,7 @@ async function hcConnect(){
  try{
   var a=await hcP().isAvailable();
   if(!a.available){modal('<h2>헬스 커넥트가 필요해요</h2><div class="meta" style="line-height:1.6">안드로이드 14 이상은 기본으로 들어 있어요. 그보다 낮은 버전이면 플레이스토어에서 <b>Health Connect</b>를 설치해 주세요.'+(a.reason?'<br>('+esc(a.reason)+')':'')+'</div><button class="primary" data-a="modal-close">확인</button>');return}
-  var st=await hcP().requestAuthorization({read:['workouts','heartRate','distance','sleep'],requestHistoryAccess:true});
+  var st=await hcP().requestAuthorization({read:HC_READS,requestHistoryAccess:true});
   if((st.readAuthorized||[]).indexOf('workouts')<0){toast('운동 기록 읽기 권한을 허용해야 불러올 수 있어요.','err');return}
   db.hc.on=true;save();await hcImport(true);
  }catch(e){toast('헬스 커넥트 연결에 실패했어요: '+(e&&e.message||e),'err')}
@@ -1316,30 +1318,37 @@ async function hcSleep(){
 async function hcImport(show){
  if(!hcOn()||hcBusy)return;hcBusy=true;
  try{
+  if(show){try{var au=await hcP().checkAuthorization({read:HC_READS});if((au.readDenied||[]).length)await hcP().requestAuthorization({read:HC_READS,requestHistoryAccess:true})}catch(e){}}
+  var skip={noDist:0,dup:0,err:0,errMsg:''};
   var since=db.hc.last?new Date(Date.parse(db.hc.last)-3*864e5):new Date(Date.now()-365*864e5);
   var res=await hcP().queryWorkouts({startDate:since.toISOString(),endDate:new Date().toISOString(),limit:500,ascending:true});
   var added=[],scan={total:(res.workouts||[]).length,run:0,swim:0,other:0,first:null};(res.workouts||[]).forEach(function(w){var t=String(w.workoutType||'');if(/^running/.test(t))scan.run++;else if(/^swimming/.test(t))scan.swim++;else scan.other++;if(!scan.first||w.startDate<scan.first)scan.first=w.startDate});db.hc.scan=scan;
   for(var i=0;i<(res.workouts||[]).length;i++){
    var w=res.workouts[i],id=w.platformId||(w.startDate+'|'+w.workoutType);if(db.hc.seen[id]||db.run.runs.some(function(r){return r.hc===id})||db.swim.swims.some(function(x){return x.hc===id}))continue;
+   try{
    var t=String(w.workoutType||''),k=hcKey(w.startDate),dist=+w.totalDistance||0,sec=Math.round(+w.duration||0);
+   if(!dist&&/^(running|swimming)/.test(t))dist=await hcDist(w.startDate,w.endDate);
    if(/^running/.test(t)){
-    var km=Math.round(dist/10)/100;if(!(km>0)){db.hc.seen[id]=1;continue}
-    if(hcDupRun(k,km)){db.hc.seen[id]=1;continue}
+    var km=Math.round(dist/10)/100;if(!(km>0)){skip.noDist++;continue}
+    if(hcDupRun(k,km)){skip.dup++;db.hc.seen[id]=1;continue}
     var hr=await hcHR(w.startDate,w.endDate),x=runRx(k),ty=x&&RTYPE[x.type]&&x.type!=='rest'&&x.type!=='race'?x.type:'easy';
     db.run.runs.push({id:'r'+rid(),date:k,type:ty,place:t==='runningTreadmill'?'tm':'out',km:km,sec:sec,hr:hr.avg,hrMax:hr.max,shoe:'',memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
     added.push('러닝 '+short(k)+' '+km+'km');
    }else if(/^swimming/.test(t)){
-    var m=Math.round(dist);if(!(m>0)){db.hc.seen[id]=1;continue}
-    if(hcDupSwim(k,m)){db.hc.seen[id]=1;continue}
+    var m=Math.round(dist);if(!(m>0)){skip.noDist++;continue}
+    if(hcDupSwim(k,m)){skip.dup++;db.hc.seen[id]=1;continue}
     var ss=sset(),kind=ss&&(ss.lessonDays||[]).indexOf(parseKey(k).getDay())>=0?'lesson':'free';
     db.swim.swims.push({id:'w'+rid(),date:k,kind:kind,m:m,sec:sec,cont:0,strokes:['free'],stage:ss?ss.stage||1:1,memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
     added.push('수영 '+short(k)+' '+m+'m');
    }else continue;
    db.hc.seen[id]=1;
+   }catch(e1){skip.err++;skip.errMsg=String(e1&&e1.message||e1)}
   }
+  db.hc.skip=skip;
   await hcSleep();
   db.hc.last=new Date().toISOString();save();render();
   if(added.length)modal('<h2>가민 기록 '+added.length+'개를 불러왔어요</h2><div class="list">'+added.map(function(a){return '<div class="li" style="cursor:default"><span class="t">'+esc(a)+'</span></div>'}).join('')+'</div><div class="note" style="padding:0;line-height:1.6">러닝 종류는 그날 추천을 기준으로 넣었어요. 다르면 기록을 눌러 고쳐 주세요. 수영은 강습 요일이면 강습으로 넣었어요.</div><button class="primary" data-a="modal-close">확인</button>');
+  else if(show&&(skip.noDist||skip.err))modal('<h2>불러온 기록이 없어요</h2><div class="meta" style="line-height:1.7">헬스 커넥트 운동 '+scan.total+'개 중 러닝 '+scan.run+' · 수영 '+scan.swim+'개를 확인했어요.<br>거리 정보 없음 '+skip.noDist+'개 · 이미 있는 기록 '+skip.dup+'개 · 오류 '+skip.err+'개'+(skip.errMsg?' ('+esc(skip.errMsg)+')':'')+'</div><div class="note" style="padding:0;line-height:1.6">거리 정보가 없으면 헬스 커넥트 권한에서 <b>거리</b>와 <b>활동 칼로리</b>가 허용돼 있는지 확인해 주세요.</div><button class="primary" data-a="modal-close">확인</button>');
   else if(show)toast(scan.total?'새로 불러올 가민 기록이 없어요. (헬스 커넥트 운동 '+scan.total+'개 확인)':'헬스 커넥트에 운동 기록이 없어요. 아래 안내를 확인해 주세요.');
  }catch(e){if(show)toast('불러오기에 실패했어요: '+(e&&e.message||e),'err')}
  hcBusy=false;
