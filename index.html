@@ -1286,14 +1286,14 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v61';
+var WEB_VER='v62';
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',function(e){if(!on)return;var c=on;on=null;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
   if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.5)return;var n=dx<0?1:-1,inM=!!c.closest('#modal');
   if(inM){var cpm=parseKey(calPop.month+'-01');cpm.setMonth(cpm.getMonth()+n);calPop.month=key(cpm).slice(0,7);renderCalPop()}
   else{var dm=parseKey(calMonth+'-01');dm.setMonth(dm.getMonth()+n);calMonth=key(dm).slice(0,7);render()}
-  var nc=document.querySelectorAll(inM?'#modal .cal':'main .cal');nc.forEach(function(el){el.style.transition='none';el.style.transform='translateX('+(n*40)+'px)';el.style.opacity='.3';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.transition='transform .2s,opacity .2s';el.style.transform='';el.style.opacity=''})})})
+  var nc=document.querySelectorAll(inM?'#modal .cal':'main .cal');nc.forEach(function(el){if(el.parentNode)el.parentNode.style.overflowX='clip';el.style.transition='none';el.style.transform='translateX('+(n*40)+'px)';el.style.opacity='.3';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.transition='transform .2s,opacity .2s';el.style.transform='';el.style.opacity=''})})})
  },{passive:true});
 })();
 var HC_READS=['workouts','heartRate','distance','calories','totalCalories','sleep'];
