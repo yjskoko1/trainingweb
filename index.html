@@ -799,6 +799,7 @@ function vMe(){
  var so=!db.settings.shiftOff;
  h+='<div class="sectitle">근무 패턴</div><div class="list"><div class="field"><label for="s-shift">당번 → 비번 → 휴무 사용</label><button id="s-shift" role="switch" aria-checked="'+so+'" data-a="shift-toggle" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(so?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(so?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff"></span></button></div>'+(so?'<div class="field"><label for="s-anchor">당번일</label><input id="s-anchor" type="date" value="'+esc(db.settings.shiftAnchor||'')+'" data-s="shiftAnchor" style="height:42px;border:1px solid #DADDE2;border-radius:10px;padding:0 8px;font-size:15px;background:#fff"></div>':'')+'</div>'+(so&&db.settings.shiftAnchor?'<div class="note">오늘은 <b>'+shiftOf(todayKey())+'</b>이에요. 러닝 처방과 홈 화면에 써요.</div>':'');
  h+=hcSettingsBlock();
+ h+='<div class="list" style="margin-top:8px"><button class="li" data-a="app-reload" style="width:100%;text-align:left"><div><div class="t">최신 버전으로 새로고침</div><div class="meta">지금 버전 '+WEB_VER+'</div></div>'+I.chev+'</button></div>';
  h+='<div class="sectitle" style="padding-top:12px">몸 기록</div>';
  if(memOnly)h+='<div class="toast err">이 브라우저에서는 저장이 되지 않아요. 기록이 사라질 수 있어요.</div>';
  if(lastW||lastH){var diff=lastW&&prev&&prev!==lastW?fix(lastW.w-prev.w):null,b=bmi(lastH,lastW&&lastW.w);
@@ -1285,6 +1286,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
+var WEB_VER='v60';
 var HC_READS=['workouts','heartRate','distance','calories','totalCalories','sleep'];
 async function hcDist(s,e){try{var r=await hcP().readSamples({dataType:'distance',startDate:s,endDate:e,limit:10000});return (r.samples||[]).reduce(function(a,x){return a+(+x.value||0)},0)}catch(e){return 0}}
 var HC_APK='https://yjskoko1.github.io/trainingweb/app/trainingweb.apk',hcBusy=false;
@@ -1318,7 +1320,7 @@ async function hcSleep(){
 async function hcImport(show){
  if(!hcOn()||hcBusy)return;hcBusy=true;
  try{
-  if(show){try{var au=await hcP().checkAuthorization({read:HC_READS});if((au.readDenied||[]).length)await hcP().requestAuthorization({read:HC_READS,requestHistoryAccess:true})}catch(e){}}
+  if(show){try{await hcP().requestAuthorization({read:HC_READS,requestHistoryAccess:true})}catch(e){}}
   var skip={noDist:0,dup:0,err:0,errMsg:''};
   var since=db.hc.last?new Date(Date.parse(db.hc.last)-3*864e5):new Date(Date.now()-365*864e5);
   var res=await hcP().queryWorkouts({startDate:since.toISOString(),endDate:new Date().toISOString(),limit:500,ascending:true});
@@ -1863,6 +1865,7 @@ document.addEventListener('click',function(ev){
   case 'run-day':runDaySheet(t.getAttribute('data-k'));break;
   case 'hc-connect':hcConnect();break;
   case 'hc-import':hcImport(true);break;
+  case 'app-reload':try{caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}).then(function(){location.reload()})}catch(e){location.reload()}break;
   case 'hc-reimport':db.hc.last=null;db.hc.seen={};hcImport(true);break;
   case 'hc-info':hcWebInfo();break;
   case 'hc-perm':try{hcP().openHealthConnectSettings()}catch(e){}break;
