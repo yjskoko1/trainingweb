@@ -17,7 +17,9 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;-webkit-text-size-adjust:100%;overscroll-behavior-y:contain}
 button,input,select,textarea{font-family:inherit;color:inherit}
 button{cursor:pointer}
-.app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+:root{--sat:max(env(safe-area-inset-top),var(--safe-area-inset-top,0px))}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--sat);background:#16181A;z-index:60;pointer-events:none}
+.app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-top:var(--sat);padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 header{padding:16px 16px 8px;display:flex;align-items:center;gap:10px}
 header .ttl{flex:1;min-width:0}
 .eyebrow{font-size:13px;color:var(--sub);font-weight:500}
@@ -1348,7 +1350,8 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.01';
+var WEB_VER='v1.02';
+try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
  document.addEventListener('touchend',function(e){if(!on)return;var c=on;on=null;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
