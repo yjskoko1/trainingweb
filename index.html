@@ -815,7 +815,7 @@ function vMe(){
   '<form class="addrow" data-form="closed-add" style="margin:0"><label for="s-cday" class="sr">임시 휴관일</label><input id="s-cday" type="date" min="'+todayKey()+'"><button type="submit">추가</button></form>'+
   '<div class="meta" style="font-size:12px;line-height:1.6">다음 휴관: '+(nxt.length?esc(nxt.join(' · ')):'없음')+'<br>휴관일엔 헬스·수영을 쉬고, 루틴은 다음 운동 날에 이어서 해요. 러닝은 그대로예요. 공휴일은 2027년까지 들어 있어요.</div></div>';
  h+=hcSettingsBlock();
- h+='<div class="list" style="margin-top:8px"><button class="li" data-a="app-reload" style="width:100%;text-align:left"><div><div class="t">최신 버전으로 새로고침</div><div class="meta">지금 버전 '+WEB_VER+'</div></div>'+I.chev+'</button></div>';
+ h+='<div class="list" style="margin-top:8px"><button class="li" data-a="app-reload" style="width:100%;text-align:left"><div><div class="t">최신 버전으로 새로고침</div><div class="meta">지금 버전 '+WEB_VER+(APP_VER?' · 앱(APK) '+esc(APP_VER):'')+'</div></div>'+I.chev+'</button></div>';
  h+='<div class="sectitle" style="padding-top:12px">몸 기록</div>';
  if(memOnly)h+='<div class="toast err">이 브라우저에서는 저장이 되지 않아요. 기록이 사라질 수 있어요.</div>';
  if(lastW||lastH){var diff=lastW&&prev&&prev!==lastW?fix(lastW.w-prev.w):null,b=bmi(lastH,lastW&&lastW.w);
@@ -1350,7 +1350,8 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.05';
+var WEB_VER='v1.06',APP_VER='';
+try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
  document.addEventListener('touchstart',function(e){var c=e.target.closest&&e.target.closest('.cal');if(!c||e.touches.length>1){on=null;return}on=c;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
