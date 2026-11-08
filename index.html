@@ -1316,11 +1316,11 @@ async function hcSleep(){
 async function hcImport(show){
  if(!hcOn()||hcBusy)return;hcBusy=true;
  try{
-  var since=db.hc.last?new Date(Date.parse(db.hc.last)-3*864e5):new Date(Date.now()-60*864e5);
+  var since=db.hc.last?new Date(Date.parse(db.hc.last)-3*864e5):new Date(Date.now()-365*864e5);
   var res=await hcP().queryWorkouts({startDate:since.toISOString(),endDate:new Date().toISOString(),limit:500,ascending:true});
-  var added=[];
+  var added=[],scan={total:(res.workouts||[]).length,run:0,swim:0,other:0,first:null};(res.workouts||[]).forEach(function(w){var t=String(w.workoutType||'');if(/^running/.test(t))scan.run++;else if(/^swimming/.test(t))scan.swim++;else scan.other++;if(!scan.first||w.startDate<scan.first)scan.first=w.startDate});db.hc.scan=scan;
   for(var i=0;i<(res.workouts||[]).length;i++){
-   var w=res.workouts[i],id=w.platformId||(w.startDate+'|'+w.workoutType);if(db.hc.seen[id])continue;
+   var w=res.workouts[i],id=w.platformId||(w.startDate+'|'+w.workoutType);if(db.hc.seen[id]||db.run.runs.some(function(r){return r.hc===id})||db.swim.swims.some(function(x){return x.hc===id}))continue;
    var t=String(w.workoutType||''),k=hcKey(w.startDate),dist=+w.totalDistance||0,sec=Math.round(+w.duration||0);
    if(/^running/.test(t)){
     var km=Math.round(dist/10)/100;if(!(km>0)){db.hc.seen[id]=1;continue}
@@ -1340,17 +1340,25 @@ async function hcImport(show){
   await hcSleep();
   db.hc.last=new Date().toISOString();save();render();
   if(added.length)modal('<h2>가민 기록 '+added.length+'개를 불러왔어요</h2><div class="list">'+added.map(function(a){return '<div class="li" style="cursor:default"><span class="t">'+esc(a)+'</span></div>'}).join('')+'</div><div class="note" style="padding:0;line-height:1.6">러닝 종류는 그날 추천을 기준으로 넣었어요. 다르면 기록을 눌러 고쳐 주세요. 수영은 강습 요일이면 강습으로 넣었어요.</div><button class="primary" data-a="modal-close">확인</button>');
-  else if(show)toast('새로 불러올 가민 기록이 없어요.');
+  else if(show)toast(scan.total?'새로 불러올 가민 기록이 없어요. (헬스 커넥트 운동 '+scan.total+'개 확인)':'헬스 커넥트에 운동 기록이 없어요. 아래 안내를 확인해 주세요.');
  }catch(e){if(show)toast('불러오기에 실패했어요: '+(e&&e.message||e),'err')}
  hcBusy=false;
 }
 function hcAuto(){if(hcOn()&&(!db.hc.last||Date.now()-Date.parse(db.hc.last)>15*60000))hcImport(false)}
+var backAt=0;
+function hcBackInit(){try{if(!hcNative()||!Capacitor.Plugins.App)return;Capacitor.Plugins.App.addListener('backButton',function(ev){
+ if(document.getElementById('modal').innerHTML){picker=null;modal('');return}
+ var h=location.hash||'#home';
+ if(h!=='#home'&&h!==''){if(ev&&ev.canGoBack)history.back();else go('#home');return}
+ if(Date.now()-backAt<2000){Capacitor.Plugins.App.exitApp();return}
+ backAt=Date.now();toast('한 번 더 누르면 앱이 닫혀요.');
+})}catch(e){}}
 function hcWebInfo(){modal('<h2>가민 기록 자동 불러오기</h2><div class="meta" style="line-height:1.7">브라우저에서는 헬스 커넥트에 접근할 수 없어요. 트레이닝웹 앱(APK)을 설치하면 가민 시계로 뛴 러닝과 수영 기록, 수면 시간을 자동으로 불러와요.</div><ol style="margin:0;padding-left:20px;line-height:1.8;font-size:14px"><li>지금 앱의 설정 → 공통에서 <b>백업 파일 저장</b></li><li>아래 버튼으로 APK를 받아 설치 (처음 한 번 "출처를 알 수 없는 앱 설치" 허용)</li><li>새 앱의 설정 → 공통에서 <b>백업 불러오기</b></li><li>설정 → 공통 → <b>가민 연결하기</b></li></ol><a class="primary" href="'+HC_APK+'" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;text-decoration:none">앱(APK) 받기</a><button class="secondary" data-a="modal-close">닫기</button>')}
 function hcSettingsBlock(){
  var h='<div class="sectitle" style="padding-top:12px">가민 연결 (헬스 커넥트)</div>';
  if(!hcNative())return h+'<div class="list"><button class="li" data-a="hc-info" style="width:100%;text-align:left"><div><div class="t">앱 설치하고 가민 연결하기</div><div class="meta">러닝·수영 기록과 수면 시간을 자동으로 불러와요</div></div>'+I.chev+'</button></div>';
  if(!db.hc.on)return h+'<div class="card" style="gap:8px"><div class="meta" style="line-height:1.6">가민 커넥트 앱 → 설정 → 연결된 앱에서 <b>헬스 커넥트</b>를 켠 다음 연결해 주세요.</div><button class="primary" data-a="hc-connect">가민 연결하기</button></div>';
- return h+'<div class="list"><div class="li" style="cursor:default"><div><div class="t">연결됨</div><div class="meta">마지막 불러오기 '+(db.hc.last?esc(new Date(db.hc.last).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})):'-')+' · 앱을 열 때 자동으로 불러와요</div></div></div><button class="li" data-a="hc-import" style="width:100%;text-align:left"><div class="t">지금 불러오기</div>'+I.chev+'</button><button class="li" data-a="hc-perm" style="width:100%;text-align:left"><div class="t">헬스 커넥트 권한 설정</div>'+I.chev+'</button><button class="li" data-a="hc-off" style="width:100%;text-align:left"><div class="t" style="color:var(--red)">자동 불러오기 끄기</div></button></div>';
+ return h+'<div class="list"><div class="li" style="cursor:default"><div><div class="t">연결됨</div><div class="meta">마지막 불러오기 '+(db.hc.last?esc(new Date(db.hc.last).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})):'-')+' · 앱을 열 때 자동으로 불러와요</div></div></div><button class="li" data-a="hc-import" style="width:100%;text-align:left"><div class="t">지금 불러오기</div>'+I.chev+'</button><button class="li" data-a="hc-reimport" style="width:100%;text-align:left"><div><div class="t">지난 1년 다시 찾기</div><div class="meta">빠진 기록이 있을 때 (중복은 자동으로 건너뛰어요)</div></div>'+I.chev+'</button><button class="li" data-a="hc-perm" style="width:100%;text-align:left"><div class="t">헬스 커넥트 권한 설정</div>'+I.chev+'</button><button class="li" data-a="hc-off" style="width:100%;text-align:left"><div class="t" style="color:var(--red)">자동 불러오기 끄기</div></button></div>'+(db.hc.scan?'<div class="note">마지막 확인: 헬스 커넥트 운동 '+db.hc.scan.total+'개 (러닝 '+db.hc.scan.run+' · 수영 '+db.hc.scan.swim+' · 기타 '+db.hc.scan.other+')'+(db.hc.scan.first?' · 가장 오래된 기록 '+esc(short(hcKey(db.hc.scan.first))):'')+'</div>':'')+'<div class="note" style="line-height:1.6">가민은 헬스 커넥트를 켠 <b>이후의 운동부터</b> 넘겨주는 경우가 많아요. 과거 기록이 안 보이면 헬스 커넥트 앱 → 데이터 및 액세스 → 운동에 가민 기록이 있는지 먼저 확인해 주세요.</div>';
 }
 
 /* =============== 수영 =============== */
@@ -1846,6 +1854,7 @@ document.addEventListener('click',function(ev){
   case 'run-day':runDaySheet(t.getAttribute('data-k'));break;
   case 'hc-connect':hcConnect();break;
   case 'hc-import':hcImport(true);break;
+  case 'hc-reimport':db.hc.last=null;db.hc.seen={};hcImport(true);break;
   case 'hc-info':hcWebInfo();break;
   case 'hc-perm':try{hcP().openHealthConnectSettings()}catch(e){}break;
   case 'hc-off':db.hc.on=false;save();toast('자동 불러오기를 껐어요.');render();break;
@@ -2080,7 +2089,7 @@ function route(hash){
  picker=null;rowCtx=null;modal('');render();if(ordAsk){modal('<h2>순서 변경을 끝낼까요?</h2><div class="meta" style="line-height:1.6">지금까지 옮긴 순서는 이미 저장돼 있어요.</div><div class="btnrow"><button class="secondary" data-a="ord-stay">계속 변경하기</button><button class="primary" data-a="ord-end">끝내기</button></div>');return}window.scrollTo(0,0);
 }
 window.addEventListener('hashchange',function(){if(location.hash!==routed)route(location.hash)});
-document.addEventListener('visibilitychange',function(){if(!document.hidden)hcAuto()});setTimeout(hcAuto,1500);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)hcAuto()});setTimeout(hcAuto,1500);hcBackInit();
 document.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('a[href^="#"]');if(!a)return;ev.preventDefault();var href=a.getAttribute('href');if(a.closest('nav.tabs')||href==='#today')curDate=href==='#today'&&!a.closest('nav.tabs')?curDate:todayKey();go(href)},true);
 
 /* =============== boot =============== */
