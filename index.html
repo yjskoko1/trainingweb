@@ -412,6 +412,7 @@ document.addEventListener('visibilitychange',syncWake);
 /* =============== state =============== */
 var meTab='common';var view='today',param=null,curDate=todayKey(),calMonth=todayKey().slice(0,7);
 var exTab='today',graphMetric='e1rm',planTab='wk',bodyMetric='w',catQuery='',editBuf=null,catEdit=null,picker=null,extra={},graphData=null,toasts=[];
+function qt(m){try{var o=document.getElementById('qtoast');if(!o){o=document.createElement('div');o.id='qtoast';o.setAttribute('role','status');o.style.cssText='position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#16181A;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;z-index:200;max-width:86vw;text-align:center;transition:opacity .25s;pointer-events:none';document.body.appendChild(o)}o.textContent='✓ '+m;o.style.opacity='1';clearTimeout(qt.t);qt.t=setTimeout(function(){o.style.opacity='0'},1600)}catch(e){}}
 function toast(m,k){toasts.push({m:m,k:k||'ok'});render()}
 
 /* =============== views: common =============== */
@@ -1168,7 +1169,7 @@ function readRunSet(){Array.prototype.forEach.call(document.querySelectorAll('[d
 function saveRunSet(){
  readRunSet();var b=rsBuf,old=rset(),n=function(v){var x=parseFloat(v);return isNaN(x)||x<0?0:x};
  var s={goal:b.goal,raceDate:/^\d{4}-\d{2}-\d{2}$/.test(b.raceDate)&&b.goal!=='fit'?b.raceDate:'',age:n(b.age),hrMax:n(b.hrMax),lthr:n(b.lthr),lthrAt:n(b.lthr)?(+old.lthr===n(b.lthr)&&old.lthrAt?old.lthrAt:todayKey()):'',recKm:n(b.recKm),recSec:Math.round(n(b.rh)*3600+n(b.rm)*60+n(b.rs)),longest:n(b.longest),since:old.goal===b.goal&&old.since?old.since:todayKey()};
- db.run.setup=s;rsBuf=null;save();toast('러닝 설정을 저장했어요.');render();
+ db.run.setup=s;rsBuf=null;save();render();qt('러닝 설정을 저장했어요');
 }
 
 /* 전체 기록 · 그래프 */
@@ -1387,7 +1388,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.10',APP_VER='';
+var WEB_VER='v1.11',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1623,7 +1624,7 @@ function saveSwSet(){
  readSwSet();var b=swBuf,old=sset()||{},c=cssOf(b);
  var s={stage:+b.stage||1,maxFree:Math.max(0,parseInt(b.maxFree,10)||0),t400:b.t400,t200:b.t200,cssIn:b.css,css:c,pool:+b.pool||25,lessonDays:b.lessonDays.map(Number).sort(),strokes:b.strokes,gear:b.gear};
  if(c&&c!==old.css)db.swim.cssHist.push({date:todayKey(),css:c});
- db.swim.setup=s;swBuf=null;save();toasts.push({m:'수영 설정을 저장했어요.',k:'ok'});go('#swim');
+ db.swim.setup=s;swBuf=null;save();render();qt('수영 설정을 저장했어요');
 }
 function openSwimLog(kind,id){
  var w=id?db.swim.swims.filter(function(x){return x.id===id})[0]:null;
@@ -2059,9 +2060,9 @@ document.addEventListener('click',function(ev){
   case 'row-tick':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
   case 'hist-del':if(e){var hk=t.getAttribute('data-k');confirmSheet(esc(pretty(hk))+' 기록 삭제',esc(e.name)+'의 이날 기록(웜업 포함 '+setsOn(hk,e.id).length+'세트)을 지울까요? 지운 기록은 되돌릴 수 없고, 다음 무게 처방도 남은 기록으로 다시 계산돼요.','삭제','hist-del-ok',hk)}break;
   case 'hist-del-ok':if(e){var hd=db.days[id];if(hd){hd.sets=hd.sets.filter(function(x){return x.exId!==e.id});cleanDay(id);save()}modal('');toast('기록을 지웠어요.')}break;
-  case 'closed-wd':var cv=+t.getAttribute('data-v'),cl=closedWd().slice(),ci2=cl.indexOf(cv);if(ci2>=0)cl.splice(ci2,1);else cl.push(cv);db.settings.closedWd=cl.sort();save();render();break;
-  case 'closed-hol':db.settings.closedHol=db.settings.closedHol===false;save();render();break;
-  case 'closed-del':db.settings.closedDays=(db.settings.closedDays||[]).filter(function(x){return x!==t.getAttribute('data-v')});save();render();break;
+  case 'closed-wd':var cv=+t.getAttribute('data-v'),cl=closedWd().slice(),ci2=cl.indexOf(cv);if(ci2>=0)cl.splice(ci2,1);else cl.push(cv);db.settings.closedWd=cl.sort();save();render();qt(WDN[cv]+'요일 '+(closedWd().indexOf(cv)>=0?'휴관으로 정했어요':'휴관을 뺐어요'));break;
+  case 'closed-hol':db.settings.closedHol=db.settings.closedHol===false;save();render();qt(db.settings.closedHol===false?'공휴일 휴관을 껐어요':'공휴일·대체공휴일을 휴관으로 정했어요');break;
+  case 'closed-del':db.settings.closedDays=(db.settings.closedDays||[]).filter(function(x){return x!==t.getAttribute('data-v')});save();render();qt('임시 휴관일을 지웠어요');break;
   case 'sug-ok':var sf=t.getAttribute('data-f'),sv=+t.getAttribute('data-v');db.run.setup=Object.assign({},rset());db.run.setup[sf]=sv;if(sf==='lthr')db.run.setup.lthrAt=todayKey();save();toast((sf==='lthr'?'젖산역치':'최대 심박')+'를 '+sv+'로 바꿨어요. 처방에 바로 반영했어요.');render();break;
   case 'sug-no':db.run.sugDis=db.run.sugDis||{};var nf=t.getAttribute('data-f'),nv=t.getAttribute('data-v');db.run.sugDis[nf]=nf==='ltOld'?(rset().lthr?(db.run.setup.lthrAt=todayKey(),todayKey()):nv):+nv;save();render();break;
   case 'fat-pop':fatPop();break;
@@ -2105,13 +2106,13 @@ document.addEventListener('click',function(ev){
   case 'rs-recd':readRunSet();rsBuf.recKm=t.getAttribute('data-v');render();break;
   case 'rs-save':saveRunSet();break;
   case 'rg':runGraph=t.getAttribute('data-v');render();break;
-  case 'run-cond':db.run.cond=db.run.cond||{};db.run.cond[todayKey()]=t.getAttribute('data-v');if(db.hc&&db.hc.condAuto===todayKey())db.hc.condAuto=null;save();render();break;
+  case 'run-cond':db.run.cond=db.run.cond||{};db.run.cond[todayKey()]=t.getAttribute('data-v');if(db.hc&&db.hc.condAuto===todayKey())db.hc.condAuto=null;save();render();qt('잠 컨디션 '+SLEEPT[t.getAttribute('data-v')]+'으로 정했어요'+(t.getAttribute('data-v')==='bad'?' · 모든 운동에 반영했어요':''));break;
   case 'pd':predDist=t.getAttribute('data-v');render();break;
   case 'shoe-pop':shoePop(id);break;
-  case 'shoe-def':if(rsBuf)readRunSet();db.run.defShoe=id;save();shoePop(id);render();break;
-  case 'shoe-retire':var shr=shoeById(id);if(shr){if(rsBuf)readRunSet();shr.retired=!shr.retired;save();render()}break;
+  case 'shoe-def':if(rsBuf)readRunSet();db.run.defShoe=id;save();shoePop(id);render();qt('기본 신발로 정했어요');break;
+  case 'shoe-retire':var shr=shoeById(id);if(shr){if(rsBuf)readRunSet();shr.retired=!shr.retired;save();render()}qt(shr&&shr.retired?'은퇴 신발로 바꿨어요':'다시 신는 신발로 바꿨어요');break;
   case 'shoe-del':var shd=shoeById(id);if(shd)confirmSheet(esc(shd.name)+' 삭제','신발 목록에서 지워요. 이 신발로 뛴 기록은 남지만 신발 표시는 빠져요.','삭제','shoe-del-ok',shd.id);break;
-  case 'shoe-del-ok':db.run.shoes=db.run.shoes.filter(function(s){return s.id!==id});db.run.runs.forEach(function(r){if(r.shoe===id)r.shoe=''});save();modal('');render();break;
+  case 'shoe-del-ok':db.run.shoes=db.run.shoes.filter(function(s){return s.id!==id});db.run.runs.forEach(function(r){if(r.shoe===id)r.shoe=''});save();modal('');render();qt('신발을 지웠어요');break;
   case 'row-reps':if(e)tickRow(e,t.getAttribute('data-t'),+t.getAttribute('data-i'),+t.getAttribute('data-r'));break;
   case 'row-edit':if(e)editSheet(e,t.getAttribute('data-t'),+t.getAttribute('data-i'));break;
   case 'es':var inp=document.getElementById(t.getAttribute('data-f')==='w'?'ew':'er'),ex2=exById(rowCtx&&rowCtx.exId);if(inp&&ex2){var n=+t.getAttribute('data-n');if(t.getAttribute('data-f')==='w'){var cv=parseFloat(inp.value)||0;inp.value=fmt(isDumbbell(ex2)&&dbList().length?snapDb(cv,n>0?'up':'below'):Math.max(0,cv+n*ex2.increment))}else inp.value=Math.max(0,(parseInt(inp.value,10)||0)+n)}break;
@@ -2123,7 +2124,7 @@ document.addEventListener('click',function(ev){
   case 'rest-add':rest.end+=30000;tickRest();break;
   case 'rest-stop':stopRest();break;
   case 'wk-start':startWk(id);break;
-  case 'wk-mode':var wm=wkById(param);if(wm){wm.mode=t.getAttribute('data-v');save();render()}break;
+  case 'wk-mode':var wm=wkById(param);if(wm){wm.mode=t.getAttribute('data-v');save();render()}qt(({h:'근비대',s:'근력','':'일반'}[t.getAttribute('data-v')]||'')+' 모드로 바꿨어요');break;
   case 'rec-ex':var rex=exById(id);if(rex&&!isCardio(rex))recSheet(rex);break;
   case 'wk-start-force':startWk(id,true);break;
   case 'day-done':var dd0=db.days[curDate];if(dd0){var left=dayOrder(curDate).map(exById).filter(function(x){return x&&!x.deleted&&!exStatus(x,curDate).done}).length;if(left){confirmSheet('아직 안 끝난 종목이 '+left+'개 있어요','그래도 오늘 운동을 완료할까요? 남은 종목은 기록된 만큼만 저장돼요.','완료하기','day-done-ok','')}else finishDay()}break;
@@ -2147,10 +2148,10 @@ document.addEventListener('click',function(ev){
   case 'prog-make':var tp=PTEMPL.filter(function(x){return x[0]===t.getAttribute('data-v')})[0];if(tp){var np={id:'p'+rid(),name:tp[0]==='empty'?'새 루틴':tp[1]};db.programs.push(np);tp[3].forEach(function(x){db.workouts.push(mkWk(db,x[0],x[1],np.id))});if(!db.activeProg)db.activeProg=np.id;save();modal('');go('#prog-'+np.id)}break;
   case 'prog-use':db.activeProg=id;save();var pu=progById(id);toast((pu?pu.name:'루틴')+'을(를) 사용해요. 오늘 탭에 이 루틴의 워크아웃이 나와요.');break;
   case 'prog-del':var pd=progById(param);if(pd)confirmSheet(esc(pd.name)+' 삭제','이 루틴과 안의 워크아웃 '+progWks(pd.id).length+'개가 지워져요. 종목과 운동 기록은 그대로 남아요.','삭제','prog-del-ok',pd.id);break;
-  case 'prog-del-ok':db.workouts=db.workouts.filter(function(x){return x.prog!==id});db.programs=db.programs.filter(function(x){return x.id!==id});if(db.activeProg===id)db.activeProg=db.programs[0]?db.programs[0].id:'';save();modal('');go('#plan');break;
-  case 'wk-up':case 'wk-down':case 'wk-rm':var ww=wkById(param);if(ww){var live=wkEx(ww).map(function(x){return x.id}),ni=+t.getAttribute('data-n');if(a==='wk-rm')live.splice(ni,1);else{var j=a==='wk-up'?ni-1:ni+1;if(j>=0&&j<live.length){var tmp=live[ni];live[ni]=live[j];live[j]=tmp}}ww.exIds=live;save();render()}break;
+  case 'prog-del-ok':db.workouts=db.workouts.filter(function(x){return x.prog!==id});db.programs=db.programs.filter(function(x){return x.id!==id});if(db.activeProg===id)db.activeProg=db.programs[0]?db.programs[0].id:'';save();modal('');go('#plan');qt('루틴을 지웠어요');break;
+  case 'wk-up':case 'wk-down':case 'wk-rm':var ww=wkById(param);if(ww){var live=wkEx(ww).map(function(x){return x.id}),ni=+t.getAttribute('data-n');if(a==='wk-rm')live.splice(ni,1);else{var j=a==='wk-up'?ni-1:ni+1;if(j>=0&&j<live.length){var tmp=live[ni];live[ni]=live[j];live[j]=tmp}}ww.exIds=live;save();render()}qt(a==='wk-rm'?'워크아웃에서 뺐어요':'순서를 바꿨어요');break;
   case 'wk-del':var wd=wkById(id||param);if(wd)confirmSheet(esc(wd.name)+' 삭제','워크아웃만 지워지고 종목과 기록은 그대로예요.','삭제','wk-del-ok',wd.id);break;
-  case 'wk-del-ok':var wdo=wkById(id),wpr=wdo?wdo.prog:'';db.workouts=db.workouts.filter(function(x){return x.id!==id});save();modal('');go(wpr?'#prog-'+wpr:'#plan');break;
+  case 'wk-del-ok':var wdo=wkById(id),wpr=wdo?wdo.prog:'';db.workouts=db.workouts.filter(function(x){return x.id!==id});save();modal('');go(wpr?'#prog-'+wpr:'#plan');qt('워크아웃을 지웠어요');break;
   case 'rec-add':var c1=catById(param),it=(CATALOG[c1.name]||[]).filter(function(x){return x[0]===t.getAttribute('data-n')})[0];if(it){db.exercises.push(mkAny(it,c1.id));save();toast(it[0]+' 추가했어요.')}break;
   case 'cat-new':catEdit={id:null,name:'',color:COLORS[db.cats.length%COLORS.length]};catSheet();break;
   case 'cat-edit':var ce=catById(id);catEdit={id:ce.id,name:ce.name,color:ce.color};catSheet();break;
@@ -2165,23 +2166,23 @@ document.addEventListener('click',function(ev){
   case 'warmset':readEdit();editBuf.warmN=+t.getAttribute('data-v');render();break;
   case 'ex-save':saveEdit();break;
   case 'ex-del':if(e)confirmSheet(esc(e.name)+' 삭제','종목 목록과 워크아웃에서 빠져요. 지난 기록은 날짜별 기록에 남아 있어요.','삭제','ex-del-ok',e.id);break;
-  case 'ex-del-ok':var xd=exById(id);if(xd){xd.deleted=true;save()}modal('');editBuf=null;go(xd?'#cat-'+xd.cat:'#plan');break;
-  case 'body-del':var bk=t.getAttribute('data-k');db.body=db.body.filter(function(x){return x.date!==bk});save();render();break;
+  case 'ex-del-ok':var xd=exById(id);if(xd){xd.deleted=true;save()}modal('');editBuf=null;go(xd?'#cat-'+xd.cat:'#plan');qt('종목을 지웠어요');break;
+  case 'body-del':var bk=t.getAttribute('data-k');db.body=db.body.filter(function(x){return x.date!==bk});save();render();qt('몸 기록을 지웠어요');break;
   case 'backup':doBackup();break;
   case 'bk-list':bkRestorePop();break;
   case 'bk-pick':bkPick(t.getAttribute('data-v'));break;
-  case 'bk-auto':db.settings.autoBk=db.settings.autoBk===false?true:false;save();render();if(db.settings.autoBk)autoBackup(false);break;
+  case 'bk-auto':db.settings.autoBk=db.settings.autoBk===false?true:false;save();render();if(db.settings.autoBk)autoBackup(false);qt(db.settings.autoBk===false?'자동 백업을 껐어요':'자동 백업을 켰어요');break;
   case 'import':document.getElementById('importFile').click();break;
   case 'paste':modal('<h2>글자로 복원</h2><div class="meta" style="line-height:1.6">백업 글자를 붙여넣으세요. 예전 아티팩트 버전에서 "백업 복사하기"로 복사한 글자도 돼요. <b>지금 기록은 백업 내용으로 바뀌어요.</b></div><label for="rs" class="sr">백업 내용</label><textarea id="rs"></textarea><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="danger" data-a="paste-ok">복원</button></div>');break;
   case 'paste-ok':restoreFrom(document.getElementById('rs').value);break;
   case 'plates-open':plateSel={};(db.settings.plates||[]).forEach(function(p){plateSel[p]=true});modal('<h2>헬스장에 있는 원판</h2><div class="meta">있는 원판을 체크하세요. 한쪽에 끼울 원판을 계산할 때 써요.</div><div style="max-height:52vh;overflow-y:auto;border-top:1px solid var(--line)">'+ALLPLATES.map(function(p){var on=!!plateSel[p];return '<button class="pick'+(on?' on':'')+'" data-a="plate-t" data-v="'+p+'" aria-pressed="'+on+'"><span style="font-size:16px;font-weight:700">'+fmt(p)+' kg</span><span class="box" aria-hidden="true">'+(on?I.checkS:'')+'</span></button>'}).join('')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="plates-save">완료</button></div>');break;
   case 'plate-t':var pv=t.getAttribute('data-v'),pon=!plateSel[pv];plateSel[pv]=pon;t.classList.toggle('on',pon);t.setAttribute('aria-pressed',String(pon));t.querySelector('.box').innerHTML=pon?I.checkS:'';break;
   case 'dbs-open':plateSel={};dbList().forEach(function(p){plateSel[p]=true});modal('<h2>헬스장에 있는 덤벨</h2><div class="meta">있는 덤벨 무게(한 개 기준)를 체크하세요.</div><div style="max-height:52vh;overflow-y:auto;border-top:1px solid var(--line)">'+ALLDBS.map(function(p){var on=!!plateSel[p];return '<button class="pick'+(on?' on':'')+'" data-a="plate-t" data-v="'+p+'" aria-pressed="'+on+'"><span style="font-size:16px;font-weight:700">'+fmt(p)+' kg</span><span class="box" aria-hidden="true">'+(on?I.checkS:'')+'</span></button>'}).join('')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="dbs-save">완료</button></div>');break;
-  case 'dbs-save':db.settings.dbs=ALLDBS.filter(function(p){return plateSel[p]});save();modal('');render();break;
-  case 'plates-save':db.settings.plates=ALLPLATES.filter(function(p){return plateSel[p]});save();modal('');render();break;
+  case 'dbs-save':db.settings.dbs=ALLDBS.filter(function(p){return plateSel[p]});save();modal('');render();qt('덤벨 무게를 저장했어요');break;
+  case 'plates-save':db.settings.plates=ALLPLATES.filter(function(p){return plateSel[p]});save();modal('');render();qt('원판 구성을 저장했어요');break;
   case 'metab':meTab=t.getAttribute('data-v');render();break;
-  case 'shift-toggle':db.settings.shiftOff=!db.settings.shiftOff;save();render();break;
-  case 'rest-toggle':db.settings.restOn=!db.settings.restOn;if(!db.settings.restOn)stopRest();save();render();break;
+  case 'shift-toggle':db.settings.shiftOff=!db.settings.shiftOff;save();render();qt(db.settings.shiftOff?'근무 패턴을 껐어요':'근무 패턴을 켰어요');break;
+  case 'rest-toggle':db.settings.restOn=!db.settings.restOn;if(!db.settings.restOn)stopRest();save();render();qt(db.settings.restOn?'휴식 타이머를 켰어요':'휴식 타이머를 껐어요');break;
   case 'notif':try{if('Notification' in window)Notification.requestPermission().then(function(){render()})}catch(err){}break;
   case 'nx-db':readNewEx();newEx.dbf=t.getAttribute('data-v')==='1';renderNewEx();break;
   case 'nx-type':readNewEx();newEx.type=t.getAttribute('data-v');var tt=NTYPES.filter(function(x){return x[0]===newEx.type})[0];if(tt)newEx.inc=tt[3];renderNewEx();break;
@@ -2190,6 +2191,9 @@ document.addEventListener('click',function(ev){
  }
 });
 document.addEventListener('pointerover',function(ev){var gi=ev.target.getAttribute&&ev.target.getAttribute('data-gi');if(gi!=null)showPoint(+gi)});
+document.addEventListener('change',function(ev){var el=ev.target;if(!el||!el.getAttribute)return;var ds=el.getAttribute('data-s');
+ if(el.getAttribute('data-prog')==='name'||el.getAttribute('data-wk')==='name')qt('이름을 저장했어요');
+ else if(ds==='shiftAnchor')qt('근무 패턴 기준일을 저장했어요');else if(ds==='bar')qt('바 무게를 저장했어요');else if(ds==='rest'||ds==='restWarm')qt('휴식 시간을 저장했어요');else if(ds)qt('저장했어요')});
 document.addEventListener('input',function(ev){
  var el=ev.target;
  if(el.id==='sq'){catQuery=el.value.trim();render();return}
@@ -2214,7 +2218,7 @@ document.addEventListener('submit',function(ev){
  var f=ev.target.getAttribute('data-form');if(!f)return;ev.preventDefault();
  if(f==='search')return;
  if(f==='newex'){saveNewEx();return}
- if(f==='closed-add'){var cdv=(document.getElementById('s-cday')||{}).value;if(cdv){db.settings.closedDays=(db.settings.closedDays||[]).filter(function(x){return x!==cdv}).concat([cdv]);save();render()}return}
+ if(f==='closed-add'){var cdv=(document.getElementById('s-cday')||{}).value;if(cdv){db.settings.closedDays=(db.settings.closedDays||[]).filter(function(x){return x!==cdv}).concat([cdv]);save();render();qt(short(cdv)+' 임시 휴관일을 추가했어요')}return}
  if(f==='shoe-add'||f==='shoe-add2'){var two=f==='shoe-add2',nm=String((document.getElementById(two?'sh2-n':'sh-n')||{}).value||'').trim().slice(0,30),sk=parseFloat((document.getElementById(two?'sh2-k':'sh-k')||{}).value)||0;if(!nm)return;var ns={id:'s'+rid(),name:nm,startKm:Math.max(0,sk),retired:false,created:todayKey()};db.run.shoes.push(ns);save();if(two&&rl){rl.shoe=ns.id;renderRunLog()}else{if(rsBuf)readRunSet();render()}return}
  if(f==='ex-add'){var v=String(document.getElementById('ea').value||'').trim().slice(0,40);var c=catById(param);
   if(v&&liveEx().some(function(x){return x.cat===c.id&&x.name===v})){toast('이미 있는 종목이에요.','err');return}
