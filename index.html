@@ -1401,7 +1401,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.21',APP_VER='';
+var WEB_VER='v1.22',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1742,14 +1742,21 @@ function dayPlan(k){var sh=shiftOf(k),rows=[],rx=runRx(k),sx=swimRx(k),gx=gymRx(
  else if(g('gym')){pick=g('gym');pw='근력은 꾸준히 이어가야 무게가 올라가요. 러닝 회복·쉬운 날은 빠져도 손해가 적어요.'}
  else if(g('run')){pick=g('run');pw='오늘 남은 추천 중 러닝이 가장 중요해요.'}
  else if(g('swim')){pick=g('swim');pw=''}
- return{sh:sh,rows:rows,pick:pick,pw:pw,fat:fz,cond:(db.run.cond||{})[k]}}
+ /* 두 가지만 한다면: 다리 부담이 겹치지 않는 쪽을 먼저 고르기 */
+ var pick2=null,pw2='';
+ if(pick&&go.length>=2){var hardRun=rx.type&&(QT0[rx.type]||rx.type==='long'),legGym=gx.wk&&wkEx(gx.wk).some(function(e){return catById(e.cat).name==='하체'});
+  var sc=function(r){if(r.sp==='swim')return 0;if(r.sp==='run')return hardRun?3:1;if(r.sp==='gym')return legGym&&pick.sp==='run'?3:2;return 5};
+  pick2=go.filter(function(r){return r!==pick}).sort(function(a,b){return sc(a)-sc(b)})[0];
+  var both=[pick.sp,pick2.sp].sort().join('+');
+  var eun=function(n){var c=n.charCodeAt(n.length-1)-0xAC00;return n+(c>=0&&c%28?'은':'는')};pw2=pick.name+' 먼저, '+eun(pick2.name)+' 그다음에 해요.'+(both==='gym+run'&&(hardRun||legGym)?' 둘 다 다리를 쓰니 3~6시간 이상 띄우세요.':both==='gym+run'?' 쉬운 러닝이라 같은 날 해도 괜찮아요.':pick2.sp==='swim'||pick.sp==='swim'?' 수영은 다리 부담이 적어서 같이 하기 좋아요.':'')}
+ return{sh:sh,rows:rows,pick:pick,pw:pw,pick2:pick2,pw2:pw2,fat:fz,cond:(db.run.cond||{})[k]}}
 var QT0={tempo:1,interval:1,fartlek:1};
 function planCard(k){var P=dayPlan(k),ST={done:['완료','#2E9E6B'],doing:['진행 중','#1F55D6'],go:['추천','#16181A'],rest:['쉬기','#9AA0A8'],none:['설정','#9AA0A8']};
  var h='<div class="card" style="gap:10px"><div class="row" style="align-items:baseline"><div class="name" style="font-size:16px">오늘 할 것</div><button data-a="fat-pop" style="all:unset;cursor:pointer;font-size:12px;color:var(--sub)">다리 피로 '+(P.fat.r!=null?'<b style="color:'+(P.fat.lv==='high'?'#D9534F':P.fat.lv==='low'?'#2E9E6B':'var(--ink)')+'">'+FATLV[P.fat.lv]+' '+P.fat.r+'</b>':'<b>계산 중</b>')+' ⓘ</button></div>';
  if(P.sh&&P.sh!=='당번'&&P.cond){var slm=db.hc&&db.hc.sleep&&db.hc.sleep[k],au=db.hc&&db.hc.condAuto===k;h+='<div class="meta" style="font-size:12px;margin-top:-6px">잠 컨디션 '+SLEEPT[P.cond]+'('+(au&&slm?'가민 수면 '+Math.floor(slm/60)+'시간 '+(slm%60)+'분':'직접 고른 값')+')·'+(P.cond==='bad'?'모든 운동에 반영했어요':'정상대로 진행해요')+'</div>'}
  if(P.sh&&P.sh!=='당번')h+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">어젯밤 잠</span>'+[['good','좋음'],['ok','보통'],['bad','나쁨']].map(function(c){var on=P.cond===c[0];return '<button class="chip'+(on?' on':'')+'" data-a="run-cond" data-v="'+c[0]+'" aria-pressed="'+on+'" style="padding:6px 12px">'+c[1]+'</button>'}).join('')+'</div>';
  h+='<div style="display:flex;flex-direction:column;gap:2px">'+P.rows.map(function(r){var st=ST[r.st];return '<a href="'+r.href+'" style="text-decoration:none;color:inherit;display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #F0F1F3'+(r.st==='rest'||r.st==='none'?';opacity:.6':'')+'"><span style="flex:none;width:8px;height:8px;border-radius:50%;margin-top:7px;background:'+(r.st==='done'?'#2E9E6B':r.col)+'"></span><div style="flex:1;min-width:0"><div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap"><b style="font-size:15px">'+r.name+'</b><span style="font-size:15px">'+esc(r.txt)+'</span><span style="margin-left:auto;font-size:11px;font-weight:700;color:'+st[1]+'">'+(r.st==='done'?'✓ ':'')+(r.opt&&r.st==='go'?'선택':st[0])+'</span></div>'+(r.why&&r.st!=='done'?'<div class="meta" style="font-size:12px;line-height:1.5;margin-top:2px">'+esc(r.why)+'</div>':'')+'</div></a>'}).join('')+'</div>';
- if(P.pick)h+='<div style="background:#F4F6F9;border-radius:12px;padding:10px 12px"><div style="font-size:14px"><b>한 가지만 한다면 → '+P.pick.name+'</b></div>'+(P.pw?'<div class="meta" style="font-size:12px;margin-top:2px">'+esc(P.pw)+'</div>':'')+'</div>';
+ if(P.pick)h+='<div style="background:#F4F6F9;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px"><div><div style="font-size:14px"><b>한가지만 한다면? → '+P.pick.name+'</b></div>'+(P.pw?'<div class="meta" style="font-size:12px;margin-top:2px">'+esc(P.pw)+'</div>':'')+'</div>'+(P.pick2?'<div style="border-top:1px solid #E3E6EA;padding-top:8px"><div style="font-size:14px"><b>두가지만 한다면? → '+P.pick.name+' + '+P.pick2.name+'</b></div><div class="meta" style="font-size:12px;margin-top:2px">'+esc(P.pw2)+'</div></div>':'')+'</div>';
  else if(P.rows.every(function(r){return r.st!=='go'}))h+='<div class="meta" style="font-size:13px">'+(P.rows.some(function(r){return r.st==='done'})?'오늘 할 운동을 마쳤어요. 잘했어요!':'오늘은 쉬는 날이에요. 회복도 훈련이에요.')+'</div>';
  h+='<button class="ghost" data-a="plan-other" style="align-self:flex-start;font-size:13px">오늘은 다르게 할게</button></div>';return h}
 function fatPop(){var k=todayKey(),f=legFat(k),days=[];for(var i=3;i>=1;i--){var d=addDays(k,-i);days.push([short(d),r1(legLoadDay(d))])}days.push(['오늘 헬스',legSets(k)]);
