@@ -449,6 +449,8 @@ function vToday(){
   h+='<button class="secondary" data-a="add-ex">종목 직접 고르기</button>'+weekSetsCard(k)+'</main>';
   return h;
  }
+ var anyLog=d&&d.sets.length>0,ow=d&&d.workout?wkById(d.workout):null;
+ if(!anyLog)h+='<div class="banner" style="align-items:center"><span>'+(ow?'<b>'+esc(ow.name)+'</b>을 열어뒀어요.':'종목을 골라뒀어요.')+' 아직 기록은 없어요.</span><button class="ghost" data-a="wk-close" style="flex-shrink:0">워크아웃 다시 고르기</button></div>';
  var stats=order.map(function(id){var e=exById(id);return e&&!e.deleted?{e:e,s:exStatus(e,k)}:{e:e,s:null}});
  var doneN=stats.filter(function(x){return x.s&&x.s.done}).length,curIdx=-1;
  stats.forEach(function(x,i){if(curIdx<0&&x.s&&!x.s.done&&(x.s.workDone||x.s.warmDone))curIdx=i});
@@ -1399,7 +1401,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.18',APP_VER='';
+var WEB_VER='v1.19',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -2139,6 +2141,7 @@ document.addEventListener('click',function(ev){
   case 'rest-add':rest.end+=30000;tickRest();break;
   case 'rest-stop':stopRest();break;
   case 'wk-start':startWk(id);break;
+  case 'wk-close':var dc=db.days[curDate];if(dc&&!dc.sets.length){delete db.days[curDate];save();render();qt('워크아웃 목록으로 돌아왔어요')}break;
   case 'ex-plain':if(editBuf){readEdit();editBuf.plain=t.getAttribute('data-v')==='1';if(editBuf.plain)editBuf.em='';render()}break;
   case 'wk-duty':var wdu=wkById(param);if(wdu){wdu.duty=t.getAttribute('data-v')==='1';save();render();qt(wdu.duty?'당번 워크아웃으로 정했어요':'평소 루틴으로 정했어요')}break;
   case 'wk-mode':var wm=wkById(param);if(wm){wm.mode=t.getAttribute('data-v');save();render()}qt(({h:'근비대',s:'근력','':'일반'}[t.getAttribute('data-v')]||'')+' 모드로 바꿨어요');break;
