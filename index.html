@@ -436,7 +436,7 @@ function vToday(){
  var eyebrow=esc(pretty(k,{month:'long',day:'numeric',weekday:'long'}));
  var h=hdr(isToday?'오늘 헬스':'이날 헬스',eyebrow,isToday?backBtn('#home','홈으로'):'<button class="icon" data-a="to-today" aria-label="오늘로">'+I.back+'</button>','<div style="display:flex;gap:6px"><a class="icon" href="#gymcal" aria-label="헬스 캘린더">'+I.cal+'</a><a class="icon" href="#plan" aria-label="운동 관리" style="width:auto;padding:0 12px;font-size:13px;font-weight:700">운동 관리</a></div>')+'<main>'+(wk?'<div style="display:flex;align-items:flex-start;gap:8px;padding:0 2px"><div style="font-size:19px;font-weight:800;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere;flex:1;min-width:0">'+esc(wk.name)+'</div>'+(wk.mode?'<span class="badge" style="flex-shrink:0;margin-top:2px;background:'+(wk.mode==='s'?'#FCE8E3;color:#B4441C':'#E5EEFB;color:#1F55D6')+'">'+MODE[wk.mode]+'</span>':'')+'</div>':'');
  if(!isToday)h+='<div class="banner"><span>'+esc(pretty(k))+' 기록을 보고 있어요.</span><button class="ghost" data-a="to-today">오늘로</button></div>';
- if(closedWhy(k)&&!(d&&d.sets.length))h+='<div class="banner"><span>'+(isToday?'오늘은':'이날은')+' 커뮤니티 <b>'+esc(closedWhy(k))+'</b>이에요. 루틴은 다음 운동 날에 이어서 해요.</span></div>';
+ if(closedWhy(k)&&!(d&&d.sets.length))h+='<div class="banner"><span>'+(isToday?'오늘은':'이날은')+' 커뮤니티 <b>'+esc(closedWhy(k))+'</b>이라 헬스는 쉬어요.</span></div>';
  var cdz=closedWhy(k)&&!(d&&d.sets.length),lcb=isToday&&!cdz&&legCutWhy(k);if(lcb)h+='<div class="banner"><span>'+esc(lcb)+' 하체 종목은 본세트를 1개씩 줄였어요.</span></div>';
  var slv=isToday&&!cdz&&sleepLv(k);if(slv)h+='<div class="banner"><span>잠 컨디션 <b>'+SLEEPT[slv]+'</b> · '+(slv==='bad'?'무게는 지난번 그대로, 본세트 1개씩 줄였어요.':'무게를 올리지 않고 지난번 무게로 해요.')+'</span></div>';
  if(!order.length){
@@ -831,7 +831,7 @@ function vMe(){
   '<div class="field" style="padding:0"><label for="s-chol">공휴일·대체공휴일도 휴관</label><button id="s-chol" role="switch" aria-checked="'+hon+'" data-a="closed-hol" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(hon?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(hon?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff"></span></button></div>'+
   '<div class="lbl">임시 휴관일</div>'+(cds.length?'<div class="chips" style="flex-wrap:wrap">'+cds.map(function(x){return '<button class="chip on" data-a="closed-del" data-v="'+x+'" aria-label="'+x+' 임시 휴관 지우기">'+short(x)+' ✕</button>'}).join('')+'</div>':'')+
   '<form class="addrow" data-form="closed-add" style="margin:0"><label for="s-cday" class="sr">임시 휴관일</label><input id="s-cday" type="date" min="'+todayKey()+'"><button type="submit">추가</button></form>'+
-  '<div class="meta" style="font-size:12px;line-height:1.6">다음 휴관: '+(nxt.length?esc(nxt.join(' · ')):'없음')+'<br>휴관일엔 헬스·수영을 쉬고, 루틴은 다음 운동 날에 이어서 해요. 러닝은 그대로예요. 공휴일은 2027년까지 들어 있어요.</div></div>';
+  '<div class="meta" style="font-size:12px;line-height:1.6">다음 휴관: '+(nxt.length?esc(nxt.join(' · ')):'없음')+'<br>휴관일엔 헬스·수영은 쉬고, 러닝은 그대로예요. 공휴일은 2027년까지 들어 있어요.</div></div>';
  h+=hcSettingsBlock();
  h+='<div class="list" style="margin-top:8px"><button class="li" data-a="app-reload" style="width:100%;text-align:left"><div><div class="t">최신 버전으로 새로고침</div><div class="meta">지금 버전 '+WEB_VER+(APP_VER?' · 앱(APK) '+esc(APP_VER):'')+'</div></div>'+I.chev+'</button></div>';
  h+='<div class="sectitle" style="padding-top:12px">몸 기록</div>';
@@ -1401,7 +1401,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.19',APP_VER='';
+var WEB_VER='v1.20',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1717,7 +1717,7 @@ function gymRx(k){var sh=shiftOf(k),gd=db.days[k],o={shift:sh};
  var cw=closedWhy(k);
  if(sh==='당번'){var dn=dutyWks().length?nextWk(k,null,true):null;if(dn){var dex=wkEx(dn);o.st='go';o.opt=true;o.wk=dn;o.txt=dn.name+' · '+dex.length+'종목';o.why='당번 날 운동이에요. 여유 있을 때만 가볍게 하고, 바쁘거나 피곤하면 건너뛰어도 괜찮아요. 평소 루틴 순서에는 영향 없어요.';return o}
   o.st='rest';o.txt='쉬기';o.why='당번이라 쉬는 날이에요.';return o}
- if(cw){o.st='rest';o.txt='쉬기';o.why='오늘은 커뮤니티 '+cw+'이라 헬스는 쉬어요. 루틴은 다음 운동 날에 이어서 해요.';return o}
+ if(cw){o.st='rest';o.txt='쉬기';o.why='오늘은 커뮤니티 '+cw+'이라 헬스는 쉬어요.';return o}
  var nx=nextWk(k);if(!nx){o.st='none';o.txt='워크아웃을 만들면 추천해요';return o}
  var legN=wkEx(nx).filter(function(e){return catById(e.cat).name==='하체'}).length,fz=legFat(k);o.st='go';o.wk=nx;o.txt=nx.name+(legN?' · 하체 '+legN+'종목':'');
  var lcw2=legCutWhy(k);if(lcw2&&legN){o.why=lcw2+' 하체 종목은 본세트를 1개씩 줄였어요.'+(hardRunOn(k)?' 가능하면 러닝과 3~6시간 이상 띄우세요.':'')}
@@ -1762,7 +1762,7 @@ function vHome(){
  if(sh)h+='<div style="display:flex;gap:6px">'+[-1,0,1].map(function(o){var kk=addDays(k,o),s2=shiftOf(kk),on=o===0;return '<div style="flex:1;text-align:center;font-size:12px;padding:7px 0;border-radius:10px;background:'+(on?'var(--ink)':'#E6E8E4')+';color:'+(on?'#fff':'#4A4F57')+';font-weight:'+(on?700:500)+'">'+(o<0?'어제':o>0?'내일':'오늘')+' · '+s2+'</div>'}).join('')+'</div>';
  var gd=db.days[k],gymDone=gd&&gd.sets.length,nx=nextFor(k),gw=gd&&gd.workout?wkById(gd.workout):null;
  var runToday=db.run.runs.filter(function(r){return r.date===k}),rx2=runRx(k);
- var swToday=db.swim.swims.filter(function(w){return w.date===k}),sx=swimRx(k),swTxt=swToday.length?'오늘 '+swToday.map(function(w){return (+w.m).toLocaleString()+'m'}).join(' + ')+' 완료':!sx.setup?'설정하고 시작하기':sx.type==='lesson'?'오늘은 <b style="color:var(--ink)">강습</b> 날':sx.type==='rest'?'오늘은 쉬는 날':'오늘 추천<br><b style="color:var(--ink)">'+esc(sx.title)+' '+sx.m.toLocaleString()+'m</b>';
+ var swToday=db.swim.swims.filter(function(w){return w.date===k}),sx=swimRx(k),swTxt=swToday.length?'오늘 '+swToday.map(function(w){return (+w.m).toLocaleString()+'m'}).join(' + ')+' 완료':!sx.setup?'설정하고 시작하기':sx.type==='lesson'?'오늘은 <b style="color:var(--ink)">강습</b> 날':sx.closed?'오늘은 <b style="color:var(--ink)">'+esc(sx.closed)+'</b>':sx.type==='rest'?'오늘은 쉬는 날':'오늘 추천<br><b style="color:var(--ink)">'+esc(sx.title)+' '+sx.m.toLocaleString()+'m</b>';
  var gymTxt=!gymDone&&closedWhy(k)?'오늘은 <b style="color:var(--ink)">'+esc(closedWhy(k))+'</b>':gymDone?'오늘 '+(gw?esc(gw.name):'운동')+(gd.done?' 완료':' 진행 중'):(nx?'다음 차례<br><b style="color:var(--ink)">'+esc(nx.name)+'</b>':'워크아웃 만들기');
  var runTxt=runToday.length?'오늘 '+runToday.map(function(r){return r1(r.km)+'km'}).join(' + ')+' 완료':(!rx2.setup?'목표를 설정하세요':rx2.type==='rest'?'오늘은 쉬는 날':'오늘 추천<br><b style="color:var(--ink)">'+RTYPE[rx2.type]+(rx2.km?' '+r1(rx2.km)+'km':'')+'</b>');
  function tile(href,name,color,bg,icon,txt,done,disabled){return (disabled?'<div':'<a href="'+href+'"')+' style="text-decoration:none;color:inherit;background:#fff;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:150px;'+(disabled?'opacity:.55':'')+'"><div class="row"><div style="width:44px;height:44px;border-radius:14px;background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+'">'+icon+'</div>'+(done?'<span class="badge b-new">완료</span>':'')+'</div><div style="font-size:18px;font-weight:900">'+name+'</div><div class="meta" style="font-size:12px;line-height:1.45">'+txt+'</div>'+(disabled?'</div>':'</a>')}
