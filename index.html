@@ -1395,7 +1395,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.14',APP_VER='';
+var WEB_VER='v1.15',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1885,7 +1885,7 @@ function startWk(id,force){
  /* 다른 워크아웃으로 바꾸기: 기록이 없는 종목은 빼고 새 워크아웃 종목으로 교체 */
  if(prevW&&prevW.id!==w.id){
   var logged=cur.filter(function(x){return setsOn(k,x).length});
-  if(!force){
+  if(!force&&logged.length){
    modal('<h2>워크아웃을 바꿀까요?</h2><div class="meta" style="line-height:1.6">오늘 <b>'+esc(prevW.name)+'</b>를 <b>'+esc(w.name)+'</b>로 바꿔요.'+(logged.length?' 이미 기록한 종목 '+logged.length+'개는 남겨 둬요.':' 아직 기록한 종목이 없어서 목록이 통째로 바뀌어요.')+'</div><div class="btnrow"><button class="secondary" data-a="modal-close">취소</button><button class="primary" data-a="wk-start-force" data-id="'+esc(w.id)+'">바꾸기</button></div>');
    return;
   }
