@@ -1168,7 +1168,7 @@ function readRunSet(){Array.prototype.forEach.call(document.querySelectorAll('[d
 function saveRunSet(){
  readRunSet();var b=rsBuf,old=rset(),n=function(v){var x=parseFloat(v);return isNaN(x)||x<0?0:x};
  var s={goal:b.goal,raceDate:/^\d{4}-\d{2}-\d{2}$/.test(b.raceDate)&&b.goal!=='fit'?b.raceDate:'',age:n(b.age),hrMax:n(b.hrMax),lthr:n(b.lthr),lthrAt:n(b.lthr)?(+old.lthr===n(b.lthr)&&old.lthrAt?old.lthrAt:todayKey()):'',recKm:n(b.recKm),recSec:Math.round(n(b.rh)*3600+n(b.rm)*60+n(b.rs)),longest:n(b.longest),since:old.goal===b.goal&&old.since?old.since:todayKey()};
- db.run.setup=s;rsBuf=null;save();toasts.push({m:'러닝 목표를 저장했어요.',k:'ok'});go('#run');
+ db.run.setup=s;rsBuf=null;save();toast('러닝 설정을 저장했어요.');render();
 }
 
 /* 전체 기록 · 그래프 */
@@ -1387,7 +1387,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.09',APP_VER='';
+var WEB_VER='v1.10',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
