@@ -1395,7 +1395,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.16',APP_VER='';
+var WEB_VER='v1.17',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1711,8 +1711,8 @@ function gymRx(k){var sh=shiftOf(k),gd=db.days[k],o={shift:sh};
  var cw=closedWhy(k);
  if(sh==='당번'){var dn=dutyWks().length?nextWk(k,null,true):null;if(dn){var dex=wkEx(dn);o.st='go';o.opt=true;o.wk=dn;o.txt=dn.name+' · '+dex.length+'종목';o.why='당번 날 운동이에요. 여유 있을 때만 가볍게 하고, 바쁘거나 피곤하면 건너뛰어도 괜찮아요. 평소 루틴 순서에는 영향 없어요.';return o}
   o.st='rest';o.txt='쉬기';o.why='당번이라 쉬는 날이에요.';return o}
+ if(cw){o.st='rest';o.txt='쉬기';o.why='오늘은 커뮤니티 '+cw+'이라 헬스는 쉬어요. 루틴은 다음 운동 날에 이어서 해요.';return o}
  var nx=nextWk(k);if(!nx){o.st='none';o.txt='워크아웃을 만들면 추천해요';return o}
- if(cw){o.st='rest';o.txt='휴관';o.why='오늘은 커뮤니티 '+cw+'이에요. 루틴은 다음 운동 날에 이어서 해요.';return o}
  var legN=wkEx(nx).filter(function(e){return catById(e.cat).name==='하체'}).length,fz=legFat(k);o.st='go';o.wk=nx;o.txt=nx.name+(legN?' · 하체 '+legN+'종목':'');
  var lcw2=legCutWhy(k);if(lcw2&&legN){o.why=lcw2+' 하체 종목은 본세트를 1개씩 줄였어요.'+(hardRunOn(k)?' 가능하면 러닝과 3~6시간 이상 띄우세요.':'')}
  else o.why='다음 차례 루틴이에요.'+(sh==='비번'&&legN?' 하체는 휴무 강도 러닝 전날보다 비번에 하는 게 좋아요.':'');
