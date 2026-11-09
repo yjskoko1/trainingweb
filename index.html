@@ -328,10 +328,10 @@ function plateTxt(w,mode){
  if(mode!=='plate'&&w<=bar)return w<bar?'빈 봉('+fmt(bar)+'kg)보다 가벼워요':'빈 봉만';
  var per=fix((w-bar)/2),left=per,parts=[];
  if(per<=0)return '';
- pl.forEach(function(p){var n=Math.floor((left+1e-9)/p);for(var i=0;i<n;i++)parts.push(fmt(p));left=fix(left-n*p)});
+ pl.forEach(function(p){var n=Math.floor((left+1e-9)/p);if(n>0)parts.push(n>1?fmt(p)+'kg×'+n:fmt(p)+'kg');left=fix(left-n*p)});
  var t='한쪽 '+fmt(per)+'kg';
- if(parts.length&&left<=0.001)t+=' ('+parts.join('+')+')';
- else if(parts.length)t+=' ('+parts.join('+')+', '+fmt(left)+'kg 원판 없음)';
+ if(parts.length&&left<=0.001){if(!(parts.length===1&&parts[0].indexOf('×')<0))t+=' ('+parts.join(' + ')+')'}
+ else if(parts.length)t+=' ('+parts.join(' + ')+', '+fmt(left)+'kg 원판 없음)';
  return t;
 }
 function warmN(e){return e.warmN!=null?+e.warmN:(e.warm==='full'?4:e.warm==='light'?1:0)}
@@ -1405,7 +1405,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.23',APP_VER='';
+var WEB_VER='v1.24',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
