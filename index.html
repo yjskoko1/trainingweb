@@ -896,7 +896,18 @@ function rHalf(n){return Math.round(n*2)/2}
 function fmtPace(sec){if(!sec||!isFinite(sec))return '–';sec=Math.round(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
 function fmtDur(sec){sec=Math.round(+sec||0);var h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(s).padStart(2,'0')}
 function hrMax(){var s=rset();return +s.hrMax||(+s.lthr?Math.round(s.lthr/0.92):0)||(s.age?Math.round(208-0.7*s.age):0)}
-function lthr(){return +rset().lthr||0} /* Tanaka 2001 추정식 */
+function lthr(){return +rset().lthr||0}
+/* 코치 제안: 최대 심박·젖산역치. 앱이 몰래 바꾸지 않고 물어봐요 */
+function hrSuggest(){var s=rset(),out=[],dm=db.run.sugDis||{},k=todayKey(),from=addDays(k,-365);if(!s.goal)return out;
+ var rr=db.run.runs.filter(function(r){return r.date>=from}),cur=+s.hrMax||0;
+ var mx=rr.reduce(function(a,r){var v=+r.hrMax||0;return v>a&&v<=215?v:a},0);
+ if(mx&&mx>(cur||hrMax())&&dm.hrMax!==mx)out.push({k:'hrMax',v:mx,t:'최대 심박 '+mx+'이 찍혔어요',d:'지금 설정은 '+(cur?cur:'나이로 추정한 '+hrMax())+'이에요. 최대 심박이 맞아야 쉬운 달리기 심박 구간이 정확해져요. 가슴 스트랩이 아닌 손목 심박은 가끔 튀니, 기억과 비슷하면 바꿔 주세요.'});
+ var lt=+s.lthr||0,f60=addDays(k,-60),best=null;
+ rr.forEach(function(r){if(r.date<f60||!(+r.hr20>0))return;var mn=(+r.sec||0)/60;if(mn<25||mn>80)return;if(lt&&r.hr20<lt*0.93)return;if(!best||r.hr20>best.hr20)best=r});
+ if(best){var est=best.hr20;if((!lt||est>=lt+3)&&dm.lthr!==est)out.push({k:'lthr',v:est,t:'젖산역치가 '+est+' 정도로 보여요',d:short(best.date)+' '+r1(best.km)+'km 러닝의 마지막 20분 평균 심박이 '+est+'이에요(30분 이상 강하게 달린 기록의 마지막 20분 평균 = 젖산역치, Friel 방식). '+(lt?'지금 설정 '+lt+'보다 높아서 체력이 좋아진 것 같아요.':'')})}
+ if(lt&&s.lthrAt&&daysBetween(s.lthrAt,k)>42&&dm.ltOld!==s.lthrAt)out.push({k:'ltOld',v:0,t:'젖산역치를 '+daysBetween(s.lthrAt,k)+'일째 그대로 쓰고 있어요',d:'가민 → 성능 통계 → 젖산역치에서 지금 값을 확인하고, 다르면 러닝 설정에서 고쳐 주세요.'});
+ return out}
+function hrSuggestCard(){var L=hrSuggest();if(!L.length)return '';return L.map(function(x){return '<div class="card" style="gap:8px;border:1.5px solid #B4441C"><div class="meta" style="font-size:12px;color:#B4441C;font-weight:700">코치 제안</div><div class="name" style="font-size:16px">'+esc(x.t)+'</div><div class="meta" style="line-height:1.6">'+esc(x.d)+'</div><div class="btnrow">'+(x.k==='ltOld'?'<a class="secondary" href="#runset" style="text-align:center;text-decoration:none">러닝 설정 열기</a>':'<button class="primary" data-a="sug-ok" data-f="'+x.k+'" data-v="'+x.v+'">'+x.v+'로 바꾸기</button>')+'<button class="secondary" data-a="sug-no" data-f="'+x.k+'" data-v="'+(x.k==='ltOld'?esc(rset().lthrAt):x.v)+'">'+(x.k==='ltOld'?'확인했어요':'괜찮아요')+'</button></div></div>'}).join('')} /* Tanaka 2001 추정식 */
 function riegel(d1,t1,d2){return t1*Math.pow(d2/d1,1.06)} /* Riegel 1981 */
 function recRec(){var s=rset();return s.recKm>0&&s.recSec>0?{km:+s.recKm,sec:+s.recSec}:null}
 function runsSorted(){return db.run.runs.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts})}
@@ -1049,6 +1060,7 @@ function vRun(){
   return h+runRecent()+'</main>';
  }
  var wk=weekKm(k),es=easyShare(k);
+ h+=hrSuggestCard();
  h+='<a class="card" href="#runset" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><div style="flex:1;min-width:0"><div class="meta">목표</div><div style="font-size:15px;font-weight:700">'+esc(x.goal.name)+(x.dRace!=null&&x.dRace>=0?' · D-'+x.dRace:'')+'</div></div><div style="text-align:right"><div class="meta">최근 7일</div><div style="font-size:15px;font-weight:900">'+wk+'km</div>'+(es!=null?'<div class="meta" style="font-size:11px">쉬운 강도 '+es+'%</div>':'')+'</div></a>';
  var today=db.run.runs.filter(function(r){return r.date===k});
  if(x.type==='rest'){
@@ -1155,7 +1167,7 @@ function vRunSet(){
 function readRunSet(){Array.prototype.forEach.call(document.querySelectorAll('[data-rs]'),function(el){rsBuf[el.getAttribute('data-rs')]=el.value})}
 function saveRunSet(){
  readRunSet();var b=rsBuf,old=rset(),n=function(v){var x=parseFloat(v);return isNaN(x)||x<0?0:x};
- var s={goal:b.goal,raceDate:/^\d{4}-\d{2}-\d{2}$/.test(b.raceDate)&&b.goal!=='fit'?b.raceDate:'',age:n(b.age),hrMax:n(b.hrMax),lthr:n(b.lthr),recKm:n(b.recKm),recSec:Math.round(n(b.rh)*3600+n(b.rm)*60+n(b.rs)),longest:n(b.longest),since:old.goal===b.goal&&old.since?old.since:todayKey()};
+ var s={goal:b.goal,raceDate:/^\d{4}-\d{2}-\d{2}$/.test(b.raceDate)&&b.goal!=='fit'?b.raceDate:'',age:n(b.age),hrMax:n(b.hrMax),lthr:n(b.lthr),lthrAt:n(b.lthr)?(+old.lthr===n(b.lthr)&&old.lthrAt?old.lthrAt:todayKey()):'',recKm:n(b.recKm),recSec:Math.round(n(b.rh)*3600+n(b.rm)*60+n(b.rs)),longest:n(b.longest),since:old.goal===b.goal&&old.since?old.since:todayKey()};
  db.run.setup=s;rsBuf=null;save();toasts.push({m:'러닝 목표를 저장했어요.',k:'ok'});go('#run');
 }
 
@@ -1375,7 +1387,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.08',APP_VER='';
+var WEB_VER='v1.09',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1394,7 +1406,9 @@ function hcNative(){try{return !!(window.Capacitor&&Capacitor.isNativePlatform&&
 function hcP(){return Capacitor.Plugins.Health}
 function hcOn(){return hcNative()&&db.hc.on}
 function hcKey(iso){return key(new Date(iso))}
-async function hcHR(s,e){try{var r=await hcP().readSamples({dataType:'heartRate',startDate:s,endDate:e,limit:10000});var v=(r.samples||[]).map(function(x){return +x.value}).filter(function(x){return x>30&&x<240});if(!v.length)return{avg:0,max:0};return{avg:Math.round(v.reduce(function(a,b){return a+b},0)/v.length),max:Math.max.apply(null,v)}}catch(e){return{avg:0,max:0}}}
+async function hcHR(s,e){try{var r=await hcP().readSamples({dataType:'heartRate',startDate:s,endDate:e,limit:10000});var sm=(r.samples||[]).filter(function(x){return +x.value>30&&+x.value<240}),v=sm.map(function(x){return +x.value});if(!v.length)return{avg:0,max:0,hr20:0};
+ var et=new Date(e).getTime(),st=new Date(s).getTime(),hr20=0;if(et-st>=25*60000){var l=sm.filter(function(x){var t=new Date(x.startDate||x.time||x.timestamp||0).getTime();return t>=et-20*60000&&t<=et}).map(function(x){return +x.value});if(l.length>=20)hr20=Math.round(l.reduce(function(a,b){return a+b},0)/l.length)}
+ return{avg:Math.round(v.reduce(function(a,b){return a+b},0)/v.length),max:Math.max.apply(null,v),hr20:hr20}}catch(e){return{avg:0,max:0,hr20:0}}}
 async function hcConnect(){
  if(!hcNative()){hcWebInfo();return}
  try{
@@ -1426,7 +1440,9 @@ async function hcImport(show){
   var res=await hcP().queryWorkouts({startDate:since.toISOString(),endDate:new Date().toISOString(),limit:500,ascending:true});
   var added=[],scan={total:(res.workouts||[]).length,run:0,swim:0,other:0,first:null};(res.workouts||[]).forEach(function(w){var t=String(w.workoutType||'');if(/^running/.test(t))scan.run++;else if(/^swimming/.test(t))scan.swim++;else scan.other++;if(!scan.first||w.startDate<scan.first)scan.first=w.startDate});db.hc.scan=scan;
   for(var i=0;i<(res.workouts||[]).length;i++){
-   var w=res.workouts[i],id=w.platformId||(w.startDate+'|'+w.workoutType);if(db.hc.seen[id]||db.run.runs.some(function(r){return r.hc===id})||db.swim.swims.some(function(x){return x.hc===id}))continue;
+   var w=res.workouts[i],id=w.platformId||(w.startDate+'|'+w.workoutType);
+   var ex0=db.run.runs.filter(function(r){return r.hc===id})[0];if(ex0&&ex0.hr20===undefined&&(+w.duration||0)>=1500&&hcKey(w.startDate)>=addDays(todayKey(),-60)){try{var h0=await hcHR(w.startDate,w.endDate);ex0.hr20=h0.hr20||0;if(!ex0.hrMax&&h0.max)ex0.hrMax=h0.max}catch(e){}}
+   if(db.hc.seen[id]||db.run.runs.some(function(r){return r.hc===id})||db.swim.swims.some(function(x){return x.hc===id}))continue;
    try{
    var t=String(w.workoutType||''),k=hcKey(w.startDate),dist=+w.totalDistance||0,sec=Math.round(+w.duration||0);
    if(!dist&&/^(running|swimming)/.test(t))dist=await hcDist(w.startDate,w.endDate);
@@ -1434,7 +1450,7 @@ async function hcImport(show){
     var km=Math.round(dist/10)/100;if(!(km>0)){skip.noDist++;continue}
     if(hcDupRun(k,km)){skip.dup++;db.hc.seen[id]=1;continue}
     var hr=await hcHR(w.startDate,w.endDate),x=runRx(k),ty=x&&RTYPE[x.type]&&x.type!=='rest'&&x.type!=='race'?x.type:'easy';
-    db.run.runs.push({id:'r'+rid(),date:k,type:ty,place:t==='runningTreadmill'?'tm':'out',km:km,sec:sec,hr:hr.avg,hrMax:hr.max,shoe:(function(){var d=defShoe();return d&&(!d.created||k>=d.created)?d.id:''})(),memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
+    db.run.runs.push({id:'r'+rid(),date:k,type:ty,place:t==='runningTreadmill'?'tm':'out',km:km,sec:sec,hr:hr.avg,hrMax:hr.max,hr20:hr.hr20||0,shoe:(function(){var d=defShoe();return d&&(!d.created||k>=d.created)?d.id:''})(),memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
     added.push('러닝 '+short(k)+' '+km+'km');
    }else if(/^swimming/.test(t)){
     var m=Math.round(dist);if(!(m>0)){skip.noDist++;continue}
@@ -2046,6 +2062,8 @@ document.addEventListener('click',function(ev){
   case 'closed-wd':var cv=+t.getAttribute('data-v'),cl=closedWd().slice(),ci2=cl.indexOf(cv);if(ci2>=0)cl.splice(ci2,1);else cl.push(cv);db.settings.closedWd=cl.sort();save();render();break;
   case 'closed-hol':db.settings.closedHol=db.settings.closedHol===false;save();render();break;
   case 'closed-del':db.settings.closedDays=(db.settings.closedDays||[]).filter(function(x){return x!==t.getAttribute('data-v')});save();render();break;
+  case 'sug-ok':var sf=t.getAttribute('data-f'),sv=+t.getAttribute('data-v');db.run.setup=Object.assign({},rset());db.run.setup[sf]=sv;if(sf==='lthr')db.run.setup.lthrAt=todayKey();save();toast((sf==='lthr'?'젖산역치':'최대 심박')+'를 '+sv+'로 바꿨어요. 처방에 바로 반영했어요.');render();break;
+  case 'sug-no':db.run.sugDis=db.run.sugDis||{};var nf=t.getAttribute('data-f'),nv=t.getAttribute('data-v');db.run.sugDis[nf]=nf==='ltOld'?(rset().lthr?(db.run.setup.lthrAt=todayKey(),todayKey()):nv):+nv;save();render();break;
   case 'fat-pop':fatPop();break;
   case 'plan-other':modal('<h2>오늘은 다르게 할게</h2><div class="meta" style="line-height:1.6">괜찮아요. 하고 싶은 운동을 그대로 기록하세요. 내일 추천은 오늘 실제로 한 기록을 보고 다시 계산해요. 빠진 운동은 쌓아두지 않아요.</div><div class="list"><a class="li" href="#today" data-a="modal-close"><span class="t">헬스</span>'+I.chev+'</a><a class="li" href="#run" data-a="modal-close"><span class="t">러닝</span>'+I.chev+'</a><a class="li" href="#swim" data-a="modal-close"><span class="t">수영</span>'+I.chev+'</a></div><button class="secondary" data-a="modal-close">닫기</button>');break;
   case 'wk-pop':weekPop(t.getAttribute('data-v'));break;
