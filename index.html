@@ -318,16 +318,20 @@ function snapDb(w,dir){var l=dbList();if(!l.length)return w;var i;
  if(dir==='down'){for(i=l.length-1;i>=0;i--)if(l[i]<=w+1e-9)return l[i];return l[0]}
  var best=l[0];l.forEach(function(x){if(Math.abs(x-w)<Math.abs(best-w))best=x});return best}
 function restTxt(sec){sec=+sec||0;var m=Math.floor(sec/60),r=sec%60;return m?(m+'분'+(r?' '+r+'초':'')):r+'초'}
-function isBarbell(e){return e.barbell!=null?!!e.barbell:e.warm==='full'}
+function isBarbell(e){return plateMode(e)==='bar'}
+/* 원판 계산: bar = 봉 무게 빼고 한쪽, plate = 원판만 한쪽(레그프레스 등), none */
+var BAR_RE=/바벨|벤치 ?프레스|스쿼트|데드리프트|오버헤드 ?프레스|밀리터리 ?프레스|굿모닝|힙 ?쓰러스트|런지/,PLATE_RE=/레그 ?프레스|핵 ?스쿼트|티 ?바|T ?바|브이 ?스쿼트|펜듈럼|플레이트 ?로디드/;
+function plateMode(e){if(!e)return 'none';if(e.plate)return e.plate;if(e.barbell===true)return 'bar';if(e.barbell===false)return 'none';var n=e.name||'';if(/덤벨|케이블|머신|스미스/.test(n)&&!PLATE_RE.test(n))return 'none';if(PLATE_RE.test(n))return 'plate';if(BAR_RE.test(n)||e.warm==='full')return 'bar';return 'none'}
 var ALLPLATES=[50,25,20,15,10,5,2.5,2,1.25,1,0.5,0.25];
-function plateTxt(w){
- var bar=db.settings.bar||20,pl=(db.settings.plates||[]).slice().sort(function(a,b){return b-a});
- if(w<bar)return 'EACH SIDE – (빈 봉 '+fmt(bar)+'kg보다 가벼움)';
+function plateTxt(w,mode){
+ var bar=mode==='plate'?0:(db.settings.bar||20),pl=(db.settings.plates||[]).slice().sort(function(a,b){return b-a});
+ if(mode!=='plate'&&w<=bar)return w<bar?'빈 봉('+fmt(bar)+'kg)보다 가벼워요':'빈 봉만';
  var per=fix((w-bar)/2),left=per,parts=[];
- if(per<=0)return 'EACH SIDE 0kg';
- pl.forEach(function(p){var n=Math.floor((left+1e-9)/p);for(var i=0;i<n;i++)parts.push(fmt(p)+'kg');left=fix(left-n*p)});
- var t='EACH SIDE '+parts.join(' + ');
- if(left>0.001)t+=(parts.length?' ':'')+'('+fmt(left)+'kg 원판 없음)';
+ if(per<=0)return '';
+ pl.forEach(function(p){var n=Math.floor((left+1e-9)/p);for(var i=0;i<n;i++)parts.push(fmt(p));left=fix(left-n*p)});
+ var t='한쪽 '+fmt(per)+'kg';
+ if(parts.length&&left<=0.001)t+=' ('+parts.join('+')+')';
+ else if(parts.length)t+=' ('+parts.join('+')+', '+fmt(left)+'kg 원판 없음)';
  return t;
 }
 function warmN(e){return e.warmN!=null?+e.warmN:(e.warm==='full'?4:e.warm==='light'?1:0)}
@@ -491,7 +495,7 @@ function vSets(e,k,order,pos){
  var badge=r.custom?'<span class="badge b-keep">직접 바꿈</span>':st.res==='up'?'<span class="badge b-up">▲ '+fmt(r.delta>0?r.delta:e.increment)+'kg 증량</span>':st.res==='down'?'<span class="badge b-down">▼ 무게 내림</span>':st.res==='new'?'<span class="badge b-new">첫 기록</span>':'<span class="badge b-keep">유지</span>';
  var h='<div class="rx'+cls+'"><div class="row"><span style="font-size:13px;opacity:.85">'+(r.mode?'<b>'+MODE[r.mode]+'</b> · ':'')+(k===todayKey()?'오늘':esc(short(k)))+' 본세트</span>'+badge+'</div>'+
   '<div class="big">'+(r.W>0?fmt(r.W)+'kg':'맨몸')+' <small>× '+(r.p.min===r.p.max?r.p.max:r.work.map(function(w){return w.r}).join('/'))+'회 × '+r.p.sets+'세트</small></div>'+
-  (isBarbell(e)&&r.W>0?'<div class="why" style="font-weight:700;opacity:1">'+plateTxt(r.W)+'</div>':'')+
+  (plateMode(e)!=='none'&&r.W>0&&plateTxt(r.W,plateMode(e))?'<div class="why" style="font-weight:700;opacity:1">'+plateTxt(r.W,plateMode(e))+'</div>':'')+
   (r.mode?'<div class="why">목표 RIR 1~3 (1~3회 더 할 수 있을 때 멈추기)'+(r.c.rest?' · 휴식 '+restTxt(r.c.rest):'')+'</div>':'')+
   '<div class="why">'+(r.custom?'오늘 무게를 직접 '+fmt(r.W)+'kg으로 바꿨어요. (추천 '+fmt(st.t)+'kg)':esc(st.why))+'</div>'+
   '<div style="display:flex;gap:8px;padding-top:4px;flex-wrap:wrap"><a class="ghost" href="#guide" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85;display:inline-flex;align-items:center;text-decoration:none">규칙 보기</a><button class="ghost" data-a="w-change" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85">오늘 무게 바꾸기</button>'+(r.custom?'<button class="ghost" data-a="w-reset" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85">추천대로</button>':'')+'</div></div>';
@@ -514,7 +518,7 @@ function vSets(e,k,order,pos){
   var v=rw.done||rw.plan,isNext=nextKey===rw.type+rw.i;
   var pct=rw.type==='warm'&&r.W>0&&!rw.done?Math.round(rw.plan.w/r.W*100):null;
   return '<div class="srow'+(rw.done?' done':'')+(isNext?' next':'')+'"><span class="no">'+rw.label+'</span>'+
-   '<button class="val" data-a="row-edit" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-label="'+rw.label+' 세트 무게·횟수 고치기"><b>'+fmt(v.w)+'</b>kg × <b>'+v.r+'</b>회'+(pct!=null?'<small>'+(rw.plan.w===db.settings.bar&&rw.i===0?'빈 봉':pct+'%')+'</small>':'')+(rw.done&&pr[rw.done.id]?I.trophy:'')+(isBarbell(e)&&v.w>0?'<span class="plates">'+plateTxt(v.w)+'</span>':'')+'</button>'+
+   '<button class="val" data-a="row-edit" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-label="'+rw.label+' 세트 무게·횟수 고치기"><b>'+fmt(v.w)+'</b>kg × <b>'+v.r+'</b>회'+(pct!=null?'<small>'+(rw.plan.w===db.settings.bar&&rw.i===0?'빈 봉':pct+'%')+'</small>':'')+(rw.done&&pr[rw.done.id]?I.trophy:'')+(plateMode(e)!=='none'&&v.w>0&&!(plateMode(e)==='bar'&&v.w===(db.settings.bar||20))&&plateTxt(v.w,plateMode(e))?'<span class="plates">'+plateTxt(v.w,plateMode(e))+'</span>':'')+'</button>'+
    '<button class="tick" data-a="row-tick" data-t="'+rw.type+'" data-i="'+rw.i+'" aria-pressed="'+!!rw.done+'" aria-label="'+rw.label+' 세트 '+(rw.done?'완료 취소':'완료')+'">'+(rw.done?I.check:'')+'</button></div>'+
    (isNext&&rw.type==='work'?repChips(rw):'');
  }
@@ -616,7 +620,7 @@ function rmCalc(b){var w=parseFloat(b.rmW),r=parseInt(b.rmR,10);if(!(w>0)||!(r>=
 function rmOutTxt(b){var c=rmCalc(b);return c?'추정 1RM <b>'+fmt(c.one)+'kg</b> → 근비대 <b>'+fmt(c.h)+'kg</b> ('+c.hn+'회 가능한 무게) · 근력 <b>'+fmt(c.s)+'kg</b> ('+c.sn+'회 가능한 무게)':'무게와 횟수를 넣으면 계산해요.'}
 function vExEdit(){
  var o=exById(param);if(!o)return vPlan();
- if(!editBuf||editBuf.id!==o.id){editBuf=JSON.parse(JSON.stringify(o));editBuf.em=exEm!=null?exEm:(editBuf.em||'');exEm=null;editBuf.M={};if(!isCardio(o)){editBuf.barbell=isBarbell(o);editBuf.dumbbell=isDumbbell(o);editBuf.cls=exCls(o);editBuf.warmN=warmN(o)}
+ if(!editBuf||editBuf.id!==o.id){editBuf=JSON.parse(JSON.stringify(o));editBuf.em=exEm!=null?exEm:(editBuf.em||'');exEm=null;editBuf.M={};if(!isCardio(o)){editBuf.barbell=isBarbell(o);editBuf.plate=plateMode(o);editBuf.dumbbell=isDumbbell(o);editBuf.cls=exCls(o);editBuf.warmN=warmN(o)}
   if(!isCardio(o))['','h','s'].forEach(function(m){var c=ec(o,m),t=progress(o,addDays(todayKey(),1),m).t;editBuf.M[m]={method:c.method,sets:c.sets,repsMin:c.repsMin,repsMax:c.repsMax,rest:c.rest||0,_t:t,_t0:t}})}
  var b=editBuf;
  var back=exBack||'#ex-'+esc(o.id);
@@ -625,6 +629,7 @@ function vExEdit(){
  h+='<div class="list"><div class="field"><label for="f-name">이름</label><input id="f-name" type="text" maxlength="40" data-f="name" value="'+esc(b.name)+'"></div><div class="field"><label for="f-cat">부위</label><select id="f-cat" data-f="cat">'+db.cats.map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===b.cat?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div></div>';
  var wn0=b.warmN!=null?+b.warmN:warmN(b);
  h+='<div class="sectitle">내 기록으로 목표 무게 계산</div><div class="card" style="gap:10px"><div class="meta" style="line-height:1.6">최근에 <b>최대로 해 본 무게와 횟수</b>(1~15회)를 넣으면 근비대·근력 시작 무게를 계산해요.</div><div style="display:flex;align-items:center;gap:8px"><input data-f="rmW" type="number" inputmode="decimal" min="0" step="any" placeholder="무게" value="'+esc(b.rmW||'')+'" aria-label="최대로 해 본 무게" style="flex:1;min-width:0;height:48px;border:1px solid #DADDE2;border-radius:12px;text-align:center;font-size:18px;font-weight:700;background:#fff"><span class="meta">kg ×</span><select data-f="rmR" aria-label="횟수" style="flex:1;min-width:0;height:48px;border:1px solid #DADDE2;border-radius:12px;font-size:18px;font-weight:700;text-align:center;background:#fff">'+Array.apply(null,Array(15)).map(function(_,i){var r=i+1;return '<option value="'+r+'"'+(+(b.rmR||5)===r?' selected':'')+'>'+r+'회</option>'}).join('')+'</select></div><div id="rm-out" class="meta" style="line-height:1.6">'+rmOutTxt(b)+'</div><button class="primary" data-a="rm-apply">이 무게로 적용</button></div>';
+ var pm=plateMode(b);h+='<div class="sectitle">원판 무게 계산</div><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+[['none','안 함'],['bar','바벨'],['plate','원판만']].map(function(t){var on=pm===t[0];return '<button data-a="plate-mode" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+t[1]+'</button>'}).join('')+'</div><div class="note">'+(pm==='bar'?'봉 무게('+fmt(db.settings.bar||20)+'kg)를 빼고 한쪽에 끼울 원판 무게를 세트마다 보여줘요.':pm==='plate'?'레그프레스처럼 봉이 없는 기구예요. 적은 무게를 양쪽으로 나눠 한쪽 원판 무게를 보여줘요.':'덤벨·머신·케이블처럼 원판을 끼우지 않는 종목이에요.')+'</div>';
  var pl=isPlain(b);h+='<div class="sectitle">목적</div><div class="seg two">'+[[false,'워크아웃 따라가기'],[true,'항상 일반']].map(function(t){var on=pl===t[0];return '<button data-a="ex-plain" data-v="'+(t[0]?1:0)+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'" style="font-size:13.5px">'+t[1]+'</button>'}).join('')+'</div><div class="note">'+(pl?'어떤 워크아웃에 넣어도 근비대·근력 구분 없이 일반 설정으로 기록하고 무게를 올려요.':'근비대 워크아웃에서는 근비대로, 근력 워크아웃에서는 근력으로 따로 기록하고 무게를 올려요.')+'</div>';
  h+='<div class="sectitle">이렇게 운동해요</div><div class="list">'+(pl?['']:['h','s']).map(function(m){var M2=b.M[m];return '<div class="li" style="cursor:default;flex-direction:column;align-items:flex-start;gap:2px"><div class="t"><span style="color:'+(m==='s'?'#B4441C':m==='h'?'#1F55D6':'#5B6068')+'">'+(m?MODE[m]+'</span> 워크아웃에서':'근비대·근력 구분 없이 일반으로</span>')+'</div><div style="font-size:14px">웜업 '+(wn0?wn0+'세트':'없음')+' → 본세트 <b>'+M2.sets+'×'+(M2.method==='linear'||+M2.repsMin===+M2.repsMax?M2.repsMax:M2.repsMin+'~'+M2.repsMax)+'</b> · <b>'+(+M2._t>0?fmt(M2._t)+'kg':'무게 미정')+'</b></div></div>'}).join('')+'</div>';
  h+='<div class="note">세트의 횟수를 모두 최대까지 채우면 다음에 무게가 올라가고, '+(b.failLimit||3)+'번 연속 못 채우면 '+(b.deloadPct||10)+'% 내려가요.</div>';
@@ -645,7 +650,6 @@ function vExEdit(){
  h+='<div class="sectitle">웜업</div><div class="seg" style="grid-template-columns:repeat(5,minmax(0,1fr))">'+[[0,'없음'],[1,'1세트'],[2,'2세트'],[3,'3세트'],[4,'4세트']].map(function(m){var on=wn===m[0];return '<button data-a="warmset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'" style="font-size:13px">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="note">'+['웜업 없이 바로 본세트를 해요.','본세트의 50% × 8회','40% × 8 → 70% × 3','40% × 8 → 60% × 5 → 80% × 2','빈 봉 × 10 → 50% × 5 → 65% × 3 → 80% × 2'][wn]+'</div>';
  h+='<div class="sectitle">덤벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isDumbbell(b);return '<button data-a="dbset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
- h+='<div class="sectitle">바벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isBarbell(b);return '<button data-a="barbell" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="sectitle">무게를 내리는 조건</div><div class="list">'+numField('연속 실패 허용','failLimit','1','회')+numField('내리는 비율','deloadPct','1','%')+'</div>';
  h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea><div class="note">종목 화면의 <b>자세</b> 버튼을 누르면 기본 설명과 함께 보여요.</div>';
  h+='<div class="btnrow"><a class="secondary" href="'+back+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';
@@ -1401,7 +1405,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.22',APP_VER='';
+var WEB_VER='v1.23',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1991,7 +1995,7 @@ function saveEdit(){
  var name=String(b.name||'').trim().slice(0,40);if(!name){toast('이름을 입력해 주세요.','err');return}
  o.memo=String(b.memo||'').slice(0,500);if(b.plain===true||b.plain===false)o.plain=b.plain;if(parseFloat(b.rmW)>0){o.rmW=parseFloat(b.rmW);o.rmR=parseInt(b.rmR,10)||5}
  if(isCardio(o)){o.name=name;o.cat=b.cat;editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});var eb=exBack;exBack=null;go(eb||'#ex-'+o.id);return}
- o.name=name;o.cat=b.cat;if(b.warmN!=null){o.warmN=+b.warmN;o.warm=o.warmN>=4?'full':o.warmN>=1?'light':'none'}else o.warm=b.warm;if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;if(b.cls)o.cls=b.cls;
+ o.name=name;o.cat=b.cat;if(b.warmN!=null){o.warmN=+b.warmN;o.warm=o.warmN>=4?'full':o.warmN>=1?'light':'none'}else o.warm=b.warm;if(b.plate){o.plate=b.plate;o.barbell=b.plate==='bar'}else if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;if(b.cls)o.cls=b.cls;
  o.increment=fix(num('increment',2.5,0.25));o.failLimit=Math.round(num('failLimit',3,1));o.deloadPct=Math.min(50,num('deloadPct',10,0));
  var tk=todayKey();
  ['','h','s'].forEach(function(m){
@@ -2189,7 +2193,8 @@ document.addEventListener('click',function(ev){
   case 'clsset':readEdit();editBuf.cls=t.getAttribute('data-v');render();break;
   case 'rec-open':if(editBuf){readEdit();recSheet(editBuf)}else if(e)recSheet(e);break;
   case 'dbset':readEdit();editBuf.dumbbell=t.getAttribute('data-v')==='1';render();break;
-  case 'barbell':readEdit();editBuf.barbell=t.getAttribute('data-v')==='1';render();break;
+  case 'barbell':readEdit();editBuf.barbell=t.getAttribute('data-v')==='1';editBuf.plate=editBuf.barbell?'bar':'none';render();break;
+  case 'plate-mode':readEdit();editBuf.plate=t.getAttribute('data-v');editBuf.barbell=editBuf.plate==='bar';render();break;
   case 'warmset':readEdit();editBuf.warmN=+t.getAttribute('data-v');render();break;
   case 'ex-save':saveEdit();break;
   case 'ex-del':if(e)confirmSheet(esc(e.name)+' 삭제','종목 목록과 워크아웃에서 빠져요. 지난 기록은 날짜별 기록에 남아 있어요.','삭제','ex-del-ok',e.id);break;
