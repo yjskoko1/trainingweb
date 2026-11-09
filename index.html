@@ -375,9 +375,13 @@ function oneRM(exId){
 }
 function rmTxt(v){return String(Math.round(v*2)/2)}
 function prIds(exId){var best=0,ids={},all=[];sortedDates().forEach(function(k){setsOn(k,exId,false).forEach(function(s){all.push(s)})});all.sort(byTs);all.forEach(function(s){var v=e1rm(s.w,s.r);if(s.w>0&&v>best+1e-9){best=v;ids[s.id]=1}});return ids}
-function nextWk(before,pid,duty){var l=(pid?progWks(pid):activeWks()).filter(function(w){return !!w.duty===!!duty});if(!l.length)return null;var last=null;sortedDates().forEach(function(k){var d=db.days[k];if(k<before&&d.workout&&d.done&&l.indexOf(wkById(d.workout))>=0)last=d.workout});if(!last)return l[0];return l[(l.indexOf(wkById(last))+1)%l.length]}
+function nextWk(before,pid,duty){var l=pid?progWks(pid).filter(function(w){return !!w.duty===!!duty}):(duty?dutyWks():normWks());if(!l.length)return null;var last=null;sortedDates().forEach(function(k){var d=db.days[k];if(k<before&&d.workout&&d.done&&l.indexOf(wkById(d.workout))>=0)last=d.workout});if(!last)return l[0];return l[(l.indexOf(wkById(last))+1)%l.length]}
 /* 당번 날엔 '당번 날 전용' 워크아웃, 다른 날엔 일반 워크아웃 */
-function dutyWks(){return activeWks().filter(function(w){return w.duty})}
+/* 당번 워크아웃은 어느 루틴에 있든 모두 사용 */
+function dutyWks(){return db.workouts.filter(function(w){return w.duty&&progById(w.prog)})}
+/* 평소 워크아웃: 사용 중인 루틴에서. 그 루틴에 평소 워크아웃이 없으면 평소 워크아웃이 있는 다른 루틴에서 */
+function normProg(){var ap=activeProg();if(ap&&progWks(ap.id).some(function(w){return !w.duty}))return ap;return db.programs.filter(function(p){return progWks(p.id).some(function(w){return !w.duty})})[0]||ap}
+function normWks(){var p=normProg();return p?progWks(p.id).filter(function(w){return !w.duty}):[]}
 function nextFor(k){return shiftOf(k)==='당번'&&dutyWks().length?nextWk(k,null,true):nextWk(k)}
 function dayOrder(k){
  var d=db.days[k],order=[];if(!d)return order;
@@ -437,7 +441,7 @@ function vToday(){
  var slv=isToday&&!cdz&&sleepLv(k);if(slv)h+='<div class="banner"><span>잠 컨디션 <b>'+SLEEPT[slv]+'</b> · '+(slv==='bad'?'무게는 지난번 그대로, 본세트 1개씩 줄였어요.':'무게를 올리지 않고 지난번 무게로 해요.')+'</span></div>';
  if(!order.length){
   var nx=nextFor(k);
-  var ap=activeProg(),isDuty=shiftOf(k)==='당번'&&dutyWks().length>0,aw=activeWks().filter(function(w){return !!w.duty===isDuty});
+  var isDuty=shiftOf(k)==='당번'&&dutyWks().length>0,ap=isDuty?{name:'당번'}:normProg(),aw=isDuty?dutyWks():normWks();
   if(aw.length){
    h+='<div class="sectitle" style="justify-content:space-between"><span>오늘 할 워크아웃 · '+esc(ap.name)+'</span><a href="#plan" class="meta" style="font-weight:500">루틴 바꾸기</a></div>'+aw.map(function(w){return wkBtn(w,nx)}).join('');
    h+='<div class="note">누르면 워크아웃 종목이 한 번에 들어가요. 운동을 마치고 <b>운동 완료</b>를 누르면 다음 차례로 넘어가요.</div>';
@@ -1395,7 +1399,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.17',APP_VER='';
+var WEB_VER='v1.18',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
