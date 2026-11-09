@@ -437,7 +437,7 @@ function vToday(){
  var slv=isToday&&!cdz&&sleepLv(k);if(slv)h+='<div class="banner"><span>잠 컨디션 <b>'+SLEEPT[slv]+'</b> · '+(slv==='bad'?'무게는 지난번 그대로, 본세트 1개씩 줄였어요.':'무게를 올리지 않고 지난번 무게로 해요.')+'</span></div>';
  if(!order.length){
   var nx=nextFor(k);
-  var ap=activeProg(),aw=activeWks();
+  var ap=activeProg(),isDuty=shiftOf(k)==='당번'&&dutyWks().length>0,aw=activeWks().filter(function(w){return !!w.duty===isDuty});
   if(aw.length){
    h+='<div class="sectitle" style="justify-content:space-between"><span>오늘 할 워크아웃 · '+esc(ap.name)+'</span><a href="#plan" class="meta" style="font-weight:500">루틴 바꾸기</a></div>'+aw.map(function(w){return wkBtn(w,nx)}).join('');
    h+='<div class="note">누르면 워크아웃 종목이 한 번에 들어가요. 운동을 마치고 <b>운동 완료</b>를 누르면 다음 차례로 넘어가요.</div>';
@@ -1395,7 +1395,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.15',APP_VER='';
+var WEB_VER='v1.16',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
