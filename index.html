@@ -1405,7 +1405,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.24',APP_VER='';
+var WEB_VER='v1.25',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1473,7 +1473,7 @@ async function hcImport(show){
    }else if(/^swimming/.test(t)){
     var m=Math.round(dist);if(!(m>0)){skip.noDist++;continue}
     if(hcDupSwim(k,m)){skip.dup++;db.hc.seen[id]=1;continue}
-    var ss=sset(),kind=ss&&(ss.lessonDays||[]).indexOf(parseKey(k).getDay())>=0?'lesson':'free';
+    var ss=sset(),kind=ss&&(ss.lessonDays||[]).indexOf(parseKey(k).getDay())>=0&&shiftOf(k)!=='당번'?'lesson':'free';
     db.swim.swims.push({id:'w'+rid(),date:k,kind:kind,m:m,sec:sec,cont:0,strokes:['free'],stage:ss?ss.stage||1:1,memo:'가민(헬스 커넥트)에서 불러옴',ts:Date.now()+i,hc:id});
     added.push('수영 '+short(k)+' '+m+'m');
    }else continue;
@@ -1529,12 +1529,12 @@ function swimRx(k){
  var s=sset(),sh=shiftOf(k);if(!s)return{setup:false,shift:sh};
  var wd=parseKey(k).getDay(),o={setup:true,shift:sh,stage:s.stage||1,blocks:[],notes:[]},cw=closedWhy(k);
  if(cw){o.type='rest';o.closed=cw;o.why='오늘은 커뮤니티 '+cw+'이라 수영은 쉬어요.';return o}
+ if(sh==='당번'){o.type='rest';o.why=(s.lessonDays||[]).indexOf(wd)>=0?'당번이라 강습도 쉬어요.':'당번이라 쉬는 날이에요.';return o}
  if((s.lessonDays||[]).indexOf(wd)>=0){o.type='lesson';o.why='오늘은 강습 날이에요. 배운 드릴을 메모에 적어 두면 자유 수영 때 복습하기 좋아요.';return o}
- if(sh==='당번'){o.type='rest';o.why='당번이라 쉬는 날이에요.';return o}
  if(sh==='휴무'){o.type='rest';o.why='휴무에는 강도 러닝과 하체 운동이 있어서 수영은 쉬어요. 원하면 300~400m를 아주 편하게 풀기만 해도 좋아요.';return o}
  var st=s.stage||1,has=function(x){return (s.strokes||[]).indexOf(x)>=0},gear=function(x){return (s.gear||[]).indexOf(x)>=0};
  var free=db.swim.swims.filter(function(w){return w.kind==='free'&&w.date<k}),n=free.filter(function(w){return (w.stage||1)===st}).length;
- var y=addDays(k,-1),prevLesson=(s.lessonDays||[]).indexOf(parseKey(y).getDay())>=0||db.swim.swims.some(function(w){return w.date===y&&w.kind==='lesson'});
+ var y=addDays(k,-1),prevLesson=((s.lessonDays||[]).indexOf(parseKey(y).getDay())>=0&&shiftOf(y)!=='당번'&&!closedWhy(y))||db.swim.swims.some(function(w){return w.date===y&&w.kind==='lesson'});
  var cut=prevLesson?2:0,B=function(lab,txt,m,main){o.blocks.push({lab:lab,txt:txt,m:m,main:!!main})};
  var other=[has('back')?'배영':'',has('breast')?'평영':''].filter(Boolean).join('·');
  o.type='free';
