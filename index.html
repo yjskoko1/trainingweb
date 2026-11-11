@@ -809,6 +809,7 @@ function vRunGuide(){
  var h=hdr('러닝 처방 근거','러닝 처방은 이렇게 정해져요',backBtn(helpFrom||'#me'))+'<main>';
  function sec(title,items){return '<div class="sectitle">'+title+'</div><div class="list">'+items.map(function(it){return '<div class="li" style="align-items:flex-start;flex-direction:column;gap:4px"><div class="row" style="justify-content:flex-start;gap:8px">'+(it[0]?'<span class="badge '+it[0]+'">'+it[1]+'</span>':'<span class="t">'+it[1]+'</span>')+'</div><div style="font-size:14px;line-height:1.6;color:#33373C">'+it[2]+'</div></div>'}).join('')+'</div>'}
  h+=sec('러닝',[['','근무 패턴','당번은 쉬고, 비번은 잠 컨디션에 따라 쉬운 달리기·리커버리·짧은 리커버리 중 하나, 휴무는 목표별 순서(풀코스: 롱런 → 템포런 → 롱런 → 인터벌)로 강도 있게 뛰어요.'],
+  ['','기초 단계','러닝을 시작하고 4주 안이고 최근 2주 평균 주간 거리가 20km 미만이면 기초 단계예요. 휴무를 번갈아 한 번은 강도 훈련(롱런·템포), 한 번은 쉬운 달리기를 하고 인터벌은 빼요. 둘 중 하나를 넘기면 본 단계로 올라가 휴무마다 강도 훈련을 해요. 강도 훈련은 주 2번 안팎, 쉬운 달리기가 80% 이상이 되도록 맞춘 거예요(Seiler 80/20).'],
   ['','러닝 종류 자동 판단','기록한 종류보다 실제 기록을 믿어요. 평균 심박이 최대의 85% 이상이거나 하프 페이스 근처보다 빠르면 템포·인터벌로, 최근 최장 거리의 90% 이상이면 롱런으로 계산해요. 못 한 훈련은 다음 휴무에 먼저 챙겨요.'],
   ['','다리 피로','하체 본세트·러닝 시간·수영 시간으로 다리 부하 점수를 내고, 최근 3일이 평소의 1.3배 이상이면 강한 러닝과 롱런을 쉬운 러닝으로 바꿔요. 홈의 "오늘 할 것"에서 점수를 눌러 계산 내용을 볼 수 있어요.'],
   ['','하체 운동한 날','하체를 3세트 이상 한 날은 쉬운 러닝으로 바꾸고 거리를 25% 줄여요. 다음 날은 템포·인터벌을 다음 휴무로 미루고, 롱런은 거리를 유지한 채 심박 상한(최대 심박의 75%)을 걸어요. 하체 운동 피로는 24~48시간 러닝 능력을 떨어뜨리고 같은 속도에서 심박을 올려요(Doma 2017). 하체는 휴무에 러닝을 먼저 하고 몇 시간 뒤에 하면, 다음 날 당번에 쉬고 비번 러닝까지 약 48시간이 생겨 가장 잘 맞아요.'],['','10% 규칙','한 번 뛰는 거리는 최근 30일 최장 거리의 10%를 넘지 않게 처방해요. 이보다 길게 뛰면 과사용 부상 위험이 높아졌다는 연구(Frandsen 외, 2025)를 따랐어요.'],['','80% 쉬운 강도','전체 거리의 약 80%를 쉬운 강도로 채워요. 마라톤 러너 15만여 명을 분석한 연구에서 가장 빠른 그룹의 80% 이상이 이런 배분을 썼고(Muniz-Pumares 외, 2025), 세계적인 장거리 선수들도 80% 이상을 낮은 강도로 뛰어요(Haugen 외, 2022). 최근 4주 쉬운 강도 비율을 러닝 화면에 보여줘요.'],['','예상 기록·페이스','5km~하프 기록은 최근 기록으로 예측해요(Riegel 공식). 이 공식은 아마추어 러너의 풀코스를 10분 이상 빠르게 예측하는 경우가 많아서(Vickers & Vertosick 2016), 훈련 페이스는 하프 예측 페이스를 기준으로 정해요. 풀코스는 기록이 쌓이면 최근 8주 주당 거리와 평균 페이스로 예측해요(Tanda 2011).'],['','테이퍼','대회 2주 전부터 거리를 30~50% 줄이고, 강도와 뛰는 날 수는 유지해요. 21일 이내로 훈련량을 41~60% 줄이고 강도·빈도를 유지하는 방식이 효과적이었다는 메타분석을 따랐어요(Wang 외, 2023; Bosquet 외, 2007).'],['','심박','최대 심박수를 모르면 208 − 0.7 × 나이로 추정해요(Tanaka 공식, 2001). 추정값은 사람마다 오차가 커서, 가민에 나오는 값이나 실제로 잰 값이 더 정확해요.']]);
@@ -979,11 +980,16 @@ function runEff(r){var c=effC[r.id];if(c)return c;var t0=r.type||'free',t=t0,why
   if(hard&&!QTX[t0]){t=(hrIv||(pc>0&&pr.p5&&pc<=pr.p5+10))?'interval':'tempo';why=hrHard?(lt?'평균 심박 '+r.hr+'이 젖산역치('+lt+')의 '+Math.round(ltp*100)+'%':'평균 심박이 최대의 '+Math.round(hrp*100)+'%'):'평균 페이스 '+fmtPace(pc)+'/km'}
   else if(!hard&&!QTX[t0]){var L=longest30(r.date),g=RGOAL[rset().goal]||RGOAL.fit,thr=Math.max(L?L*0.9:g.rec[1]+2,g.rec[1]+1);
    if(+r.km>=thr){if(t0!=='long'){t='long';why=r1(r.km)+'km로 최근 최장 거리의 90% 이상'}}
-   else if(t0==='long'){t='easy';why=r1(r.km)+'km로 롱런 거리(최근 최장의 90%)에 못 미쳐요'}}
+   else if(t0==='long'&&L){t='easy';why=r1(r.km)+'km로 롱런 거리(최근 최장의 90%)에 못 미쳐요'}}
  }
  return effC[r.id]={t:t,why:why,chg:t!==t0}}
 function rType(r){return runEff(r).t}
 function rLabel(r){var e=runEff(r);return RTYPE[e.t]+(e.chg?' (기록: '+RTYPE[r.type||'free']+')':'')}
+/* 러닝 단계: 시작 4주 안이고 최근 2주 평균 주간 거리가 20km 미만이면 기초 단계 */
+function runPhase(k){var s0=rset().since||'',f14=addDays(k,-14),km=0;db.run.runs.forEach(function(r){if(r.date>=f14&&r.date<k)km+=+r.km||0});var days=s0?daysBetween(s0,k):999;return{base:days<28&&km/2<20,days:days,wk:r1(km/2)}}
+/* 지난 휴무(없으면 최근 3일) 이후 강도 훈련을 했는지 */
+function qRecent(k){var prev=null;for(var i=1;i<=10;i++){var d=addDays(k,-i);if(shiftOf(d)==='휴무'){prev=d;break}}if(!prev)prev=addDays(k,-3);
+ return db.run.runs.some(function(r){var t=rType(r);return r.date>=prev&&r.date<k&&(QTX[t]||t==='long'||t==='race')})}
 function hardRunOn(k){return db.run.runs.some(function(r){return r.date===k&&(QTX[rType(r)]||rType(r)==='race')})}
 function isLegEx(e){return !!e&&catById(e.cat).name==='하체'}
 /* 하체 본세트를 1개 줄이는 이유(같은 날 강한 러닝, 다리 피로 높음) */
@@ -1011,8 +1017,14 @@ function runRx(k){
    o.type='recovery';o.km=(g.rec[0]+g.rec[1])/2;o.pace=ph?[ph+90,ph+120]:null;o.hr=hr(0.6,0.7);
    o.detail='대화가 편한 속도로 천천히. 다리를 푸는 날이에요.';o.why='비번 날은 가볍게 회복해요. 전체 거리의 80% 이상을 쉬운 강도로 채우는 게 기본이에요.';
   }
+ }else if(runPhase(k).base&&qRecent(k)){
+  o.type='easy';o.km=rHalf(g.rec[1]);o.pace=ph?[ph+70,ph+100]:null;o.hr=hr(0.65,0.78);o.detail='처음부터 끝까지 대화할 수 있는 속도로 편하게.';
+  o.why='기초 단계라 휴무를 번갈아 써요. 지난 휴무에 강도 훈련을 했으니 오늘은 쉬운 달리기, 다음 휴무에 강도 훈련이에요.';
  }else{
-  var qs=g.seq,uq=qs.filter(function(t,i){return qs.indexOf(t)===i}),s0=rset().since||'',done={},n=0;runsBefore(k).forEach(function(r){if(r.date<s0)return;var t=rType(r);if(uq.indexOf(t)>=0){done[t]=(done[t]||0)+1;n++}});
+  var bph=runPhase(k).base,qs=bph?g.seq.filter(function(t){return t!=='interval'}):g.seq;if(!qs.length)qs=['long'];
+  if(bph)o.notes.push('기초 단계예요(처음 4주 또는 주간 20km 전까지). 휴무를 번갈아 강도 훈련을 하고, 인터벌은 본 단계부터 해요.');
+  else if(runPhase(addDays(k,-3)).base)o.notes.push('기초 단계를 마쳤어요. 이제 휴무마다 강도 훈련을 해요.');
+  var uq=qs.filter(function(t,i){return qs.indexOf(t)===i}),s0=rset().since||'',done={},n=0;runsBefore(k).forEach(function(r){if(r.date<s0)return;var t=rType(r);if(uq.indexOf(t)>=0){done[t]=(done[t]||0)+1;n++}});
   var nat=qs[n%qs.length],bs=-1e9;uq.forEach(function(t){var sh2=qs.filter(function(x){return x===t}).length/qs.length,pos=(qs.indexOf(t)-n%qs.length+qs.length)%qs.length,sc=sh2*(n+1)-(done[t]||0)-pos*0.001;if(sc>bs){bs=sc;o.type=t}});
   if(o.type!==nat)o.notes.push('최근에 '+RTYPE[o.type]+'을 못 해서 이번 휴무에 먼저 챙겨요.');
   if(o.type==='long'){
@@ -1405,7 +1417,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.25',APP_VER='';
+var WEB_VER='v1.26',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
