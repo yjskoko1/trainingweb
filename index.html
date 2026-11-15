@@ -928,7 +928,9 @@ function hrSuggest(){var s=rset(),out=[],dm=db.run.sugDis||{},k=todayKey(),from=
  return out}
 function hrSuggestCard(){var L=hrSuggest();if(!L.length)return '';return L.map(function(x){return '<div class="card" style="gap:8px;border:1.5px solid #B4441C"><div class="meta" style="font-size:12px;color:#B4441C;font-weight:700">코치 제안</div><div class="name" style="font-size:16px">'+esc(x.t)+'</div><div class="meta" style="line-height:1.6">'+esc(x.d)+'</div><div class="btnrow">'+(x.k==='ltOld'?'<a class="secondary" href="#runset" style="text-align:center;text-decoration:none">러닝 설정 열기</a>':'<button class="primary" data-a="sug-ok" data-f="'+x.k+'" data-v="'+x.v+'">'+x.v+'로 바꾸기</button>')+'<button class="secondary" data-a="sug-no" data-f="'+x.k+'" data-v="'+(x.k==='ltOld'?esc(rset().lthrAt):x.v)+'">'+(x.k==='ltOld'?'확인했어요':'괜찮아요')+'</button></div></div>'}).join('')} /* Tanaka 2001 추정식 */
 function riegel(d1,t1,d2){return t1*Math.pow(d2/d1,1.06)} /* Riegel 1981 */
-function lastRace(k){var f=addDays(k||todayKey(),-180);return db.run.runs.filter(function(r){return rType(r)==='race'&&r.date>=f&&r.date<=(k||todayKey())&&+r.km>=3&&+r.sec>0}).sort(function(a,b){return a.date<b.date?1:-1})[0]||null}
+/* 대회 러닝인지 (runEff를 거치지 않음: predictions→recRec→lastRace 순환 방지) */
+function isRaceRun(r){if(r.type==='race')return true;var rd=rset().raceDate;if(!rd||r.date!==rd||!(+r.km>=3))return false;return db.run.runs.filter(function(x){return x.date===rd&&+x.km>=3}).sort(function(a,b){return b.km-a.km})[0]===r}
+function lastRace(k){var f=addDays(k||todayKey(),-180);return db.run.runs.filter(function(r){return isRaceRun(r)&&r.date>=f&&r.date<=(k||todayKey())&&+r.km>=3&&+r.sec>0}).sort(function(a,b){return a.date<b.date?1:-1})[0]||null}
 function recRec(){var lr=lastRace();if(lr)return{km:+lr.km,sec:+lr.sec,race:lr.date};var s=rset();return s.recKm>0&&s.recSec>0?{km:+s.recKm,sec:+s.recSec}:null}
 function runsSorted(){return db.run.runs.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts})}
 function runsBefore(k){return db.run.runs.filter(function(r){return r.date<k})}
@@ -977,7 +979,7 @@ function countTypes(k,types){var s=rset().since||'';return runsBefore(k).filter(
 /* 실제로 어떻게 달렸는지로 러닝 종류 판단: 심박·페이스가 높으면 강한 러닝, 최근 최장의 90% 이상이면 롱런 */
 var QTX={tempo:1,interval:1,fartlek:1};
 function runEff(r){var c=effC[r.id];if(c)return c;var t0=r.type||'free',t=t0,why='',rdx=rset().raceDate;
- if(rdx&&r.date===rdx&&t0!=='race'&&+r.km>=3&&db.run.runs.filter(function(x){return x.date===rdx&&+x.km>=3}).sort(function(a,b){return b.km-a.km})[0]===r)return effC[r.id]={t:'race',why:'대회 날('+short(rdx)+')의 가장 긴 러닝이라 대회로 계산했어요',chg:true};
+ if(t0!=='race'&&isRaceRun(r))return effC[r.id]={t:'race',why:'대회 날('+short(rdx)+')의 가장 긴 러닝이라 대회로 계산했어요',chg:true};
  if(t0!=='race'&&+r.km>0){var hm=hrMax(),lt=lthr(),pr=predictions(r.date),pc=+r.sec>0?r.sec/r.km:0,hrp=hm&&+r.hr>0?r.hr/hm:0,ltp=lt&&+r.hr>0?r.hr/lt:0;
   var hrHard=lt?ltp>=0.94:hrp>=0.85,hrIv=lt?ltp>=0.99:hrp>=0.9,hard=hrHard||(pc>0&&pr.ph&&pc<=pr.ph+8);
   if(hard&&!QTX[t0]){t=(hrIv||(pc>0&&pr.p5&&pc<=pr.p5+10))?'interval':'tempo';why=hrHard?(lt?'평균 심박 '+r.hr+'이 젖산역치('+lt+')의 '+Math.round(ltp*100)+'%':'평균 심박이 최대의 '+Math.round(hrp*100)+'%'):'평균 페이스 '+fmtPace(pc)+'/km'}
@@ -994,7 +996,7 @@ function runPhase(k){var s0=rset().since||'',f14=addDays(k,-14),km=0;db.run.runs
 function qRecent(k){var prev=null;for(var i=1;i<=10;i++){var d=addDays(k,-i);if(shiftOf(d)==='휴무'){prev=d;break}}if(!prev)prev=addDays(k,-3);
  return db.run.runs.some(function(r){var t=rType(r);return r.date>=prev&&r.date<k&&(QTX[t]||t==='long'||t==='race')})}
 /* 대회 후 회복: 대회 거리에 따라 10km 7일, 하프 10일, 풀 21일 동안 강도 훈련 없음 */
-function afterRace(k){var f=addDays(k,-21),rc=db.run.runs.filter(function(r){return rType(r)==='race'&&r.date<k&&r.date>=f}).sort(function(a,b){return a.date<b.date?1:-1})[0];
+function afterRace(k){var f=addDays(k,-21),rc=db.run.runs.filter(function(r){return isRaceRun(r)&&r.date<k&&r.date>=f}).sort(function(a,b){return a.date<b.date?1:-1})[0];
  var rd=rset().raceDate;var dt=rc?rc.date:(rd&&rd<k&&rd>=f?rd:null);if(!dt)return null;var km=rc?+rc.km:({full:42.2,half:21.1,ten:10}[rset().goal]||10);
  var len=km>=30?21:km>=15?10:7,d=daysBetween(dt,k);return d>=1&&d<=len?{d:d,len:len,date:dt,km:km}:null}
 /* 지금 훈련 페이스·심박 (러닝 처방과 같은 계산) */
@@ -1439,7 +1441,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.32',APP_VER='';
+var WEB_VER='v1.33',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
