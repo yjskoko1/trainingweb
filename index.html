@@ -928,7 +928,8 @@ function hrSuggest(){var s=rset(),out=[],dm=db.run.sugDis||{},k=todayKey(),from=
  return out}
 function hrSuggestCard(){var L=hrSuggest();if(!L.length)return '';return L.map(function(x){return '<div class="card" style="gap:8px;border:1.5px solid #B4441C"><div class="meta" style="font-size:12px;color:#B4441C;font-weight:700">코치 제안</div><div class="name" style="font-size:16px">'+esc(x.t)+'</div><div class="meta" style="line-height:1.6">'+esc(x.d)+'</div><div class="btnrow">'+(x.k==='ltOld'?'<a class="secondary" href="#runset" style="text-align:center;text-decoration:none">러닝 설정 열기</a>':'<button class="primary" data-a="sug-ok" data-f="'+x.k+'" data-v="'+x.v+'">'+x.v+'로 바꾸기</button>')+'<button class="secondary" data-a="sug-no" data-f="'+x.k+'" data-v="'+(x.k==='ltOld'?esc(rset().lthrAt):x.v)+'">'+(x.k==='ltOld'?'확인했어요':'괜찮아요')+'</button></div></div>'}).join('')} /* Tanaka 2001 추정식 */
 function riegel(d1,t1,d2){return t1*Math.pow(d2/d1,1.06)} /* Riegel 1981 */
-function recRec(){var s=rset();return s.recKm>0&&s.recSec>0?{km:+s.recKm,sec:+s.recSec}:null}
+function lastRace(k){var f=addDays(k||todayKey(),-180);return db.run.runs.filter(function(r){return r.type==='race'&&r.date>=f&&r.date<=(k||todayKey())&&+r.km>=3&&+r.sec>0}).sort(function(a,b){return a.date<b.date?1:-1})[0]||null}
+function recRec(){var lr=lastRace();if(lr)return{km:+lr.km,sec:+lr.sec,race:lr.date};var s=rset();return s.recKm>0&&s.recSec>0?{km:+s.recKm,sec:+s.recSec}:null}
 function runsSorted(){return db.run.runs.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts})}
 function runsBefore(k){return db.run.runs.filter(function(r){return r.date<k})}
 function longest30(k){var from=addDays(k,-30),mx=0;db.run.runs.forEach(function(r){if(r.date>=from&&r.date<k&&r.km>mx)mx=+r.km});if(mx)return mx;
@@ -991,10 +992,14 @@ function runPhase(k){var s0=rset().since||'',f14=addDays(k,-14),km=0;db.run.runs
 /* 지난 휴무(없으면 최근 3일) 이후 강도 훈련을 했는지 */
 function qRecent(k){var prev=null;for(var i=1;i<=10;i++){var d=addDays(k,-i);if(shiftOf(d)==='휴무'){prev=d;break}}if(!prev)prev=addDays(k,-3);
  return db.run.runs.some(function(r){var t=rType(r);return r.date>=prev&&r.date<k&&(QTX[t]||t==='long'||t==='race')})}
+/* 대회 후 회복: 대회 거리에 따라 10km 7일, 하프 10일, 풀 21일 동안 강도 훈련 없음 */
+function afterRace(k){var f=addDays(k,-21),rc=db.run.runs.filter(function(r){return r.type==='race'&&r.date<k&&r.date>=f}).sort(function(a,b){return a.date<b.date?1:-1})[0];
+ var rd=rset().raceDate;var dt=rc?rc.date:(rd&&rd<k&&rd>=f?rd:null);if(!dt)return null;var km=rc?+rc.km:({full:42.2,half:21.1,ten:10}[rset().goal]||10);
+ var len=km>=30?21:km>=15?10:7,d=daysBetween(dt,k);return d>=1&&d<=len?{d:d,len:len,date:dt,km:km}:null}
 function hardRunOn(k){return db.run.runs.some(function(r){return r.date===k&&(QTX[rType(r)]||rType(r)==='race')})}
 function isLegEx(e){return !!e&&catById(e.cat).name==='하체'}
 /* 하체 본세트를 1개 줄이는 이유(같은 날 강한 러닝, 다리 피로 높음) */
-function legCutWhy(k){if(hardRunOn(k))return '오늘 강한 러닝을 해서';if(legFat(k).lv==='high')return '다리 피로가 높아서('+legFat(k).r+'배)';return ''}
+function legCutWhy(k){var ar0=afterRace(k);if(ar0&&ar0.d<=3)return '대회 후 '+ar0.d+'일째라';if(hardRunOn(k))return '오늘 강한 러닝을 해서';if(legFat(k).lv==='high')return '다리 피로가 높아서('+legFat(k).r+'배)';return ''}
 function runRx(k){
  var s=rset(),sh=shiftOf(k);
  if(!s.goal)return{setup:false,shift:sh};
@@ -1005,6 +1010,12 @@ function runRx(k){
  if(sh==='당번'){o.type='rest';o.why='당번이라 쉬는 날이에요. 회복도 훈련이에요.';return o}
  var taper=race&&dR>0&&dR<=14?(dR<=7?0.5:0.7):1;
  var hr=function(a,b){if(lt&&b<=0.8)return b<=0.72?[Math.round(lt*0.72),Math.round(lt*0.8)]:[Math.round(lt*0.77),Math.round(lt*0.85)];return hm?[Math.round(hm*a),Math.round(hm*b)]:null},lt=lthr(),hrL=function(a,b,fa,fb){return lt?[Math.round(lt*a),Math.round(lt*b)]:hr(fa,fb)};
+ var ar=afterRace(k);
+ if(ar){o.postRace=ar;
+  if(ar.d===1){o.type='rest';o.why='대회 다음 날이에요. 오늘은 달리지 말고 쉬어요. 가볍게 걷기나 스트레칭은 좋아요.';return o}
+  if(ar.d<=3){o.type='recovery';o.km=3;o.pace=ph?[ph+100,ph+130]:null;o.hr=hr(0.6,0.7);o.detail='20~30분, 아주 천천히. 다리가 아프면 걷기로 바꿔도 돼요.';o.why='대회 후 '+ar.d+'일째예요. 피를 돌려 회복을 돕는 정도로만 가볍게 움직여요.';return o}
+  o.type=sh==='휴무'?'easy':'recovery';o.km=rHalf(sh==='휴무'?g.rec[0]+1:g.rec[0]);o.pace=ph?[ph+75,ph+105]:null;o.hr=hr(0.65,0.78);o.detail='처음부터 끝까지 대화할 수 있는 속도로.';
+  o.why='대회 후 '+ar.d+'일째, 회복 기간('+ar.len+'일) 중이에요. 이 기간엔 강도 훈련 없이 쉽게만 달려요. '+(ar.len-ar.d+1)+'일 뒤부터 평소 훈련으로 돌아가요.';return o}
  if(sh==='비번'){
   var cd=(db.run.cond||{})[k]||'ok';o.cond=cd;
   if(cd==='good'){
@@ -1092,6 +1103,7 @@ function vRun(){
  }
  var wk=weekKm(k),es=easyShare(k);
  h+=hrSuggestCard();
+ var arC=afterRace(k),rdP=rset().raceDate&&rset().raceDate<k;if(arC||rdP)h+='<div class="card" style="gap:8px;border:1.5px solid #B4441C"><div class="meta" style="font-size:12px;color:#B4441C;font-weight:700">코치</div><div class="name" style="font-size:16px">대회 수고했어요!</div><div class="meta" style="line-height:1.6">'+(arC?'지금은 회복 기간이에요('+arC.d+'/'+arC.len+'일). 강도 훈련 없이 쉽게만 달려요. ':'')+(lastRace(k)?'대회 기록('+r1(lastRace(k).km)+'km '+fmtDur(lastRace(k).sec)+')으로 페이스를 다시 계산했어요. ':'대회 러닝을 "대회"로 기록하면 그 기록으로 페이스를 다시 계산해요. ')+'회복이 끝나면 다음 목표와 대회 날짜를 정해 주세요.</div><a class="secondary" href="#runset" style="text-align:center;text-decoration:none">다음 목표 정하기</a></div>';
  h+='<a class="card" href="#runset" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><div style="flex:1;min-width:0"><div class="meta">목표</div><div style="font-size:15px;font-weight:700">'+esc(x.goal.name)+(x.dRace!=null&&x.dRace>=0?' · D-'+x.dRace:'')+'</div></div><div style="text-align:right"><div class="meta">최근 7일</div><div style="font-size:15px;font-weight:900">'+wk+'km</div>'+(es!=null?'<div class="meta" style="font-size:11px">쉬운 강도 '+es+'%</div>':'')+'</div></a>';
  var today=db.run.runs.filter(function(r){return r.date===k});
  if(x.type==='rest'){
@@ -1418,7 +1430,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.30',APP_VER='';
+var WEB_VER='v1.31',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
