@@ -1135,7 +1135,7 @@ function shoePop(id){var s=shoeById(id);if(!s)return;var rr=db.run.runs.filter(f
  if(n<=40)pts.forEach(function(p,i){g+='<circle cx="'+x(i)+'" cy="'+y(p.v)+'" r="3" fill="'+shoeCol(p.v)+'"/>'});
  g+='<text x="'+pl+'" y="'+(H-6)+'" font-size="10" fill="#8A9099">'+esc(short(pts[0].d))+'</text><text x="'+(W-pr)+'" y="'+(H-6)+'" font-size="10" text-anchor="end" fill="#8A9099">'+esc(short(pts[n-1].d))+'</text></svg>';
  var ds=defShoe(),isD=ds&&ds.id===id;
- modal('<h2>'+esc(s.name)+'</h2><div class="meta">누적 <b style="color:var(--ink)">'+r1(acc)+'km</b> · 등록할 때 '+r1(+s.startKm||0)+'km + 앱 기록 '+rr.length+'회</div>'+g+(s.retired?'':'<button class="secondary" data-a="shoe-def" data-id="'+esc(id)+'"'+(isD?' disabled':'')+'>'+(isD?'지금 기본 신발이에요':'기본 신발로 정하기')+'</button>')+'<div class="note">가민에서 불러온 러닝은 기본 신발로 들어가요. 다른 신발로 뛴 날은 캘린더에서 그날 러닝을 눌러 바꿔 주세요.</div><button class="secondary" data-a="modal-close">닫기</button>')}
+ modal('<h2>'+esc(s.name)+'</h2><div class="meta">누적 <b style="color:var(--ink)">'+r1(acc)+'km</b> · 등록할 때 '+r1(+s.startKm||0)+'km + 앱 기록 '+rr.length+'회</div>'+g+(s.retired?'':'<button class="secondary" data-a="shoe-def" data-id="'+esc(id)+'"'+(isD?' disabled':'')+'>'+(isD?'지금 기본 신발이에요':'기본 신발로 정하기')+'</button>')+(function(){var rr2=db.run.runs.filter(function(r){return +r.km>0}).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:(b.ts||0)-(a.ts||0)}).slice(0,6);if(!rr2.length||s.retired)return '';return '<div class="sectitle" style="padding:6px 0 0">최근 러닝을 이 신발로</div><div class="list">'+rr2.map(function(r){var cur=shoeById(r.shoe),mine=r.shoe===id;return '<div class="li" style="cursor:default"><div style="min-width:0;flex:1"><div class="t">'+esc(short(r.date))+' · '+r1(r.km)+'km</div><div class="meta">'+(cur?esc(cur.name):'신발 없음')+'</div></div>'+(mine?'<span class="meta" style="color:#2E9E6B;font-weight:700">✓ 이 신발</span>':'<button class="ghost" data-a="shoe-assign" data-id="'+esc(r.id)+'" data-v="'+esc(id)+'" style="flex-shrink:0">이 신발로</button>')+'</div>'}).join('')+'</div>'})()+'<div class="note">가민에서 불러온 러닝은 기본 신발로 들어가요. 다른 신발로 뛴 날은 위에서 "이 신발로"를 누르면 거리가 옮겨져요.</div><button class="secondary" data-a="modal-close">닫기</button>')}
 function shoeKm(sh){return r1((+sh.startKm||0)+db.run.runs.filter(function(r){return r.shoe===sh.id}).reduce(function(a,r){return a+(+r.km||0)},0))}
 
 /* 기록 입력 창 */
@@ -1224,7 +1224,7 @@ function vRunHist(){
  }
  else if(runGraph==='eff'){
   var easy=rs.filter(function(r){return EASYT[rType(r)]&&r.hr>0&&r.sec>0&&r.km>=2}),hm=hrMax(),ref;
-  if(hm)ref=Math.round(hm*0.7);else{var hs=easy.map(function(r){return +r.hr}).sort(function(a,b){return a-b});ref=hs.length?hs[Math.floor(hs.length/2)]:140}
+  if(lthr())ref=Math.round(lthr()*0.82);else if(hm)ref=Math.round(hm*0.7);else{var hs=easy.map(function(r){return +r.hr}).sort(function(a,b){return a-b});ref=hs.length?hs[Math.floor(hs.length/2)]:140}
   pts=easy.slice(-20).map(function(r){var pc=r.sec/r.km*r.hr/ref;return{k:r.date,v:Math.round(pc/60*100)/100,lab:fmtPace(pc)+'/km'}});
   if(pts.length>=2){var fast=pts.reduce(function(a,p){return p.v<a.v?p:a});
    extra2='<div class="card">'+lineChart(pts,'분/km','심박 '+ref+' 기준 페이스','심박 '+ref+'에서 최근 <b>'+pts[pts.length-1].lab+'</b> · 가장 빠름 '+fast.lab,function(v){return fmtPace(v*60)})+'<div class="note">쉬운 러닝(리커버리·이지·롱런·자유)만 골라, 평균 심박이 '+ref+'였다면 어떤 페이스였을지 환산했어요. 선이 내려가면 같은 힘으로 더 빨리 뛰게 된 거예요. 더운 날, 오르막, 트레드밀은 값이 흔들릴 수 있어요.</div></div>'}
@@ -1418,7 +1418,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.27',APP_VER='';
+var WEB_VER='v1.28',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -2150,6 +2150,7 @@ document.addEventListener('click',function(ev){
   case 'run-cond':db.run.cond=db.run.cond||{};db.run.cond[todayKey()]=t.getAttribute('data-v');if(db.hc&&db.hc.condAuto===todayKey())db.hc.condAuto=null;save();render();qt('잠 컨디션 '+SLEEPT[t.getAttribute('data-v')]+'으로 정했어요'+(t.getAttribute('data-v')==='bad'?' · 모든 운동에 반영했어요':''));break;
   case 'pd':predDist=t.getAttribute('data-v');render();break;
   case 'shoe-pop':shoePop(id);break;
+  case 'shoe-assign':if(rsBuf)readRunSet();if(!db.run.defShoe){var pds=defShoe();if(pds)db.run.defShoe=pds.id}var ra=db.run.runs.filter(function(r){return r.id===id})[0],sa=shoeById(t.getAttribute('data-v'));if(ra&&sa){ra.shoe=sa.id;save();shoePop(sa.id);render();qt(short(ra.date)+' '+r1(ra.km)+'km를 '+sa.name+'에 더했어요')}break;
   case 'shoe-def':if(rsBuf)readRunSet();db.run.defShoe=id;save();shoePop(id);render();qt('기본 신발로 정했어요');break;
   case 'shoe-retire':var shr=shoeById(id);if(shr){if(rsBuf)readRunSet();shr.retired=!shr.retired;save();render()}qt(shr&&shr.retired?'은퇴 신발로 바꿨어요':'다시 신는 신발로 바꿨어요');break;
   case 'shoe-del':var shd=shoeById(id);if(shd)confirmSheet(esc(shd.name)+' 삭제','신발 목록에서 지워요. 이 신발로 뛴 기록은 남지만 신발 표시는 빠져요.','삭제','shoe-del-ok',shd.id);break;
