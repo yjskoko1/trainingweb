@@ -1113,7 +1113,7 @@ function vRun(){
  }
  var wk=weekKm(k),es=easyShare(k);
  h+=hrSuggestCard();
- var arC=afterRace(k),rdP=rset().raceDate&&rset().raceDate<k,rT=db.run.runs.some(function(r){return r.date===k&&rType(r)==='race'});if(arC||rdP||rT)h+='<div class="card" style="gap:8px;border:1.5px solid #B4441C"><div class="meta" style="font-size:12px;color:#B4441C;font-weight:700">코치</div><div class="name" style="font-size:16px">대회 수고했어요!</div><div class="meta" style="line-height:1.6">'+(rT&&!arC?'내일부터 회복 기간이에요. 내일은 쉬고, 그다음부터 강도 훈련 없이 쉽게만 달려요. ':'')+(arC?'지금은 회복 기간이에요('+arC.d+'/'+arC.len+'일). 강도 훈련 없이 쉽게만 달려요. ':'')+(lastRace(k)?'대회 기록('+r1(lastRace(k).km)+'km '+fmtDur(lastRace(k).sec)+')으로 페이스를 다시 계산했어요. ':'대회 러닝을 "대회"로 기록하면 그 기록으로 페이스를 다시 계산해요. ')+'회복이 끝나면 다음 목표와 대회 날짜를 정해 주세요.</div><a class="secondary" href="#runset" style="text-align:center;text-decoration:none">다음 목표 정하기</a></div>';
+ var arC=afterRace(k),rdP=false,rT=db.run.runs.some(function(r){return r.date===k&&rType(r)==='race'});if(arC||rdP||rT)h+='<div class="card" style="gap:8px;border:1.5px solid #B4441C"><div class="meta" style="font-size:12px;color:#B4441C;font-weight:700">코치</div><div class="name" style="font-size:16px">대회 수고했어요!</div><div class="meta" style="line-height:1.6">'+(rT&&!arC?'내일부터 회복 기간이에요. 내일은 쉬고, 그다음부터 강도 훈련 없이 쉽게만 달려요. ':'')+(arC?'지금은 회복 기간이에요('+arC.d+'/'+arC.len+'일). 강도 훈련 없이 쉽게만 달려요. ':'')+(lastRace(k)?'대회 기록('+r1(lastRace(k).km)+'km '+fmtDur(lastRace(k).sec)+')으로 페이스를 다시 계산했어요. ':'대회 러닝을 "대회"로 기록하면 그 기록으로 페이스를 다시 계산해요. ')+'다음 대회가 정해지면 그때 대회 날짜만 넣어 주세요. 그전까지는 지금 목표로 계속 훈련해요.</div></div>';
  h+='<a class="card" href="#runset" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><div style="flex:1;min-width:0"><div class="meta">목표</div><div style="font-size:15px;font-weight:700">'+esc(x.goal.name)+(x.dRace!=null&&x.dRace>=0?' · D-'+x.dRace:'')+'</div></div><div style="text-align:right"><div class="meta">최근 7일</div><div style="font-size:15px;font-weight:900">'+wk+'km</div>'+(es!=null?'<div class="meta" style="font-size:11px">쉬운 강도 '+es+'%</div>':'')+'</div></a>';
  var today=db.run.runs.filter(function(r){return r.date===k});
  if(x.type==='rest'){
@@ -1441,7 +1441,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.33',APP_VER='';
+var WEB_VER='v1.34',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
