@@ -1441,7 +1441,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.34',APP_VER='';
+var WEB_VER='v1.35',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1760,7 +1760,8 @@ function gymRx(k){var sh=shiftOf(k),gd=db.days[k],o={shift:sh};
  if(cw){o.st='rest';o.txt='쉬기';o.why='오늘은 커뮤니티 '+cw+'이라 헬스는 쉬어요.';return o}
  var nx=nextWk(k);if(!nx){o.st='none';o.txt='워크아웃을 만들면 추천해요';return o}
  var legN=wkEx(nx).filter(function(e){return catById(e.cat).name==='하체'}).length,fz=legFat(k);o.st='go';o.wk=nx;o.txt=nx.name+(legN?' · 하체 '+legN+'종목':'');
- var lcw2=legCutWhy(k);if(lcw2&&legN){o.why=lcw2+' 하체 종목은 본세트를 1개씩 줄였어요.'+(hardRunOn(k)?' 가능하면 러닝과 3~6시간 이상 띄우세요.':'')}
+ var lcw2=legCutWhy(k);if(lcw2&&!legN){o.why='다음 차례 루틴이에요. 다리 피로가 높아도 하체 종목이 없어서 그대로 해요.'}
+ else if(lcw2&&legN){o.why=lcw2+' 하체 종목은 본세트를 1개씩 줄였어요.'+(hardRunOn(k)?' 가능하면 러닝과 3~6시간 이상 띄우세요.':'')}
  else o.why='다음 차례 루틴이에요.'+(sh==='비번'&&legN?' 하체는 휴무 강도 러닝 전날보다 비번에 하는 게 좋아요.':'');
  var sl=sleepLv(k);if(sl)o.why+=sl==='bad'?' 잠이 부족해서 무게는 지난번 그대로, 본세트는 1개씩 줄였어요.':' 잠 컨디션이 보통이라 무게를 올리지 않고 지난번 무게로 해요.';
  return o}
@@ -1785,10 +1786,12 @@ function dayPlan(k){var sh=shiftOf(k),rows=[],rx=runRx(k),sx=swimRx(k),gx=gymRx(
  /* 두 가지만 한다면: 다리 부담이 겹치지 않는 쪽을 먼저 고르기 */
  var pick2=null,pw2='';
  if(pick&&go.length>=2){var hardRun=rx.type&&(QT0[rx.type]||rx.type==='long'),legGym=gx.wk&&wkEx(gx.wk).some(function(e){return catById(e.cat).name==='하체'});
-  var sc=function(r){if(r.sp==='swim')return 0;if(r.sp==='run')return hardRun?3:1;if(r.sp==='gym')return legGym&&pick.sp==='run'?3:2;return 5};
+  var fh=fz.lv==='high';
+  /* 점수가 낮을수록 먼저: 다리 부담 + 빠지면 손해(근력은 꾸준함이 중요, 회복 러닝은 빠져도 손해가 적음) */
+  var sc=function(r){if(r.sp==='swim')return 1;if(r.sp==='gym')return legGym?(fh||(pick.sp==='run'&&hardRun)?3:2):1;if(r.sp==='run')return hardRun?3:(fh?3:2);return 5};
   pick2=go.filter(function(r){return r!==pick}).sort(function(a,b){return sc(a)-sc(b)})[0];
   var both=[pick.sp,pick2.sp].sort().join('+');
-  var eun=function(n){var c=n.charCodeAt(n.length-1)-0xAC00;return n+(c>=0&&c%28?'은':'는')};pw2=pick.name+' 먼저, '+eun(pick2.name)+' 그다음에 해요.'+(both==='gym+run'&&(hardRun||legGym)?' 둘 다 다리를 쓰니 3~6시간 이상 띄우세요.':both==='gym+run'?' 쉬운 러닝이라 같은 날 해도 괜찮아요.':pick2.sp==='swim'||pick.sp==='swim'?' 수영은 다리 부담이 적어서 같이 하기 좋아요.':'')}
+  var eun=function(n){var c=n.charCodeAt(n.length-1)-0xAC00;return n+(c>=0&&c%28?'은':'는')};pw2=pick.name+' 먼저, '+eun(pick2.name)+' 그다음에 해요.'+(pick2.sp==='gym'&&!legGym?' 하체가 없는 루틴이라 다리 피로와 겹치지 않아요.':'')+(both==='gym+run'&&(hardRun||legGym)?' 둘 다 다리를 쓰니 3~6시간 이상 띄우세요.':both==='gym+run'?' 쉬운 러닝이라 같은 날 해도 괜찮아요.':pick2.sp==='swim'||pick.sp==='swim'?' 수영은 다리 부담이 적어서 같이 하기 좋아요.':'')}
  return{sh:sh,rows:rows,pick:pick,pw:pw,pick2:pick2,pw2:pw2,fat:fz,cond:(db.run.cond||{})[k]}}
 var QT0={tempo:1,interval:1,fartlek:1};
 function planCard(k){var P=dayPlan(k),ST={done:['완료','#2E9E6B'],doing:['진행 중','#1F55D6'],go:['추천','#16181A'],rest:['쉬기','#9AA0A8'],none:['설정','#9AA0A8']};
