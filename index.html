@@ -950,7 +950,9 @@ function longest30(k){var from=addDays(k,-30),mx=0;db.run.runs.forEach(function(
  var past=db.run.runs.filter(function(r){return r.date<k&&r.km>0});if(past.length)return r1(Math.max.apply(null,past.map(function(r){return +r.km}))*0.5);
  return +rset().longest||0}
 /* 하체 운동 뒤 남은 피로: 같은 날이면 'same', 전날이면 'next' (Doma 2017 Sports Med, Doma 2017 APNM) */
-function legSets(k){var d=db.days[k];if(!d)return 0;return d.sets.filter(function(s){if(s.warm)return false;var e=exById(s.exId);return e&&catById(e.cat).name==='하체'}).length}
+/* 하체 본세트 수: 종아리 운동은 러닝 부담이 작아서 0.5세트로 세요 */
+var CALF_RE=/카프|종아리|calf/i;
+function legSets(k){var d=db.days[k];if(!d)return 0;return d.sets.reduce(function(a,s){if(s.warm)return a;var e=exById(s.exId);if(!e||catById(e.cat).name!=='하체')return a;return a+(CALF_RE.test(e.name||'')?0.5:1)},0)}
 function legFatigue(k){return legSets(k)>=3?'same':legSets(addDays(k,-1))>=3?'next':null}
 /* 다리 부하 점수: 하체 본세트 1점, 러닝 10분 1점(템포·인터벌·파틀렉·대회 2배), 수영 10분 0.2점.
    최근 3일 합 ÷ 평소(직전 28일 하루 평균 × 3). 세션 부하(Foster 2001)·TRIMP(Banister 1991)·급성:만성 부하 비(Gabbett 2016) 개념 */
@@ -1079,7 +1081,7 @@ function runRx(k){
  }
  var lf=legFatigue(k),QT={tempo:1,interval:1,fartlek:1};
  if(lf&&o.type!=='race'){
-  o.leg=lf;var hc=hm?Math.round(hm*0.75):null;
+  o.leg=lf;var hc=lthr()?Math.round(lthr()*0.85):hm?Math.round(hm*0.75):null;
   if(lf==='same'){
    if(QT[o.type]||o.type==='long'){o.moved=o.type;o.type='easy';o.km=rHalf(g.rec[1]*0.75);o.pace=ph?[ph+80,ph+110]:null;o.hr=hr(0.6,0.75);o.detail='처음부터 끝까지 편하게. 다리가 무거우면 걷기를 섞어도 돼요.'}
    else{o.km=rHalf(Math.max(3,o.km*0.75));o.hr=hr(0.6,0.72)}
@@ -1452,7 +1454,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.37',APP_VER='';
+var WEB_VER='v1.38',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1652,6 +1654,8 @@ function vSwim(){
  }
  var st=x.stage;
  h+='<a class="card" href="#swimset" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:12px;padding:12px 14px"><div style="flex:1;min-width:0"><div class="meta">'+st+'단계</div><div style="font-size:15px;font-weight:700">'+SSTAGE[st][0]+'</div></div><div style="text-align:right"><div class="meta">최근 7일</div><div style="font-size:15px;font-weight:900">'+swimWeekM(k).toLocaleString()+'m</div>'+(sset().css?'<div class="meta" style="font-size:11px">CSS '+fmtPace(sset().css)+'/100m</div>':'')+'</div></a>';
+ var nc=db.swim.swims.filter(function(w){return w.kind==='free'&&!(+w.cont>0)&&+w.m>0&&w.date>=addDays(k,-14)}).sort(function(a,b){return a.date<b.date?1:-1}).slice(0,2);
+ nc.forEach(function(w){h+='<div class="card" style="gap:8px;border:1.5px solid #1D9E75"><div class="meta" style="font-size:12px;color:#1D9E75;font-weight:700">코치 질문</div><div class="name" style="font-size:15px">'+esc(short(w.date))+' 수영 '+(+w.m).toLocaleString()+'m, 쉬지 않고 가장 길게 간 거리는?</div><div class="chips" style="flex-wrap:wrap">'+[25,50,75,100,150,200,300,400].map(function(v){return '<button class="chip" data-a="sw-cont" data-id="'+esc(w.id)+'" data-v="'+v+'">'+v+'m'+(v===400?'+':'')+'</button>'}).join('')+'</div><div class="meta" style="font-size:12px">가민 기록엔 이 값이 없어서 여쭤봐요. 이걸로 단계를 올릴 때를 판단해요.</div></div>'});
  var sg=swimSuggest();if(sg)h+='<div class="card" style="gap:8px;border:2px solid #1D9E75"><div class="name" style="font-size:15px">'+sg.to+'단계로 올릴 때가 됐어요</div><div class="meta">'+sg.why+'</div><button class="primary" data-a="sw-stage" data-v="'+sg.to+'">'+sg.to+'단계로 올리기</button></div>';
  var today=db.swim.swims.filter(function(w){return w.date===k});
  if(x.type!=='free'){
@@ -1746,6 +1750,7 @@ function vSwimHist(){
 function swimAct(a,t,id){
  var v=t.getAttribute('data-v'),f=t.getAttribute('data-f');
  switch(a){
+   case 'sw-cont':var wc=db.swim.swims.filter(function(w){return w.id===id})[0];if(wc){wc.cont=+v;save();render();qt('쉬지 않고 '+v+'m 기록했어요')}break;
   case 'sw-log':openSwimLog(v);break;
   case 'sw-edit':openSwimLog(null,id);break;
   case 'sw-stage':db.swim.setup.stage=+v;save();toast(v+'단계로 올렸어요.');render();break;
@@ -1816,7 +1821,7 @@ function planCard(k){var P=dayPlan(k),ST={done:['완료','#2E9E6B'],doing:['진�
 function fatPop(){var k=todayKey(),f=legFat(k),days=[];for(var i=3;i>=1;i--){var d=addDays(k,-i);days.push([short(d),r1(legLoadDay(d))])}days.push(['오늘 헬스',legSets(k)]);
  modal('<h2>다리 피로</h2>'+(f.r!=null?'<div style="font-size:28px;font-weight:900;color:'+(f.lv==='high'?'#D9534F':f.lv==='low'?'#2E9E6B':'var(--ink)')+'">'+f.r+'배 · '+FATLV[f.lv]+'</div><div class="meta">최근 3일 '+f.rec+'점 ÷ 평소 3일 '+f.base+'점</div>':'<div class="meta" style="line-height:1.6">기록이 2주 이상 쌓이면 계산해요. 지금은 하체 운동 다음 날 규칙만 적용돼요.</div>')+
  '<div class="list">'+days.map(function(x){return '<div class="li" style="cursor:default"><span class="t">'+esc(x[0])+'</span><b>'+x[1]+'점</b></div>'}).join('')+'</div>'+
- '<div class="note" style="padding:0;line-height:1.7"><b>점수 계산</b><br>하체 본세트 1세트 = 1점 · 러닝 10분 = 1점(템포·인터벌·파틀렉 2배) · 수영 10분 = 0.2점<br><b>판단</b><br>1.3배 이상 높음 → 강한 러닝은 쉬운 러닝으로, 하체는 1세트씩 줄이기 · 0.8~1.3 보통 → 처방대로 · 0.8 미만 여유<br>비번 날 잠 컨디션이 나쁘면 러닝 강도를 한 단계 더 낮춰요.<br><b>근거</b><br>세션 부하(Foster 2001), 심박 기반 TRIMP(Banister 1991), 최근 부하와 평소 부하의 비율(Gabbett 2016), 근력·지구력 간섭 효과(Wilson 2012). 추정치라 몸 상태가 다르면 몸을 먼저 따르세요.</div><button class="secondary" data-a="modal-close">닫기</button>')}
+ '<div class="note" style="padding:0;line-height:1.7"><b>점수 계산</b><br>하체 본세트 1세트 = 1점(종아리는 0.5점) · 러닝 10분 = 1점(템포·인터벌·파틀렉 2배) · 수영 10분 = 0.2점<br><b>판단</b><br>1.3배 이상 높음 → 강한 러닝은 쉬운 러닝으로, 하체는 1세트씩 줄이기 · 0.8~1.3 보통 → 처방대로 · 0.8 미만 여유<br>비번 날 잠 컨디션이 나쁘면 러닝 강도를 한 단계 더 낮춰요.<br><b>근거</b><br>세션 부하(Foster 2001), 심박 기반 TRIMP(Banister 1991), 최근 부하와 평소 부하의 비율(Gabbett 2016), 근력·지구력 간섭 효과(Wilson 2012). 추정치라 몸 상태가 다르면 몸을 먼저 따르세요.</div><button class="secondary" data-a="modal-close">닫기</button>')}
 function vHome(){
  var k=todayKey(),sh=shiftOf(k);
  var h='<header><div class="ttl"><div class="eyebrow">'+esc(pretty(k,{month:'long',day:'numeric',weekday:'long'}))+'</div><h1>'+(sh?'오늘은 '+sh:'트레이닝웹')+(sh?' <span class="badge" style="background:var(--ink);color:#fff;font-size:12px;vertical-align:middle">'+SHIFT_NOTE[sh]+'</span>':'')+'</h1></div></header><main>';
