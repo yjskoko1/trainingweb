@@ -1418,6 +1418,12 @@ var REFS=[
   {use:'3번 연속 실패 시 10% 내리기 · 14일 쉬면 10% 내리기 · 웜업 순서',note:'특정 논문의 수치가 아니라 근력 운동 프로그램에서 흔히 쓰는 코칭 관행이에요. 종목 설정에서 바꿀 수 있어요.'}
  ]},
  {sec:'러닝',items:[
+  {use:'심박 구간 (젖산역치 기준: 쉬운 달리기 77~85%, 템포 95~100%, 인터벌 100% 이상)',ref:'Friel J (2006). Total Heart Rate Training: Customize and Maximize Your Workout Using a Heart Rate Monitor. Ulysses Press.',sum:'젖산역치 심박수를 기준으로 훈련 구간을 나누는 방법이에요. 최대 심박보다 개인차를 더 잘 반영해요. 젖산역치는 30분 정도 혼자 강하게 달린 기록의 마지막 20분 평균 심박으로 추정해요.'},
+  {use:'다리 피로 점수 · 세션 부하(시간 × 강도)',ref:'Foster C, Florhaug JA, Franklin J, et al. (2001). A new approach to monitoring exercise training. Journal of Strength and Conditioning Research, 15(1), 109-115.',sum:'운동 시간에 주관적 강도를 곱한 값으로 훈련 부하를 간단하고 믿을 만하게 잴 수 있었어요.'},
+  {use:'다리 피로 점수 · 심박 기반 훈련 부하(TRIMP)',ref:'Banister EW (1991). Modeling elite athletic performance. In: MacDougall JD, Wenger HA, Green HJ (eds), Physiological Testing of the High-Performance Athlete, 403-424. Human Kinetics.',sum:'훈련은 체력과 피로를 함께 만들고, 둘의 차이가 그날의 컨디션이라는 모델이에요. 강도가 높을수록 부하를 더 크게 쳐요.'},
+  {use:'다리 피로 1.3배 기준 · 최근 부하 ÷ 평소 부하',ref:'Gabbett TJ (2016). The training-injury prevention paradox: should athletes be training smarter and harder? British Journal of Sports Medicine, 50(5), 273-280.',doi:'10.1136/bjsports-2015-095788',sum:'최근 부하가 평소보다 갑자기 많이(대략 1.5배 이상) 늘면 부상 위험이 커졌어요. 평소 수준을 꾸준히 쌓은 선수는 오히려 덜 다쳤어요.'},
+  {use:'하체 운동과 러닝을 같은 날 띄우기 · 강한 러닝 뒤 하체 줄이기',ref:'Wilson JM, Marin PJ, Rhea MR, Wilson SMC, Loenneke JP, Anderson JC (2012). Concurrent training: a meta-analysis examining interference of aerobic and resistance exercises. Journal of Strength and Conditioning Research, 26(8), 2293-2307.',doi:'10.1519/JSC.0b013e31823a3e2d',sum:'근력 운동과 지구력 운동을 함께 하면 근력·근비대가 조금 덜 늘었고, 특히 러닝이 하체 근력을 많이 방해했어요. 운동 시간과 빈도가 많을수록 방해가 컸어요.'},
+  {use:'대회 후 회복 기간 (10km 7일 · 하프 10일 · 풀 21일)',ref:'코칭 현장의 경험 기준: 대회 거리 1마일(1.6km)당 강도 훈련 없는 날 하루. 마라톤 뒤 근육 손상·염증 지표가 1~2주 이상 이어진다는 연구들을 바탕으로 한 보수적인 기준이에요.',sum:'연구로 딱 정해진 숫자는 아니에요. 대회가 길수록 회복이 오래 걸린다는 점을 반영한 안전한 기준이라, 몸이 먼저 회복됐다고 느껴져도 강도 훈련은 기간이 끝난 뒤 시작해요.'},
   {use:'쉬운 강도 약 80% (근무 패턴별 강도 배치)',ref:'Seiler S (2010). What is best practice for training intensity and duration distribution in endurance athletes? International Journal of Sports Physiology and Performance, 5(3), 276-291.',doi:'10.1123/ijspp.5.3.276',sum:'잘하는 지구력 선수들은 훈련의 약 80%를 낮은 강도로 하고 나머지만 높은 강도로 했어요.'},
   {use:'쉬운 강도 약 80%',ref:'Haugen T, Sandbakk Ø, Seiler S, Tønnessen E (2022). The training characteristics of world-class distance runners: an integration of scientific literature and results-proven practice. Sports Medicine - Open, 8, 46.',doi:'10.1186/s40798-022-00438-7',sum:'세계 정상급 장거리 선수들의 훈련도 대부분 낮은 강도였어요.'},
   {use:'쉬운 강도 약 80% (아마추어 마라토너)',ref:'Muniz-Pumares D, Hunter B, Meyler S, Maunder E, Smyth B (2025). The training intensity distribution of marathon runners across performance levels. Sports Medicine, 55(4), 1023-1035.',doi:'10.1007/s40279-024-02137-7',sum:'마라톤 약 15만 건을 분석했어요. 빠른 러너일수록 쉬운 강도 훈련량이 많았어요.'},
@@ -1454,7 +1460,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.38',APP_VER='';
+var WEB_VER='v1.39',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -1558,7 +1564,7 @@ function hcSettingsBlock(){
 /* =============== 수영 =============== */
 var STROKE={free:'자유형',back:'배영',breast:'평영',fly:'접영'},GEAR={pull:'풀부이',paddle:'패들',kick:'킥판',fins:'오리발'};
 var SKIND={free:'자유 수영',lesson:'강습'},SCOLOR={free:'#1D9E75',lesson:'#3B6D11'};
-var SSTAGE={1:['익숙해지기','25~50m씩 끊어서, 숨이 고를 때까지 쉬며 자세에 집중해요.'],2:['이어서 수영하기','100m 반복으로 쉬지 않고 가는 힘을 길러요.'],3:['페이스 훈련','CSS(임계 수영 속도)를 기준으로 세트를 돌려요.']};
+var SSTAGE={1:['익숙해지기','한 번에 50m(25m 왕복) 이하로 끊어서, 숨이 고를 때까지 쉬며 자세에 집중해요.'],2:['이어서 수영하기','100m(25m 2왕복)를 반복하며 쉬지 않고 가는 힘을 길러요.'],3:['페이스 훈련','CSS(임계 수영 속도)를 기준으로 세트를 돌려요.']};
 var swBuf=null,sl=null,swGraph='m';
 function sset(){return db.swim.setup}
 function swimsSorted(){return db.swim.swims.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.ts-b.ts})}
@@ -1596,7 +1602,7 @@ function swimRx(k){
   if(other)B('다른 영법','4×25 '+other+' 번갈아 · 편하게',100);
   if(has('fly'))B('접영','2~4×25 접영 · 휴식 40초, 자세가 무너지면 멈추기',100);
   B('쿨다운','100 아주 편하게',100);
-  o.title='짧게 끊어서 편하게';o.why='초보 단계는 거리보다 자세가 먼저예요. 50m씩 끊고 충분히 쉬면서, 매번 같은 자세로 가는 데 집중하세요.';
+  o.title='짧게 끊어서 편하게';o.why='초보 단계는 거리보다 자세가 먼저예요. '+swL(50)+'씩 끊고 충분히 쉬면서, 매번 같은 자세로 가는 데 집중하세요.';
  }else if(st===2){
   var r2=Math.max(4,Math.min(10,6+Math.floor(n/2))-cut),late=n>=6;
   B('워밍업','자유형 200 + '+(other||'자유형')+' 100 편하게',300);
@@ -1605,7 +1611,7 @@ function swimRx(k){
   if(gear('pull'))B('풀',late?'4×100 풀부이'+(gear('paddle')?' + 패들 (어깨가 불편하면 패들 빼기)':''):'4×50 풀부이',late?400:200);
   if(has('fly'))B('접영',(late?'6':'4')+'×25 접영 · 휴식 30초',late?150:100);
   B('쿨다운','100 아주 편하게',100);
-  o.title='100m 이어서 수영';o.why='100m를 쉬지 않고 같은 페이스로 가는 연습이에요. 마지막 반복도 첫 반복과 비슷하게 들어오면 잘하고 있는 거예요.';
+  o.title='100m 이어서 수영';o.why=swL(100)+'를 쉬지 않고 같은 페이스로 가는 연습이에요. 마지막 반복도 첫 반복과 비슷하게 들어오면 잘하고 있는 거예요.';
  }else{
   var p=s.css;
   if(!p){
