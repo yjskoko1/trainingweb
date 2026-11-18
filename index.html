@@ -929,7 +929,13 @@ function rxMin(x,k){if(!x||!x.km)return 0;var r5=function(m){return Math.max(5,M
  return r5(x.km*myEasyPace(k||todayKey())/60)}
 function rxAmt(x,k){if(!x||!x.km)return '';return timeOn()?rxMin(x,k)+'분':r1(x.km)+'km'}
 function rxAlt(x,k){if(!x||!x.km)return '';return timeOn()?'약 '+r1(x.km)+'km':'약 '+rxMin(x,k)+'분'}
-function rxDetail(x){var d=x.detail||'';if(!timeOn())return d;d=d.replace('워밍업 2km','워밍업 10분').replace('쿨다운 2km','쿨다운 10분');if(x.type==='interval'&&x.pace){var mm=(x.pace[0]+x.pace[1])/2;d=d.replace(/1km × (\d+)회/,'1km(약 '+Math.floor(mm/60)+'분 '+String(Math.round(mm%60)).padStart(2,'0')+'초) × $1회')}return d}
+function rxDetail(x){var d=x.detail||'';
+ if(timeOn()){d=d.replace('워밍업 2km','워밍업 10분').replace('쿨다운 2km','쿨다운 10분');if(x.type==='interval'&&x.pace){var mm=(x.pace[0]+x.pace[1])/2;d=d.replace(/1km × (\d+)회/,'1km(약 '+Math.floor(mm/60)+'분 '+String(Math.round(mm%60)).padStart(2,'0')+'초) × $1회')}}
+ if(x.type==='tempo'||x.type==='interval'){var lt=lthr(),hm=hrMax(),wu=lt?[Math.round(lt*0.73),Math.round(lt*0.85)]:hm?[Math.round(hm*0.65),Math.round(hm*0.78)]:null,cd=lt?Math.round(lt*0.8):hm?Math.round(hm*0.7):null;
+  if(wu)d=d.replace(/(워밍업 [0-9]+(분|km))/,'$1 (심박 '+wu[0]+'→'+wu[1]+')');
+  if(x.hr){d=d.replace(/(템포 [0-9]+분)/,'$1 ('+x.hr[0]+'~'+x.hr[1]+')');d=d.replace(/(× [0-9]+회) \(사이 2~3분 조깅\)/,'$1 ('+x.hr[0]+'~'+x.hr[1]+', 사이 2~3분 조깅'+(cd?' · '+(cd-2)+' 아래로 떨어지면 다음 반복':'')+')')}
+  if(cd)d=d.replace(/(쿨다운 [0-9]+(분|km))/,'$1 ('+cd+' 이하)')}
+ return d}
 var RUNCOLOR='#16181A';
 function rset(){return db.run.setup||{}}
 function r1(n){return Math.round(n*10)/10}
@@ -1472,7 +1478,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.41',APP_VER='';
+var WEB_VER='v1.42',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
