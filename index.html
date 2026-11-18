@@ -286,7 +286,7 @@ function planText(p){return p.sets+'세트 × '+(p.min===p.max?p.max:p.min+'~'+p
 function progress(e0,before,m){
  if(isCardio(e0))return{t:0,fail:0,res:'new',why:'',last:null,lastSets:null};
  m=m||'';var e=ec(e0,m);
- var st={t:e.startWeight,fail:0,res:'new',why:(m?MODE[m]+' ':'')+'시작 무게로 시작해요.',last:null,lastSets:null};
+ var st={t:snapStart(e,e.startWeight),fail:0,res:'new',why:(m?MODE[m]+' ':'')+'시작 무게로 시작해요.',last:null,lastSets:null};
  sortedDates().forEach(function(k){
   if(k<=(e.anchor||'')||k>=before)return;
   var ss=modeSets(k,e.id,m);if(!ss.length)return;
@@ -296,7 +296,7 @@ function progress(e0,before,m){
   var when=short(k);
   st.last=k;st.lastSets=at;
   if(good>=p.sets){st.t=nextUp(e,w);st.fail=0;st.res='up';st.why='지난번('+when+') '+fmt(w)+'kg으로 '+planText(p)+'를 모두 성공해서 '+(isDumbbell(e)&&dbList().length?'다음 덤벨('+fmt(st.t)+'kg)로 ':'')+'올렸어요.'}
-  else if((sleepLv(k)==='bad'||(isLegEx(e0)&&legCutWhy(k)))&&okMin>=p.sets-1&&okMin>=1){st.t=w;st.res='keep';st.why='지난번('+when+')은 컨디션 때문에 세트를 줄인 날이라 실패로 세지 않았어요. 같은 무게로 다시 해요.'}
+  else if((sleepLv(k)==='bad'||(isLegEx(e0)&&legCutWhy(k)))&&okMin>=p.sets-1&&okMin>=1){if(e.method==='double'&&good>=p.sets-1&&p.sets>=2){st.t=nextUp(e,w);st.fail=0;st.res='up';st.why='지난번('+when+')은 세트를 줄인 날이었지만 남은 세트를 모두 '+p.max+'회 채워서 올렸어요.'}else{st.t=w;st.res='keep';st.why='지난번('+when+')은 컨디션 때문에 세트를 줄인 날이라 실패로 세지 않았어요. 같은 무게로 다시 해요.'}}
   else if(e.method==='double'&&okMin>=p.sets){st.t=w;st.fail=0;st.res='keep';st.why='지난번('+when+') 범위 안에서 성공했어요. 같은 무게로 횟수를 늘려 보세요.'}
   else{st.fail++;
    if(st.fail>=e.failLimit){st.t=downTo(e,w*(1-e.deloadPct/100));st.fail=0;st.res='down';st.why=fmt(w)+'kg에서 '+e.failLimit+'번 연속 목표를 못 채워서 '+e.deloadPct+'% 내렸어요. 여기서 다시 올라가요.'}
@@ -319,6 +319,7 @@ function snapList(l,w,dir){if(!l.length)return w;var i;
  if(dir==='down'){for(i=l.length-1;i>=0;i--)if(l[i]<=w+1e-9)return l[i];return l[0]}
  var best=l[0];l.forEach(function(x){if(Math.abs(x-w)<Math.abs(best-w))best=x});return best}
 /* 다음 무게(올리기) / 맞춰 내리기: 덤벨 목록 → 기구 무게 목록 → 증량 단위 순서 */
+function snapStart(e,w){w=+w||0;if(w<=0)return w;if(isDumbbell(e)&&dbList().length)return snapDb(w,'down');var l=wList(e);if(l.length)return snapList(l,w,'down');return w}
 function nextUp(e,w){if(isDumbbell(e)&&dbList().length)return snapDb(w,'up');var l=wList(e);if(l.length)return snapList(l,w,'up');return fix(w+(e.increment||2.5))}
 function downTo(e,x){if(isDumbbell(e)&&dbList().length)return snapDb(x,'down');var l=wList(e);if(l.length)return snapList(l,x,'down');return roundTo(x,e.increment||2.5)}
 function snapDb(w,dir){var l=dbList();if(!l.length)return w;var i;
@@ -646,7 +647,7 @@ function vExEdit(){
  h+='<div class="sectitle">이렇게 운동해요</div><div class="list">'+(pl?['']:['h','s']).map(function(m){var M2=b.M[m];return '<div class="li" style="cursor:default;flex-direction:column;align-items:flex-start;gap:2px"><div class="t"><span style="color:'+(m==='s'?'#B4441C':m==='h'?'#1F55D6':'#5B6068')+'">'+(m?MODE[m]+'</span> 워크아웃에서':'근비대·근력 구분 없이 일반으로</span>')+'</div><div style="font-size:14px">웜업 '+((M2.warmN!=null?+M2.warmN:wn0)?(M2.warmN!=null?+M2.warmN:wn0)+'세트':'없음')+' → 본세트 <b>'+M2.sets+'×'+(M2.method==='linear'||+M2.repsMin===+M2.repsMax?M2.repsMax:M2.repsMin+'~'+M2.repsMax)+'</b> · <b>'+(+M2._t>0?fmt(M2._t)+'kg':'무게 미정')+'</b></div></div>'}).join('')+'</div>';
  h+='<div class="note">세트의 횟수를 모두 최대까지 채우면 다음에 무게가 올라가고, '+(b.failLimit||3)+'번 연속 못 채우면 '+(b.deloadPct||10)+'% 내려가요.</div>';
  h+='<button class="secondary" data-a="adv-toggle">'+(b.adv?'자세히 설정 접기':'자세히 설정 (세트·횟수·웜업·증량 단위 등)')+'</button>';
- if(!b.adv){h+=wSec(b);h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea>';
+ if(!b.adv){if(!isCardio(b)){var mts=isPlain(b)?['']:['h','s'];h+='<div class="sectitle">다음 무게 (직접 바꾸기)</div><div class="list">'+mts.map(function(mm){return '<div class="field"><label for="mt-'+(mm||'n')+'">'+(mm?MODE[mm]:'다음')+' 무게</label><span style="display:flex;align-items:center;gap:6px"><input id="mt-'+(mm||'n')+'" data-mt="'+mm+'" type="number" inputmode="decimal" min="0" step="any" value="'+esc(b.M[mm]?b.M[mm]._t:'')+'" style="height:42px;width:90px;border:1px solid #DADDE2;border-radius:10px;padding:0 10px;font-size:15px;text-align:right;background:#fff"><span class="meta">kg</span></span></div>'}).join('')+'</div><div class="note">다음에 운동할 때 이 무게부터 시작해요. 저장을 눌러야 반영돼요.</div>'}h+=wSec(b);h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea>';
   h+='<div class="btnrow"><a class="secondary" href="'+back+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';return h}
  var em=b.em||'',M=b.M[em];
  h+='<div class="sectitle" style="justify-content:space-between"><span>목적별 세트·횟수·무게</span><button class="ghost" data-a="rec-open" style="min-height:34px">추천 보기</button></div><div class="tabs3" role="tablist">'+[['','일반'],['h','근비대'],['s','근력']].map(function(t){return '<button role="tab" aria-selected="'+(em===t[0])+'" class="'+(em===t[0]?'on':'')+'" data-a="emode" data-v="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div>';
@@ -1488,7 +1489,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.44',APP_VER='';
+var WEB_VER='v1.45',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -2095,9 +2096,9 @@ function catSheet(){
  var isNew=!catEdit.id;
  modal('<h2>'+(isNew?'부위 추가':'부위 편집')+'</h2><form data-form="cat-form" style="display:flex;flex-direction:column;gap:14px"><label for="cn" class="lbl">이름</label><input id="cn" type="text" maxlength="20" value="'+esc(catEdit.name)+'" placeholder="예: 전완" style="height:50px;border:1px solid #DADDE2;border-radius:12px;padding:0 12px;font-size:16px"><div class="lbl">색</div><div class="swatches">'+COLORS.map(function(c){return '<button type="button" data-a="cat-color" data-v="'+c+'" class="'+(c===catEdit.color?'on':'')+'" aria-pressed="'+(c===catEdit.color)+'" aria-label="색 '+c+'" style="background:'+c+'"></button>'}).join('')+'</div><div class="btnrow"><button type="button" class="secondary" data-a="modal-close">취소</button><button type="submit" class="primary">저장</button></div>'+(isNew?'':'<button type="button" class="danger" data-a="cat-del">이 부위 삭제</button>')+'</form>');
 }
-function readEdit(){Array.prototype.forEach.call(document.querySelectorAll('[data-f]'),function(el){if(el.tagName!=='BUTTON')editBuf[el.getAttribute('data-f')]=el.value});if(editBuf&&editBuf.M){var M=editBuf.M[editBuf.em||''];Array.prototype.forEach.call(document.querySelectorAll('[data-mf]'),function(el){M[el.getAttribute('data-mf')]=el.value})}}
-function saveEdit(){
- readEdit();var b=editBuf,o=exById(b.id);if(!o)return;
+function readEdit(){Array.prototype.forEach.call(document.querySelectorAll('[data-f]'),function(el){if(el.tagName!=='BUTTON')editBuf[el.getAttribute('data-f')]=el.value});if(editBuf&&editBuf.M)Array.prototype.forEach.call(document.querySelectorAll('[data-mt]'),function(el){var mm=el.getAttribute('data-mt');if(editBuf.M[mm])editBuf.M[mm]._t=el.value});if(editBuf&&editBuf.M){var M=editBuf.M[editBuf.em||''];Array.prototype.forEach.call(document.querySelectorAll('[data-mf]'),function(el){M[el.getAttribute('data-mf')]=el.value})}}
+function saveEdit(stay,msg,noRead){
+ if(!noRead)readEdit();var b=editBuf,o=exById(b.id);if(!o)return;
  var num=function(k,def,min){var v=parseFloat(b[k]);return isNaN(v)||v<min?def:v};
  var name=String(b.name||'').trim().slice(0,40);if(!name){toast('이름을 입력해 주세요.','err');return}
  o.memo=String(b.memo||'').slice(0,500);var wlp=Array.isArray(b.wlist)?b.wlist:parseWl(b.wlist);if(wlp.length)o.wlist=wlp;else delete o.wlist;if(b.plain===true||b.plain===false)o.plain=b.plain;if(parseFloat(b.rmW)>0){o.rmW=parseFloat(b.rmW);o.rmR=parseInt(b.rmR,10)||5}
@@ -2116,6 +2117,7 @@ function saveEdit(){
   var differs=Object.keys(v).some(function(k){return v[k]!==base[k]});
   if(o[m]||differs||changed){var prev=o[m]||{};o[m]=Object.assign({},v,{startWeight:prev.startWeight!=null?prev.startWeight:o.startWeight,anchor:prev.anchor!=null?prev.anchor:''});if(changed){o[m].startWeight=nt;o[m].anchor=anchor}}
  });
+ if(stay){var keepEm=b.em,keepAdv=b.adv;editBuf=null;save();exEm=keepEm;render();if(editBuf)editBuf.adv=keepAdv;render();qt(msg||'저장했어요');return}
  editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});var eb=exBack;exBack=null;go(eb||'#ex-'+o.id);
 }
 /* ---- 자동 백업 (앱) ---- */
@@ -2213,7 +2215,7 @@ document.addEventListener('click',function(ev){
   case 'hc-info':hcWebInfo();break;
   case 'hc-perm':try{hcP().openHealthConnectSettings()}catch(e){}break;
   case 'hc-off':db.hc.on=false;save();toast('자동 불러오기를 껐어요.');render();break;
-  case 'rm-apply':if(editBuf){readEdit();var rc=rmCalc(editBuf);if(!rc){toast('무게와 횟수를 넣어 주세요.','err');break}editBuf.M.h._t=rc.h;if(isPlain(editBuf)&&editBuf.M[''])editBuf.M['']._t=rc.h;editBuf.M.s._t=rc.s;editBuf.M[''] && (editBuf.M['']._t=rc.h);toast('근비대 '+fmt(rc.h)+'kg · 근력 '+fmt(rc.s)+'kg로 맞췄어요. 저장을 눌러 주세요.');render()}break;
+  case 'rm-apply':if(editBuf){readEdit();var rc=rmCalc(editBuf);if(!rc){toast('무게와 횟수를 넣어 주세요.','err');break}editBuf.M.h._t=rc.h;if(isPlain(editBuf)&&editBuf.M[''])editBuf.M['']._t=rc.h;editBuf.M.s._t=rc.s;editBuf.M[''] && (editBuf.M['']._t=rc.h);saveEdit(true,(isPlain(editBuf)?'다음 무게 '+fmt(rc.h)+'kg':'근비대 '+fmt(rc.h)+'kg · 근력 '+fmt(rc.s)+'kg')+'으로 적용했어요',true)}break;
   case 'adv-toggle':if(editBuf){readEdit();editBuf.adv=!editBuf.adv;render()}break;
   case 'cat-exset':exBack=view==='cat'?'#cat-'+param:'#plan';exEm=isPlain(exById(id))?'':'h';editBuf=null;go('#exedit-'+id);break;
   case 'wk-exset':exBack='#wk-'+param;exEm=isPlain(exById(id))?'':((wkById(param)||{}).mode||'h');editBuf=null;go('#exedit-'+id);break;
