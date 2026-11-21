@@ -361,8 +361,35 @@ function warmups(e,W){
  });
  return out;
 }
+/* ===== 1RM 기준 처방 (NSCA %1RM-횟수 표, ACSM 2009) ===== */
+var TMT={s:{comp:{pct:0.85,sets:3,min:3,max:5,tg:5,rest:180},iso:{pct:0.75,sets:3,min:8,max:10,tg:10,rest:90}},h:{comp:{pct:0.70,sets:4,min:8,max:12,tg:10,rest:120},iso:{pct:0.65,sets:3,min:10,max:15,tg:12,rest:75}}};
+var ISO_RE=/익스텐션|레그 ?컬|컬|레이즈|플라이|푸시 ?다운|킥백|크런치|카프|펙덱|풀오버|슈러그|리버스 ?플라이|페이스 ?풀|애덕션|어덕션|힙 ?어브|와이드 ?스쿼트 ?머신/;
+function isIso(e){if(e.cls==='iso')return true;if(e.cls==='comp'||e.cls==='core')return false;return ISO_RE.test(e.name||'')}
+/* 종목의 1RM: 최근 2번 운동(목적 상관없이) 중 더 좋은 날의 추정 1RM. 직접 계산해 넣은 값이 더 최근이면 그 값 */
+function tm1RM(e0,k){if(!e0||isCardio(e0)||isAssist(e0))return null;var an=[e0.anchor||'',(e0.h||{}).anchor||'',(e0.s||{}).anchor||''].sort().pop(),L=[];
+ sortedDates().forEach(function(d){if(d<=an||d>=k)return;var b=null;setsOn(d,e0.id,false).forEach(function(x){if(x.w>0&&x.r>=1&&x.r<=15){var v=e1rm(x.w,x.r);if(!b||v>b.v)b={v:v,s:x,d:d}}});if(b)L.push(b)});
+ var last=L.length?L[L.length-1]:null,pick=null;if(L.length){pick=L.slice(-2).sort(function(a,b){return b.v-a.v})[0]}
+ if(e0.rm1&&e0.rm1.v>0&&e0.rm1.d<k&&(!last||e0.rm1.d>=last.d))return{v:e0.rm1.v,d:e0.rm1.d,manual:true};
+ return pick}
+function snapNear(e,w){if(isDumbbell(e)&&dbList().length)return snapDb(w,'near');var l=wList(e);if(l.length)return snapList(l,w,'near');return roundTo(w,e.increment||2.5)}
+function tmRx(e0,k){var tm=tm1RM(e0,k);if(!tm||!(tm.v>0))return null;
+ var m=isPlain(e0)?'':modeOf(k),T=TMT[m==='s'?'s':'h'][isIso(e0)?'iso':'comp'],e=ec(e0,m),d=db.days[k],cus=d&&d.wo&&d.wo[e0.id]!=null,sl=sleepLv(k),why='1RM '+rmTxt(tm.v)+'kg'+(tm.manual?' (직접 계산)':tm.s?' ('+short(tm.d)+' '+fmt(tm.s.w)+'×'+tm.s.r+')':'')+' 기준 '+Math.round(T.pct*100)+'%예요.';
+ var base=tm.v*T.pct,gap=daysBetween(tm.d,k);if(gap>14){base*=0.9;why+=' '+gap+'일 만이라 10% 낮췄어요.'}
+ var t=snapNear(e,base),p={sets:T.sets,min:T.min,max:T.max},lcw=isLegEx(e0)?legCutWhy(k):'';
+ if((sl==='bad'||lcw)&&p.sets>=2){p.sets--;why+=' '+(sl==='bad'?'잠이 부족해서':lcw)+' 본세트를 1개 줄였어요.'}
+ var lastD=null;sortedDates().forEach(function(dd){if(dd<k&&modeSets(dd,e0.id,m).length)lastD=dd});
+ var lastSS=lastD?modeSets(lastD,e0.id,m):[],lastW=lastSS.length?Math.max.apply(null,lastSS.map(function(x){return x.w})):null;
+ /* 지난번 같은 목적에서 그 무게로 목표 횟수를 다 채웠으면 그 아래로는 내리지 않아요 */
+ if(lastW!=null&&t<lastW&&gap<=14&&sl!=='bad'){var atL=lastSS.filter(function(x){return x.w===lastW});if(atL.length>=Math.min(T.sets,lastSS.length)&&atL.every(function(x){return x.r>=T.tg})){t=lastW;why+=' 지난번 '+fmt(lastW)+'kg으로 목표 횟수를 다 채워서 그 무게를 유지해요.'}}
+ var W=cus?d.wo[e0.id]:t,delta=lastW!=null?fix(t-lastW):null,res=delta==null?'new':delta>0?'up':delta<0?'down':'keep';
+ if(res==='keep')why+=' 목표 횟수가 쉬우면 1~2회 남을 때까지 더 하세요. 그래야 1RM이 올라 다음 무게가 올라가요.';
+ if(res==='up')why+=' 1RM이 올라서 무게도 올랐어요.';else if(res==='down')why+=' 지난번에 목표 횟수를 다 못 채웠거나 쉰 기간이 있어서 1RM 기준으로 맞췄어요.';
+ var work=[];for(var i=0;i<p.sets;i++)work.push({w:W,r:T.tg});
+ var st={t:t,fail:0,res:res,why:why,last:lastD,lastSets:lastD?modeSets(lastD,e0.id,m):null};
+ return{st:st,W:W,custom:cus,p:p,warm:warmups(e,W),work:work,delta:delta,mode:m,c:Object.assign({},e,{rest:T.rest}),tm:tm,pct:T.pct}}
 /* 오늘 처방: 웜업 + 본세트 */
 function rx(e0,k){
+ var tmx=tmRx(e0,k);if(tmx)return tmx;
  var m=isPlain(e0)?'':modeOf(k),e=ec(e0,m),st=progress(e0,k,m),d=db.days[k],cus=d&&d.wo&&d.wo[e.id]!=null,p=plan(e),sl=sleepLv(k);
  if(sl&&!cus&&st.res==='up'&&st.lastSets&&st.lastSets.length){st=Object.assign({},st,{t:st.lastSets[0].w,res:'keep',why:'잠 컨디션이 '+SLEEPT[sl]+'이라 오늘은 올리지 않고 지난번 무게로 해요. 다음에 성공하면 그때 올려요.'})}
  var lcw=isLegEx(e0)?legCutWhy(k):'';
@@ -495,7 +522,7 @@ function wkBtn(w,nx){var ex=wkEx(w);return '<button class="wkbtn'+(nx===w?' next
 
 /* =============== view: exercise =============== */
 /* 다른 목적(근비대↔근력)의 1RM이 올라 이 목적의 무게가 많이 낮을 때 제안 */
-function xModeSug(e0,k){if(isCardio(e0)||isPlain(e0)||isAssist(e0))return null;var m=modeOf(k);if(m!=='h'&&m!=='s')return null;var m2=m==='h'?'s':'h',f=addDays(k,-60),best=0,bs=null;
+function xModeSug(e0,k){if(isCardio(e0)||isPlain(e0)||isAssist(e0)||tm1RM(e0,k))return null;var m=modeOf(k);if(m!=='h'&&m!=='s')return null;var m2=m==='h'?'s':'h',f=addDays(k,-60),best=0,bs=null;
  sortedDates().forEach(function(d){if(d<f||d>=k)return;modeSets(d,e0.id,m2).forEach(function(x){if(x.w>0&&x.r>=1&&x.r<=12){var v=e1rm(x.w,x.r);if(v>best){best=v;bs={s:x,d:d}}}})});
  if(!bs)return null;var e=ec(e0,m),p=plan(e),r=rx(e0,k);if(r.custom||!(r.st.t>0))return null;
  var exp=downTo(e,best/(1+(p.min+2)/30));if(!(exp>r.st.t*1.1))return null;var key=m+':'+Math.round(best);if((e0.xmDis||{})[key])return null;
@@ -802,12 +829,13 @@ function vCal(){
 function vGuide(){
  var h=hdr('헬스 규칙 안내','무게·웜업·1RM은 이렇게 정해져요',backBtn(helpFrom||'#me'))+'<main>';
  function sec(title,items){return '<div class="sectitle">'+title+'</div><div class="list">'+items.map(function(it){return '<div class="li" style="align-items:flex-start;flex-direction:column;gap:4px"><div class="row" style="justify-content:flex-start;gap:8px">'+(it[0]?'<span class="badge '+it[0]+'">'+it[1]+'</span>':'<span class="t">'+it[1]+'</span>')+'</div><div style="font-size:14px;line-height:1.6;color:#33373C">'+it[2]+'</div></div>'}).join('')+'</div>'}
- h+=sec('본세트 무게',[
-  ['b-up','올림','지난번 본세트를 <b>모든 세트 목표 횟수만큼</b> 성공하면 다음 운동에서 증량 단위만큼 올려요. (예: 벤치 60kg 5×5 성공 → 62.5kg)'],
-  ['b-keep','유지','조금 모자랐으면 같은 무게로 한 번 더 해요. 횟수 범위 종목(예: 3×8~12)은 같은 무게에서 지난번보다 세트마다 1회씩 더 하도록 처방하고, 모든 세트가 최대 횟수에 닿으면 올려요.'],
-  ['b-down','내림','같은 무게로 <b>3번 연속</b> 목표를 못 채우면 10% 내려요. (예: 스쿼트 80kg 3번 실패 → 72.5kg) 내린 무게에서 다시 올라가면 대부분 이전 무게를 넘어서요.'],
-  ['b-up','덤벨 종목','올리거나 내릴 때 증량 단위 대신 <b>설정 → 헬스장에 있는 덤벨</b> 무게로 맞춰요. (예: 14kg 성공 → 다음 덤벨 16kg)'],
-  ['b-down','오래 쉼','마지막 운동 후 <b>14일이 넘게</b> 지나면 10% 내려서 다시 시작해요.']
+ h+=sec('본세트 무게 (1RM 기준)',[
+  ['b-new','1RM','종목마다 1RM 하나를 써요. 최근 2번 운동(근비대·근력 상관없이) 중 더 좋은 날의 본세트로 계산해요(Epley: 무게 × (1 + 횟수 ÷ 30), 15회 이하 세트만). 예: 스쿼트 110kg × 5회 → 1RM 약 128kg'],
+  ['b-up','근력','복합 운동은 1RM의 <b>85% · 3세트 × 3~5회</b>(목표 5회), 레그 익스텐션 같은 고립 운동은 <b>75% · 3세트 × 8~10회</b>(목표 10회)예요. 예: 1RM 128kg 스쿼트 → 110kg × 5회 × 3세트'],
+  ['b-up','근비대','복합 운동은 1RM의 <b>70% · 4세트 × 8~12회</b>(목표 10회), 고립 운동은 <b>65% · 3세트 × 10~15회</b>(목표 12회)예요. 예: 1RM 128kg 스쿼트 → 90kg × 10회 × 4세트'],
+  ['b-keep','올라가는 방법','목표보다 많이 하면 1RM이 올라가서 다음 근력·근비대 무게가 함께 올라가요. 적게 하면 조금 내려가요. 하루 컨디션에 흔들리지 않게 최근 2번 중 좋은 쪽을 써요.'],
+  ['b-down','오래 쉼','마지막 운동 후 <b>14일이 넘게</b> 지나면 10% 낮춰서 다시 시작해요.'],
+  ['b-keep','제외','맨몸 운동, 보조 기구(어시스트 풀업), 카디오, 처음 하는 종목은 1RM이 없어서 지난번 무게에서 이어가요(횟수를 채우면 증량).']
  ]);
  h+='<div class="note">판정은 그날 가장 무거운 무게로 한 본세트를 기준으로 해요. 웜업 세트는 판정에 들어가지 않아요. 연속 실패 횟수, 내리는 비율, 증량 단위는 종목 설정에서 바꿀 수 있어요.</div>';
  h+=sec('웜업',[
@@ -1502,7 +1530,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.46',APP_VER='';
+var WEB_VER='v1.47',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -2236,7 +2264,7 @@ document.addEventListener('click',function(ev){
   case 'hc-info':hcWebInfo();break;
   case 'hc-perm':try{hcP().openHealthConnectSettings()}catch(e){}break;
   case 'hc-off':db.hc.on=false;save();toast('자동 불러오기를 껐어요.');render();break;
-  case 'rm-apply':if(editBuf){readEdit();var rc=rmCalc(editBuf);if(!rc){toast('무게와 횟수를 넣어 주세요.','err');break}editBuf.M.h._t=rc.h;if(isPlain(editBuf)&&editBuf.M[''])editBuf.M['']._t=rc.h;editBuf.M.s._t=rc.s;editBuf.M[''] && (editBuf.M['']._t=rc.h);saveEdit(true,(isPlain(editBuf)?'다음 무게 '+fmt(rc.h)+'kg':'근비대 '+fmt(rc.h)+'kg · 근력 '+fmt(rc.s)+'kg')+'으로 적용했어요',true)}break;
+  case 'rm-apply':if(editBuf){readEdit();var rc=rmCalc(editBuf);if(!rc){toast('무게와 횟수를 넣어 주세요.','err');break}var rmo=exById(editBuf.id);if(rmo)rmo.rm1={v:rc.one,d:addDays(todayKey(),-1)};editBuf.M.h._t=rc.h;if(isPlain(editBuf)&&editBuf.M[''])editBuf.M['']._t=rc.h;editBuf.M.s._t=rc.s;editBuf.M[''] && (editBuf.M['']._t=rc.h);saveEdit(true,(isPlain(editBuf)?'다음 무게 '+fmt(rc.h)+'kg':'근비대 '+fmt(rc.h)+'kg · 근력 '+fmt(rc.s)+'kg')+'으로 적용했어요',true)}break;
   case 'adv-toggle':if(editBuf){readEdit();editBuf.adv=!editBuf.adv;render()}break;
   case 'cat-exset':exBack=view==='cat'?'#cat-'+param:'#plan';exEm=isPlain(exById(id))?'':'h';editBuf=null;go('#exedit-'+id);break;
   case 'wk-exset':exBack='#wk-'+param;exEm=isPlain(exById(id))?'':((wkById(param)||{}).mode||'h');editBuf=null;go('#exedit-'+id);break;
