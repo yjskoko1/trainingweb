@@ -467,7 +467,7 @@ document.addEventListener('visibilitychange',syncWake);
 
 /* =============== state =============== */
 var meTab='common';var view='today',param=null,curDate=todayKey(),calMonth=todayKey().slice(0,7);
-var exMore=false,exTab='today',graphMetric='e1rm',planTab='wk',bodyMetric='w',catQuery='',editBuf=null,catEdit=null,picker=null,extra={},graphData=null,toasts=[];
+var exMore=true,exTab='today',graphMetric='e1rm',planTab='wk',bodyMetric='w',catQuery='',editBuf=null,catEdit=null,picker=null,extra={},graphData=null,toasts=[];
 function qt(m){try{var o=document.getElementById('qtoast');if(!o){o=document.createElement('div');o.id='qtoast';o.setAttribute('role','status');o.style.cssText='position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#16181A;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;z-index:200;max-width:86vw;text-align:center;transition:opacity .25s;pointer-events:none';document.body.appendChild(o)}o.textContent='✓ '+m;o.style.opacity='1';clearTimeout(qt.t);qt.t=setTimeout(function(){o.style.opacity='0'},1600)}catch(e){}}
 function toast(m,k){toasts.push({m:m,k:k||'ok'});render()}
 
@@ -549,7 +549,6 @@ function vSets(e,k,order,pos){
   (!first&&r.mode?'<div class="why">1~3회 남기고 멈추기'+(r.c.rest?' · 휴식 '+restTxt(r.c.rest):'')+'</div>':'')+
   (first?'':'<div class="why'+(exMore?'':' clamp1')+'">'+(r.custom?'오늘 무게를 직접 '+fmt(r.W)+'kg으로 바꿨어요. (추천 '+fmt(st.t)+'kg)':esc(st.why))+'</div>')+
   '<div style="display:flex;gap:8px;padding-top:4px;flex-wrap:wrap"><a class="ghost" href="#guide" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85;display:inline-flex;align-items:center;text-decoration:none">규칙 보기</a><button class="ghost" data-a="w-change" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85">오늘 무게 바꾸기</button>'+(r.custom?'<button class="ghost" data-a="w-reset" style="background:transparent;color:inherit;border-color:currentColor;opacity:.85">추천대로</button>':'')+'</div></div>';
- h+='<button class="ghost" data-a="ex-more" style="align-self:flex-start" aria-expanded="'+exMore+'">'+(exMore?'간단히 ▴':'기록·설명 자세히 ▾')+'</button>';
  var rm=isAssist(e)?null:oneRM(e.id);
  if(exMore&&isAssist(e)){var am=null;sortedDates().forEach(function(dk){setsOn(dk,e.id,false).forEach(function(x){if(x.r>=1&&(!am||x.w<am.s.w||(x.w===am.s.w&&x.r>am.s.r)))am={s:x,k:dk}})});var cellA=function(lbl,val,sub){return '<div style="flex:1;min-width:0"><div class="meta">'+lbl+'</div><div style="font-size:22px;font-weight:900;line-height:1.3">'+val+'</div><div class="meta" style="font-size:11px">'+sub+'</div></div>'};h+='<div class="card" style="flex-direction:row;justify-content:space-around;text-align:center;gap:6px;padding:12px 8px">'+(am?cellA('가장 적은 보조',fmt(am.s.w)+'<small class="meta"> kg</small>',am.s.r+'회 · '+short(am.k)):cellA('가장 적은 보조','–','기록 후'))+'</div>'}
  if(exMore&&!isAssist(e)&&(r.W>0||e.startWeight>0)){
@@ -1531,7 +1530,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.49',APP_VER='';
+var WEB_VER='v1.50',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
