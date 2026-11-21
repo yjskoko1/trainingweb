@@ -686,17 +686,14 @@ function vExEdit(){
  var pl=isPlain(b),asv2=isAssist(b);
  if(pl||asv2)h+='<div class="sectitle">이렇게 운동해요</div><div class="note">'+(asv2?'보조 기구 종목은 1RM 대신 횟수로 진행해요.':'복근·카디오 종목은 1RM 대신 횟수로 진행해요.')+' 목표 횟수를 모두 채우면 다음에 '+(asv2?'보조 무게를 줄여요.':'무게를 올려요.')+'</div>';
  else{var tk=isIso(b)?'iso':'comp';h+='<div class="sectitle">이렇게 운동해요 · 1RM 기준 자동</div><div class="list">'+['h','s'].map(function(m){var T=TMT[m][tk];return '<div class="li" style="cursor:default;flex-direction:column;align-items:flex-start;gap:2px"><div class="t"><span style="color:'+(m==='s'?'#B4441C':'#1F55D6')+'">'+MODE[m]+'</span> 워크아웃에서</div><div style="font-size:14px">1RM의 <b>'+Math.round(T.pct*100)+'%</b> · <b>'+T.sets+'×'+T.min+'~'+T.max+'</b> · 휴식 '+(T.rest>=60&&T.rest%60===0?T.rest/60+'분':T.rest+'초')+'</div></div>'}).join('')+'</div><div class="note">'+(isIso(b)?'고립 운동':'다관절 운동')+' 기준이에요. 세트·횟수·무게는 처방 1RM으로 정해져서 직접 바꿀 필요가 없어요. 1RM 기록이 없을 땐 아래 "다음 무게"부터 시작해요.</div>'}
- h+='<button class="secondary" data-a="adv-toggle">'+(b.adv?'자세히 설정 접기':'자세히 설정 (웜업·증량 단위 등)')+'</button>';
  if(!isCardio(b)){var mts=pl?['']:['h','s'];h+='<div class="sectitle">다음 무게 (직접 바꾸기)</div><div class="list">'+mts.map(function(mm){return '<div class="field"><label for="mt-'+(mm||'n')+'">'+(mm?MODE[mm]:'다음')+' 무게</label><span style="display:flex;align-items:center;gap:6px"><input id="mt-'+(mm||'n')+'" data-mt="'+mm+'" type="number" inputmode="decimal" min="0" step="any" value="'+esc(b.M[mm]?b.M[mm]._t:'')+'" style="height:42px;width:90px;border:1px solid #DADDE2;border-radius:10px;padding:0 10px;font-size:15px;text-align:right;background:#fff"><span class="meta">kg</span></span></div>'}).join('')+'</div><div class="note">다음에 운동할 때 이 무게부터 시작해요. 저장을 눌러야 반영돼요.</div>'}
- if(!b.adv){h+=wSec(b);h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea>';
-  h+='<div class="btnrow"><a class="secondary" href="'+back+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';return h}
  var em=pl?'':(b.em==='s'?'s':'h'),M=b.M[em];b.em=em;
- h+=wSec(b);
  h+='<div class="sectitle">웜업</div>'+(pl?'':'<div class="tabs3 two" role="tablist">'+[['h','근비대'],['s','근력']].map(function(t){return '<button role="tab" aria-selected="'+(em===t[0])+'" class="'+(em===t[0]?'on':'')+'" data-a="emode" data-v="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div>');
  var wn=M&&M.warmN!=null?+M.warmN:(b.warmN!=null?+b.warmN:warmN(b));
  h+='<div class="seg" style="grid-template-columns:repeat(5,minmax(0,1fr))">'+[[0,'없음'],[1,'1세트'],[2,'2세트'],[3,'3세트'],[4,'4세트']].map(function(m){var on=wn===m[0];return '<button data-a="warmset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'" style="font-size:13px">'+m[1]+'</button>'}).join('')+'</div>';
  h+='<div class="note">'+['웜업 없이 바로 본세트를 해요.','본세트의 50% × 8회','40% × 8 → 70% × 3','40% × 8 → 60% × 5 → 80% × 2','빈 봉 × 10 → 50% × 5 → 65% × 3 → 80% × 2'][wn]+'</div>';
  h+='<div class="sectitle">덤벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isDumbbell(b);return '<button data-a="dbset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
+ h+=wSec(b);
  if(pl||asv2)h+='<div class="sectitle">무게를 내리는 조건</div><div class="list">'+numField('연속 실패 허용','failLimit','1','회')+numField('내리는 비율','deloadPct','1','%')+'</div>';
  h+='<div class="sectitle">자세 메모</div><textarea data-f="memo" maxlength="500" placeholder="내 자세 포인트, 기구 세팅(의자 높이 등)" style="min-height:70px;font-family:inherit;font-size:14px;border:1px solid #DADDE2;border-radius:12px;padding:10px;background:#fff">'+esc(b.memo||'')+'</textarea><div class="note">종목 화면의 <b>자세</b> 버튼을 누르면 기본 설명과 함께 보여요.</div>';
  h+='<div class="btnrow"><a class="secondary" href="'+back+'">취소</a><button class="primary" data-a="ex-save">저장</button></div><button class="danger" data-a="ex-del">이 종목 삭제</button></main>';
@@ -1526,7 +1523,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.52',APP_VER='';
+var WEB_VER='v1.53',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
