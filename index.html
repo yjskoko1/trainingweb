@@ -554,8 +554,8 @@ function vSets(e,k,order,pos){
  if(exMore&&!isAssist(e)&&(r.W>0||e.startWeight>0)){
   var cell=function(lbl,val,sub){return '<div style="flex:1;min-width:0"><div class="meta">'+lbl+'</div><div style="font-size:22px;font-weight:900;line-height:1.3">'+val+'</div><div class="meta" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sub+'</div></div>'};
   h+='<div class="card" style="flex-direction:row;justify-content:space-around;text-align:center;gap:6px;padding:12px 8px">'+
-   (rm?cell('추정 1RM',rmTxt(rm.best.v)+'<small class="meta"> kg</small>',fmt(rm.best.s.w)+'×'+rm.best.s.r+' · '+short(rm.best.k))+cell('최근 1RM',rmTxt(rm.recent.v)+'<small class="meta"> kg</small>',fmt(rm.recent.s.w)+'×'+rm.recent.s.r+' · '+short(rm.recent.k))+cell('최고 무게',fmt(rm.top.s.w)+'<small class="meta"> kg</small>',rm.top.s.r+'회 · '+short(rm.top.k))
-     :cell('추정 1RM','–','본세트 기록 후')+cell('최근 1RM','–','본세트 기록 후')+cell('최고 무게','–','본세트 기록 후'))+'</div>';
+   (rm?cell('최고 1RM',rmTxt(rm.best.v)+'<small class="meta"> kg</small>',fmt(rm.best.s.w)+'×'+rm.best.s.r+' · '+short(rm.best.k))+(function(){var tq=tm1RM(e,k);return tq?cell('처방 1RM',rmTxt(tq.v)+'<small class="meta"> kg</small>',tq.manual?'직접 계산':(fmt(tq.s.w)+'×'+tq.s.r+' · '+short(tq.d))):cell('처방 1RM','–','다음 운동부터')})()+cell('최고 무게',fmt(rm.top.s.w)+'<small class="meta"> kg</small>',rm.top.s.r+'회 · '+short(rm.top.k))
+     :cell('최고 1RM','–','본세트 기록 후')+cell('처방 1RM','–','본세트 기록 후')+cell('최고 무게','–','본세트 기록 후'))+'</div>';
  }
  /* warmups */
  var nextKey=null;
@@ -844,10 +844,11 @@ function vGuide(){
   ['','1세트 (덤벨·머신)','본세트의 50% ×10'],
   ['','없음 (맨몸 운동, 가벼운 운동)','바로 본세트를 해요. 사이드 레터럴 레이즈처럼 가벼운 무게로 하는 운동도 웜업 없이 시작하게 해 뒀어요. 종목 설정에서 바꿀 수 있어요.']
  ]);
- h+=sec('추정 1RM',[
+ h+=sec('1RM 카드',[
   ['','계산 방법','한 세트의 무게와 횟수로 "한 번에 들 수 있는 최대 무게"를 추정해요. 공식: 무게 × (1 + 횟수 ÷ 30). (예: 70kg × 5회 → 약 81.5kg)'],
-  ['','추정 1RM','지금까지 본세트 중 가장 높게 나온 값이에요.'],
-  ['','최근 1RM','가장 최근 운동한 날 기준 값이에요. 추정 1RM보다 많이 낮으면 컨디션이나 회복을 점검해 보세요.'],
+  ['','최고 1RM','지금까지 본세트 중 가장 높게 나온 값이에요. 내 최고 기록이라 내려가지 않아요.'],
+  ['','처방 1RM','근력·근비대 무게를 정할 때 실제로 쓰는 값이에요. 최근 2번 운동 중 더 좋은 날로 계산해요. 최고 1RM보다 많이 낮으면 컨디션이나 회복을 점검해 보세요.'],
+  ['','최고 무게','횟수와 상관없이 든 적 있는 가장 무거운 무게예요.'],
   ['','참고','15회가 넘는 세트는 정확도가 떨어져서 계산에서 빼요. 실제로 1RM을 시도할 때는 보조자와 함께 하세요.']
  ]);
  h+=sec('루틴과 워크아웃',[['','루틴','2분할·3분할 같은 운동 방식이에요. 여러 개 만들어 두고 하나를 골라 사용해요.'],['','워크아웃','루틴 안의 하루치 운동(A, B, C…)이에요. 순서대로 돌아가며 "다음 차례"가 되고, 오늘 탭에서 <b>운동 완료</b>를 눌러야 다음 차례로 넘어가요.']]);
@@ -1530,7 +1531,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.50',APP_VER='';
+var WEB_VER='v1.51',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
