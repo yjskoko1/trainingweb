@@ -351,7 +351,9 @@ function plateTxt(w,mode){
 function warmN(e){return e.warmN!=null?+e.warmN:(e.warm==='full'?4:e.warm==='light'?1:0)}
 var WSTEPS={1:[[0.5,8]],2:[[0.4,8],[0.7,3]],3:[[0.4,8],[0.6,5],[0.8,2]],4:[[0,10],[0.5,5],[0.65,3],[0.8,2]]};
 function gymWarm(m){var v=db.settings[m==='s'?'warmS':'warmH'];return v==null?(m==='s'?3:4):+v}
-function warmOn(e){if(!e||isCardio(e))return false;if(e.warmOn===true||e.warmOn===false)return e.warmOn;return !(isPlain(e)||isAssist(e))}
+function warmOn(e){return !!e&&!isCardio(e)&&!isPlain(e)}
+function noWarm(k,id){var d=db.days[k];return !!(d&&d.nowarm&&d.nowarm[id])}
+function tmSetsOf(e,m){var v=e&&e.tmSets&&e.tmSets[m==='s'?'s':'h'];return v?+v:0}
 function warmups(e,W,m){
  var n=warmOn(e)?gymWarm(m):0;if(!n||W<=0)return[];
  if(isAssist(e)){var la=wList(e),ow=[];for(var ai=Math.min(n,2);ai>=1;ai--){var aw=la.length?la[Math.min(la.length-1,Math.max(0,la.indexOf(snapList(la,W,'near'))+ai*2))]:roundTo(W*(1+0.25*ai),e.increment||2.5);if(aw>W&&!ow.some(function(o){return o.w===aw}))ow.push({w:aw,r:8})}return ow}
@@ -377,6 +379,7 @@ function tm1RM(e0,k){if(!e0||isCardio(e0)||isAssist(e0))return null;var an=[e0.a
 function snapNear(e,w){if(isDumbbell(e)&&dbList().length)return snapDb(w,'near');var l=wList(e);if(l.length)return snapList(l,w,'near');return roundTo(w,e.increment||2.5)}
 function tmRx(e0,k){var tm=tm1RM(e0,k);if(!tm||!(tm.v>0))return null;
  var m=isPlain(e0)?'':modeOf(k),T=TMT[m==='s'?'s':'h'][isIso(e0)?'iso':'comp'],e=ec(e0,m),d=db.days[k],cus=d&&d.wo&&d.wo[e0.id]!=null,sl=sleepLv(k),why='1RM '+rmTxt(tm.v)+'kg'+(tm.manual?' (직접 계산)':tm.s?' ('+short(tm.d)+' '+fmt(tm.s.w)+'×'+tm.s.r+')':'')+' 기준 '+Math.round(T.pct*100)+'%예요.';
+ if(tmSetsOf(e0,m))T=Object.assign({},T,{sets:tmSetsOf(e0,m)});
  var base=tm.v*T.pct,gap=daysBetween(tm.d,k);if(gap>14){base*=0.9;why+=' '+gap+'일 만이라 10% 낮췄어요.'}
  var t=snapNear(e,base),p={sets:T.sets,min:T.min,max:T.max},lcw=isLegEx(e0)?legCutWhy(k):'';
  if((sl==='bad'||lcw)&&p.sets>=2){p.sets--;why+=' '+(sl==='bad'?'잠이 부족해서':lcw)+' 본세트를 1개 줄였어요.'}
@@ -389,19 +392,20 @@ function tmRx(e0,k){var tm=tm1RM(e0,k);if(!tm||!(tm.v>0))return null;
  if(res==='up')why+=' 1RM이 올라서 무게도 올랐어요.';else if(res==='down')why+=' 지난번에 목표 횟수를 다 못 채웠거나 쉰 기간이 있어서 1RM 기준으로 맞췄어요.';
  var work=[];for(var i=0;i<p.sets;i++)work.push({w:W,r:T.tg});
  var st={t:t,fail:0,res:res,why:why,last:lastD,lastSets:lastD?modeSets(lastD,e0.id,m):null};
- return{st:st,W:W,custom:cus,p:p,warm:warmups(e,W,m),work:work,delta:delta,mode:m,c:Object.assign({},e,{rest:T.rest}),tm:tm,pct:T.pct}}
+ return{st:st,W:W,custom:cus,p:p,warm:noWarm(k,e0.id)?[]:warmups(e,W,m),work:work,delta:delta,mode:m,c:Object.assign({},e,{rest:T.rest}),tm:tm,pct:T.pct}}
 /* 오늘 처방: 웜업 + 본세트 */
 function rx(e0,k){
  var tmx=tmRx(e0,k);if(tmx)return tmx;
  var m=isPlain(e0)?'':modeOf(k),e=ec(e0,m),st=progress(e0,k,m),d=db.days[k],cus=d&&d.wo&&d.wo[e.id]!=null,p=plan(e),sl=sleepLv(k);
  if(sl&&!cus&&st.res==='up'&&st.lastSets&&st.lastSets.length){st=Object.assign({},st,{t:st.lastSets[0].w,res:'keep',why:'잠 컨디션이 '+SLEEPT[sl]+'이라 오늘은 올리지 않고 지난번 무게로 해요. 다음에 성공하면 그때 올려요.'})}
+ if(!isPlain(e0)&&tmSetsOf(e0,m))p={sets:tmSetsOf(e0,m),min:p.min,max:p.max};
  var lcw=isLegEx(e0)?legCutWhy(k):'';
  if((sl==='bad'||lcw)&&p.sets>=2){p={sets:p.sets-1,min:p.min,max:p.max};st=Object.assign({},st,{why:st.why+' '+(sl==='bad'?'잠이 부족해서':lcw)+' 본세트를 1개 줄였어요.'})}
  var W=cus?d.wo[e.id]:st.t;
  var prev=st.last&&st.lastSets&&st.lastSets.length&&st.lastSets[0].w===W?modeSets(st.last,e.id,m).filter(function(s){return s.w===W}):null;
  var work=[];for(var i=0;i<p.sets;i++){var r=p.max;if(e.method==='double'){r=p.min;if(prev&&prev[i])r=Math.min(p.max,Math.max(p.min,prev[i].r+1))}work.push({w:W,r:r})}
  var delta=st.last?fix(W-Math.max.apply(null,modeSets(st.last,e.id,m).map(function(s){return s.w}))):null;
- return{st:st,W:W,custom:d&&d.wo&&d.wo[e.id]!=null,p:p,warm:warmups(e,W,m),work:work,delta:delta,mode:m,c:e};
+ return{st:st,W:W,custom:d&&d.wo&&d.wo[e.id]!=null,p:p,warm:noWarm(k,e.id)?[]:warmups(e,W,m),work:work,delta:delta,mode:m,c:e};
 }
 function exStatus(e,k){
  if(isCardio(e)){var cl=setsOn(k,e.id);return{cardio:true,list:cl,done:cl.length>0,workDone:cl.length,warmDone:0}}
@@ -581,7 +585,9 @@ function vSets(e,k,order,pos){
   return '<div class="repchips" role="group" aria-label="한 횟수 바로 기록">'+b+'</div><div class="repchips hint" style="display:block;padding-top:0">실제로 한 횟수를 누르면 바로 기록돼요</div>';
  }
  var warmRows=rows.filter(function(x){return x.type==='warm'}),workRows=rows.filter(function(x){return x.type==='work'});
- if(warmRows.length)h+='<div class="card" style="gap:4px;padding:12px"><div class="row" style="padding:0 6px 6px"><span class="name" style="font-size:15px">웜업</span><span class="meta">본세트 무게 기준 자동 계산</span></div>'+warmRows.map(rowHtml).join('')+'</div>';
+ var skipW=noWarm(k,e.id),canW=warmOn(e)&&r.W>0&&gymWarm(r.mode)>0&&!isAssist(e)||warmOn(e)&&isAssist(e)&&gymWarm(r.mode)>0;
+ if(warmRows.length)h+='<div class="card" style="gap:4px;padding:12px"><div class="row" style="padding:0 6px 6px;align-items:center"><span class="name" style="font-size:15px">웜업</span>'+(canW&&!wl.length?'<button class="ghost" data-a="warm-skip" data-id="'+e.id+'" data-k="'+k+'" style="font-size:13px;padding:4px 10px">웜업 안하기</button>':'<span class="meta">본세트 무게 기준 자동 계산</span>')+'</div>'+warmRows.map(rowHtml).join('')+'</div>';
+ else if(skipW&&canW)h+='<div class="card" style="padding:12px"><div class="row" style="padding:0 6px;align-items:center"><span class="meta">오늘은 웜업 없이 바로 본세트를 해요.</span><button class="ghost" data-a="warm-skip" data-id="'+e.id+'" data-k="'+k+'" style="font-size:13px;padding:4px 10px">웜업 하기</button></div></div>';
  var lastTxt=st.last?short(st.last)+' '+modeSets(st.last,e.id,r.mode).map(function(s){return fmt(s.w)+'×'+s.r}).join(', '):'';
  h+='<div class="card" style="gap:4px;padding:12px"><div class="row" style="padding:0 6px 6px"><span class="name" style="font-size:15px">본세트</span><span class="meta" style="text-align:right">'+(lastTxt?'지난번 '+esc(lastTxt):'')+'</span></div>'+workRows.map(rowHtml).join('')+
   '<div class="row" style="padding:6px 4px 2px"><button class="ghost" data-a="set-add">+ 세트 추가</button><span class="meta">숫자를 누르면 고칠 수 있어요</span></div></div>';
@@ -687,8 +693,7 @@ function vExEdit(){
  var pm=plateMode(b);if(!isAssist(b))h+='<div class="sectitle">원판 무게 계산</div><div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+[['none','안 함'],['bar','바벨'],['plate','원판만']].map(function(t){var on=pm===t[0];return '<button data-a="plate-mode" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+t[1]+'</button>'}).join('')+'</div><div class="note">'+(pm==='bar'?'봉 무게('+fmt(db.settings.bar||20)+'kg)를 빼고 한쪽에 끼울 원판 무게를 세트마다 보여줘요.':pm==='plate'?'레그프레스처럼 봉이 없는 기구예요. 적은 무게를 양쪽으로 나눠 한쪽 원판 무게를 보여줘요.':'덤벨·머신·케이블처럼 원판을 끼우지 않는 종목이에요.')+'</div>';
  var pl=isPlain(b),asv2=isAssist(b);
  if(pl||asv2)h+='<div class="sectitle">이렇게 운동해요</div><div class="note">'+(asv2?'보조 기구 종목은 1RM 대신 횟수로 진행해요.':'복근·카디오 종목은 1RM 대신 횟수로 진행해요.')+' 목표 횟수를 모두 채우면 다음에 '+(asv2?'보조 무게를 줄여요.':'무게를 올려요.')+'</div>';
- else{var tk=isIso(b)?'iso':'comp';h+='<div class="sectitle">이렇게 운동해요 · 1RM 기준 자동</div><div class="list">'+['h','s'].map(function(m){var T=TMT[m][tk];return '<div class="li" style="cursor:default;flex-direction:column;align-items:flex-start;gap:2px"><div class="t"><span style="color:'+(m==='s'?'#B4441C':'#1F55D6')+'">'+MODE[m]+'</span> 워크아웃에서</div><div style="font-size:14px">1RM의 <b>'+Math.round(T.pct*100)+'%</b> · <b>'+T.sets+'×'+T.min+'~'+T.max+'</b> · 휴식 '+(T.rest>=60&&T.rest%60===0?T.rest/60+'분':T.rest+'초')+'</div></div>'}).join('')+'</div><div class="note">'+(isIso(b)?'고립 운동':'다관절 운동')+' 기준이에요. 세트·횟수·무게는 처방 1RM으로 정해져서 직접 바꿀 필요가 없어요. 처음 하는 날은 직접 기록하면, 다음부터 그 기록으로 계산해요.</div>'}
- var wo=warmOn(b);h+='<div class="sectitle">웜업</div><div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+[[1,'하기'],[0,'안 하기']].map(function(t){var on=wo===!!t[0];return '<button data-a="warm-on" data-v="'+t[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+t[1]+'</button>'}).join('')+'</div><div class="note">'+(wo?'웜업 세트 수는 설정 → 헬스 값을 따라요 (근비대 '+gymWarm('h')+'세트 · 근력 '+gymWarm('s')+'세트).':'웜업 없이 바로 본세트를 해요.')+'</div>';
+ else{var tk=isIso(b)?'iso':'comp';h+='<div class="sectitle">이렇게 운동해요 · 1RM 기준 자동</div><div class="list">'+['h','s'].map(function(m){var T=TMT[m][tk];var ns=tmSetsOf(b,m)||T.sets;return '<div class="li" style="cursor:default;flex-direction:column;align-items:stretch;gap:6px"><div class="t"><span style="color:'+(m==='s'?'#B4441C':'#1F55D6')+'">'+MODE[m]+'</span> 워크아웃에서</div><div style="font-size:14px">1RM의 <b>'+Math.round(T.pct*100)+'%</b> · <b>'+ns+'세트 × '+T.min+'~'+T.max+'회</b> · 휴식 '+(T.rest>=60&&T.rest%60===0?T.rest/60+'분':T.rest+'초')+'<div class="meta">기본 '+T.sets+'세트</div></div><div class="seg" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+[2,3,4,5].map(function(n){var on=ns===n;return '<button data-a="tm-sets" data-m="'+m+'" data-v="'+n+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+n+'세트</button>'}).join('')+'</div></div>'}).join('')+'</div><div class="note">'+(isIso(b)?'고립 운동':'다관절 운동')+' 기준이에요. 무게와 횟수는 처방 1RM으로 정해지고, 본세트 수만 고를 수 있어요. 처음 하는 날은 직접 기록하면, 다음부터 그 기록으로 계산해요.</div>'}
  var em=pl?'':(b.em==='s'?'s':'h'),M=b.M[em];b.em=em;
  h+='<div class="sectitle">덤벨 종목</div><div class="seg two">'+[['1','예'],['0','아니요']].map(function(m){var on=(m[0]==='1')===isDumbbell(b);return '<button data-a="dbset" data-v="'+m[0]+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+m[1]+'</button>'}).join('')+'</div>';
  h+=wSec(b);
@@ -829,10 +834,10 @@ function vGuide(){
  ]);
  h+='<div class="note">판정은 그날 가장 무거운 무게로 한 본세트를 기준으로 해요. 웜업 세트는 판정에 들어가지 않아요. 연속 실패 횟수, 내리는 비율, 증량 단위는 종목 설정에서 바꿀 수 있어요.</div>';
  h+=sec('웜업',[
-  ['','세트 수','설정 → 헬스에서 근비대·근력 각각 없음~4세트 중에 골라요. 기본은 근비대 4세트, 근력 3세트예요. 웜업을 하는 종목에 똑같이 적용해요.'],
+  ['','세트 수','설정 → 헬스에서 근비대·근력 각각 없음~4세트 중에 골라요. 기본은 근비대 4세트, 근력 3세트예요. 복근·카디오를 뺀 모든 종목에 적용해요.'],
   ['','4세트','빈 봉 ×10 → 본세트의 50% ×5 → 65% ×3 → 80% ×2. 빈 봉보다 가볍거나 본세트와 같아지는 세트는 빼요.'],
   ['','3세트','본세트의 40% ×8 → 60% ×5 → 80% ×2'],
-  ['','종목별 하기·안 하기','종목 설정에서 웜업을 하기·안 하기로 골라요. 복근·카디오·보조 기구 종목은 처음엔 안 하기예요. 맨몸 종목은 무게가 없어서 웜업이 나오지 않아요.']
+  ['','그날만 빼기','운동 화면 웜업 카드의 웜업 안하기를 누르면 그날 그 종목만 웜업이 빠져요. 다음 운동에는 영향이 없어요. 복근·카디오와 맨몸 종목은 웜업이 나오지 않아요.']
  ]);
  h+=sec('1RM 카드',[
   ['','계산 방법','한 세트의 무게와 횟수로 "한 번에 들 수 있는 최대 무게"를 추정해요. 공식: 무게 × (1 + 횟수 ÷ 30). (예: 70kg × 5회 → 약 81.5kg)'],
@@ -904,7 +909,7 @@ function vMe(){
  h+='<div class="sectitle" style="padding-top:12px">바벨 · 원판</div><div class="list"><div class="field"><label for="s-bar">빈 봉 무게</label><div style="display:flex;align-items:center;gap:6px"><input id="s-bar" type="number" min="0" step="0.5" value="'+db.settings.bar+'" data-s="bar"><span class="meta">kg</span></div></div></div>'+
   '<div class="list" style="margin-top:8px"><button class="li" data-a="plates-open"><div><div class="t" style="font-weight:500">헬스장에 있는 원판</div><div class="meta">'+((db.settings.plates||[]).slice().sort(function(a,b){return b-a}).map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note" style="margin-bottom:6px">바벨 종목을 할 때 무게 아래에 "EACH SIDE 25kg"처럼 한쪽 무게와 끼울 원판이 표시돼요.</div>';
  h+='<div class="sectitle" style="padding-top:12px">덤벨</div><div class="list"><button class="li" data-a="dbs-open"><div style="min-width:0"><div class="t" style="font-weight:500">헬스장에 있는 덤벨</div><div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(dbList().map(fmt).join(', ')||'선택 안 함')+' kg</div></div>'+I.chev+'</button></div><div class="note">덤벨 종목은 무게를 올리거나 내릴 때 여기 있는 덤벨 무게로 맞춰요. 예: 14kg 다음은 16kg</div>';
- h+='<div class="sectitle" style="padding-top:12px">웜업 세트 수</div><div class="list">'+[['h','근비대'],['s','근력']].map(function(t){var cur=gymWarm(t[0]);return '<div class="field" style="flex-direction:column;align-items:stretch;gap:8px"><label>'+t[1]+'</label><div class="seg" style="grid-template-columns:repeat(5,minmax(0,1fr))">'+[0,1,2,3,4].map(function(n){var on=cur===n;return '<button data-a="set-warm" data-m="'+t[0]+'" data-v="'+n+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+(n?n+'세트':'없음')+'</button>'}).join('')+'</div></div>'}).join('')+'</div><div class="note">웜업을 하는 종목에 똑같이 적용해요. 종목 설정에서 웜업을 안 하기로 바꿀 수 있어요. 복근·카디오·보조 기구 종목은 처음엔 안 하기로 되어 있어요.</div>';
+ h+='<div class="sectitle" style="padding-top:12px">웜업 세트 수</div><div class="list">'+[['h','근비대'],['s','근력']].map(function(t){var cur=gymWarm(t[0]);return '<div class="field" style="flex-direction:column;align-items:stretch;gap:8px"><label>'+t[1]+'</label><div class="seg" style="grid-template-columns:repeat(5,minmax(0,1fr))">'+[0,1,2,3,4].map(function(n){var on=cur===n;return '<button data-a="set-warm" data-m="'+t[0]+'" data-v="'+n+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'">'+(n?n+'세트':'없음')+'</button>'}).join('')+'</div></div>'}).join('')+'</div><div class="note">복근·카디오를 뺀 모든 종목에 적용해요. 웜업을 안 할 날은 운동 화면의 웜업 안하기를 누르면 그날 그 종목만 빠져요.</div>';
  var ro=!!db.settings.restOn;
  h+='<div class="list"><div class="field"><label for="s-rest-on">휴식 타이머</label><button id="s-rest-on" role="switch" aria-checked="'+ro+'" data-a="rest-toggle" style="width:60px;height:34px;border-radius:999px;border:none;background:'+(ro?'var(--ink)':'#C9CDD3')+';position:relative;flex-shrink:0"><span style="position:absolute;top:3px;left:'+(ro?'29px':'3px')+';width:28px;height:28px;border-radius:50%;background:#fff;transition:left .15s"></span><span class="sr">'+(ro?'켜짐':'꺼짐')+'</span></button></div>'+
   (ro?'<div class="field"><label for="s-rest">본세트 휴식</label><div style="display:flex;align-items:center;gap:6px"><input id="s-rest" type="number" min="10" step="5" value="'+db.settings.rest+'" data-s="rest"><span class="meta">초</span></div></div><div class="field"><label for="s-restw">웜업 휴식</label><div style="display:flex;align-items:center;gap:6px"><input id="s-restw" type="number" min="0" step="5" value="'+db.settings.restWarm+'" data-s="restWarm"><span class="meta">초</span></div></div>':'')+'</div>';
@@ -1522,7 +1527,7 @@ function vRefs(){
 }
 
 /* =============== 헬스 커넥트 (앱에서만) =============== */
-var WEB_VER='v1.56',APP_VER='';
+var WEB_VER='v1.57',APP_VER='';
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App&&Capacitor.Plugins.App.getInfo)Capacitor.Plugins.App.getInfo().then(function(i){APP_VER=i.version||'';if(typeof view!=='undefined'&&view==='me')render()}).catch(function(){})}catch(e){}
 try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SystemBars)Capacitor.Plugins.SystemBars.setStyle({style:'DARK',bar:'StatusBar'})}catch(e){}
 (function(){var sx=0,sy=0,on=null;
@@ -2147,7 +2152,7 @@ function saveEdit(stay,msg,noRead){
  if(!noRead)readEdit();var b=editBuf,o=exById(b.id);if(!o)return;
  var num=function(k,def,min){var v=parseFloat(b[k]);return isNaN(v)||v<min?def:v};
  var name=String(b.name||'').trim().slice(0,40);if(!name){toast('이름을 입력해 주세요.','err');return}
- o.memo=String(b.memo||'').slice(0,500);if(b.warmOn===true||b.warmOn===false)o.warmOn=b.warmOn;var wlp=Array.isArray(b.wlist)?b.wlist:parseWl(b.wlist);if(wlp.length)o.wlist=wlp;else delete o.wlist;delete o.plain;if(b.assist===true||b.assist===false)o.assist=b.assist;if(parseFloat(b.rmW)>0){o.rmW=parseFloat(b.rmW);o.rmR=parseInt(b.rmR,10)||5}
+ o.memo=String(b.memo||'').slice(0,500);delete o.warmOn;if(b.tmSets)o.tmSets={h:b.tmSets.h||0,s:b.tmSets.s||0};var wlp=Array.isArray(b.wlist)?b.wlist:parseWl(b.wlist);if(wlp.length)o.wlist=wlp;else delete o.wlist;delete o.plain;if(b.assist===true||b.assist===false)o.assist=b.assist;if(parseFloat(b.rmW)>0){o.rmW=parseFloat(b.rmW);o.rmR=parseInt(b.rmR,10)||5}
  if(isCardio(o)){o.name=name;o.cat=b.cat;editBuf=null;save();toasts.push({m:'저장했어요.',k:'ok'});var eb=exBack;exBack=null;go(eb||'#ex-'+o.id);return}
  o.name=name;o.cat=b.cat;if(b.warmN!=null){o.warmN=+b.warmN;o.warm=o.warmN>=4?'full':o.warmN>=1?'light':'none'}else o.warm=b.warm;if(b.plate){o.plate=b.plate;o.barbell=b.plate==='bar'}else if(b.barbell!=null)o.barbell=!!b.barbell;if(b.dumbbell!=null)o.dumbbell=!!b.dumbbell;if(b.cls)o.cls=b.cls;
  o.increment=fix(num('increment',2.5,0.25));o.failLimit=Math.round(num('failLimit',3,1));o.deloadPct=Math.min(50,num('deloadPct',10,0));
@@ -2356,7 +2361,8 @@ document.addEventListener('click',function(ev){
   case 'dbset':readEdit();editBuf.dumbbell=t.getAttribute('data-v')==='1';render();break;
   case 'barbell':readEdit();editBuf.barbell=t.getAttribute('data-v')==='1';editBuf.plate=editBuf.barbell?'bar':'none';render();break;
   case 'plate-mode':readEdit();editBuf.plate=t.getAttribute('data-v');editBuf.barbell=editBuf.plate==='bar';render();break;
-  case 'warm-on':readEdit();editBuf.warmOn=t.getAttribute('data-v')==='1';render();break;
+  case 'warm-skip':var wd=day(t.getAttribute('data-k'),true),wid=t.getAttribute('data-id');wd.nowarm=wd.nowarm||{};if(wd.nowarm[wid])delete wd.nowarm[wid];else wd.nowarm[wid]=true;save();render();qt(wd.nowarm[wid]?'오늘은 웜업 없이 해요':'웜업을 다시 넣었어요');break;
+  case 'tm-sets':readEdit();editBuf.tmSets=editBuf.tmSets||{};editBuf.tmSets[t.getAttribute('data-m')]=+t.getAttribute('data-v');render();break;
   case 'warmset':readEdit();var wv=+t.getAttribute('data-v'),wem=editBuf.em||'';if(editBuf.M&&editBuf.M[wem])editBuf.M[wem].warmN=wv;if(!wem)editBuf.warmN=wv;render();break;
   case 'ex-save':saveEdit();break;
   case 'ex-del':if(e)confirmSheet(esc(e.name)+' 삭제','종목 목록과 워크아웃에서 빠져요. 지난 기록은 날짜별 기록에 남아 있어요.','삭제','ex-del-ok',e.id);break;
